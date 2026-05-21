@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
-import { DM_Sans } from "next/font/google";
+import { Poppins } from "next/font/google";
 import "./globals.css";
 
-const dmSans = DM_Sans({
-  variable: "--font-dm-sans",
+const poppins = Poppins({
+  variable: "--font-poppins",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
 export const metadata: Metadata = {
-  title: "Diseño AI",
-  description: "Generador de piezas visuales con brand kit",
+  title: "Condimento · Diseño AI",
+  description: "El toque justo para que tu marca se note",
 };
 
 export default function RootLayout({
@@ -20,8 +20,8 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
-      className={`${dmSans.variable} h-full antialiased`}
+      lang="es"
+      className={`${poppins.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

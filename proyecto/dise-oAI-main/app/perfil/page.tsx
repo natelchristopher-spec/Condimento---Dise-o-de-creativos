@@ -50,12 +50,12 @@ export default function PerfilPage() {
     <div className="min-h-screen bg-[#0a0a0c]">
       <header className="bg-[#111111] border-b border-white/10 px-6 py-4 flex items-center justify-between text-white">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-[#FA5A1E] flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-[#e42820] flex items-center justify-center">
             <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           </div>
-          <span className="font-semibold text-lg">Diseño AI</span>
+          <span className="font-semibold text-lg">Condimento</span>
         </div>
         <Link href="/" className="text-sm text-white/50 hover:text-white/80 transition-colors border border-white/10 hover:border-white/20 px-3 py-1.5 rounded-lg">
           ← Generar
@@ -93,7 +93,7 @@ export default function PerfilPage() {
                 value={apiKey}
                 onChange={e => setApiKey(e.target.value)}
                 placeholder="sk-proj-..."
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-12 text-white placeholder-white/25 focus:outline-none focus:border-[#FF912D] text-sm font-mono"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-12 text-white placeholder-white/25 focus:outline-none focus:border-[#e42820] text-sm font-mono"
               />
               <button
                 type="button"
@@ -114,7 +114,7 @@ export default function PerfilPage() {
             onClick={handleSave}
             disabled={!apiKey.trim() || saving || apiKey === savedKey}
             className={`w-full font-medium px-4 py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-sm ${
-              saved ? 'bg-emerald-600 text-white' : 'bg-[#FA5A1E] hover:bg-[#FF912D] disabled:opacity-40 disabled:cursor-not-allowed text-white'
+              saved ? 'bg-emerald-600 text-white' : 'bg-[#e42820] hover:bg-[#e42820] disabled:opacity-40 disabled:cursor-not-allowed text-white'
             }`}
           >
             {saved ? (

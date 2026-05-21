@@ -192,12 +192,12 @@ export default function ConfigPage() {
     <div className="min-h-screen bg-[#0a0a0c]">
       <header className="bg-[#111111] border-b border-white/10 px-6 py-4 flex items-center justify-between text-white">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-[#FA5A1E] flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-[#e42820] flex items-center justify-center">
             <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           </div>
-          <span className="font-semibold text-lg">Diseño AI</span>
+          <span className="font-semibold text-lg">Condimento</span>
         </div>
         <Link href="/" className="text-sm text-white/50 hover:text-white/80 transition-colors border border-white/10 hover:border-white/20 px-3 py-1.5 rounded-lg">
           ← Generar
@@ -213,9 +213,9 @@ export default function ConfigPage() {
         <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-lg text-white">{hasKit ? 'Editar brand kit' : 'Crear brand kit'}</h2>
-            <label className={`cursor-pointer flex items-center gap-2 text-sm px-4 py-2 rounded-xl border transition-colors ${extracting ? 'opacity-50 cursor-not-allowed border-white/10 text-white/40' : 'border-[#FA5A1E]/40 text-[#FF912D] hover:bg-[#FA5A1E]/10 hover:border-[#FF912D]'}`}>
+            <label className={`cursor-pointer flex items-center gap-2 text-sm px-4 py-2 rounded-xl border transition-colors ${extracting ? 'opacity-50 cursor-not-allowed border-white/10 text-white/40' : 'border-[#e42820]/40 text-[#e42820] hover:bg-[#e42820]/10 hover:border-[#e42820]'}`}>
               {extracting ? (
-                <><div className="w-4 h-4 border-2 border-[#FF912D]/30 border-t-[#FF912D] rounded-full animate-spin" />Leyendo manual...</>
+                <><div className="w-4 h-4 border-2 border-[#e42820]/30 border-t-[#e42820] rounded-full animate-spin" />Leyendo manual...</>
               ) : (
                 <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>Importar desde PDF</>
               )}
@@ -231,7 +231,7 @@ export default function ConfigPage() {
               value={form.name}
               onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
               placeholder="Ej: Mi Tienda"
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 focus:outline-none focus:border-[#FF912D] text-sm"
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 focus:outline-none focus:border-[#e42820] text-sm"
             />
           </div>
 
@@ -276,7 +276,7 @@ export default function ConfigPage() {
               value={form.typography}
               onChange={e => setForm(f => ({ ...f, typography: e.target.value }))}
               placeholder="Ej: Montserrat (principal), Playfair Display (acento)"
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 focus:outline-none focus:border-[#FF912D] text-sm"
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 focus:outline-none focus:border-[#e42820] text-sm"
             />
           </div>
 
@@ -288,7 +288,7 @@ export default function ConfigPage() {
               onChange={e => setForm(f => ({ ...f, styleDescription: e.target.value }))}
               placeholder="Estilo visual, tono, audiencia, reglas de diseño, prohibiciones, aplicaciones en RRSS..."
               rows={5}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 focus:outline-none focus:border-[#FF912D] resize-none text-sm leading-relaxed"
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 focus:outline-none focus:border-[#e42820] resize-none text-sm leading-relaxed"
             />
           </div>
 
@@ -326,8 +326,8 @@ export default function ConfigPage() {
               )}
             </div>
             {form.referencePiecesStyle && (
-              <div className="bg-[#FA5A1E]/5 border border-[#FA5A1E]/20 rounded-xl p-3">
-                <p className="text-xs text-[#FF912D] font-medium mb-1">Estilo extraído</p>
+              <div className="bg-[#e42820]/5 border border-[#e42820]/20 rounded-xl p-3">
+                <p className="text-xs text-[#e42820] font-medium mb-1">Estilo extraído</p>
                 <p className="text-xs text-white/50 leading-relaxed line-clamp-3">{form.referencePiecesStyle}</p>
               </div>
             )}
@@ -363,11 +363,11 @@ export default function ConfigPage() {
             </div>
             <div className="flex flex-wrap gap-2">
               {(form.quickAdjustments || []).map((adj, i) => (
-                <span key={i} className="flex items-center gap-1.5 bg-[#FA5A1E]/10 border border-[#FA5A1E]/30 text-[#FF912D] text-xs px-3 py-1.5 rounded-lg">
+                <span key={i} className="flex items-center gap-1.5 bg-[#e42820]/10 border border-[#e42820]/30 text-[#e42820] text-xs px-3 py-1.5 rounded-lg">
                   {adj}
                   <button
                     onClick={() => setForm(f => ({ ...f, quickAdjustments: (f.quickAdjustments || []).filter((_, idx) => idx !== i) }))}
-                    className="text-[#FF912D]/60 hover:text-[#FF912D] ml-0.5"
+                    className="text-[#e42820]/60 hover:text-[#e42820] ml-0.5"
                   >×</button>
                 </span>
               ))}
@@ -384,7 +384,7 @@ export default function ConfigPage() {
                   }
                 }}
                 placeholder="Escribí un ajuste y presioná Enter..."
-                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-white/25 focus:outline-none focus:border-[#FF912D] text-sm"
+                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-white/25 focus:outline-none focus:border-[#e42820] text-sm"
               />
               <button
                 onClick={() => {
@@ -405,7 +405,7 @@ export default function ConfigPage() {
             onClick={handleSave}
             disabled={!form.name.trim() || !form.styleDescription.trim() || saving}
             className={`w-full font-medium px-4 py-3 rounded-xl transition-all flex items-center justify-center gap-2 ${
-              saved ? 'bg-emerald-600 text-white' : 'bg-[#FA5A1E] hover:bg-[#FF912D] disabled:opacity-40 disabled:cursor-not-allowed text-white'
+              saved ? 'bg-emerald-600 text-white' : 'bg-[#e42820] hover:bg-[#e42820] disabled:opacity-40 disabled:cursor-not-allowed text-white'
             }`}
           >
             {saved ? (

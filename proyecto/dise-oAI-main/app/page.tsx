@@ -412,12 +412,12 @@ export default function Home() {
       {/* Header */}
       <header className="bg-[#111111] border-b border-white/10 px-6 py-4 flex items-center justify-between text-white">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-[#FA5A1E] flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-[#e42820] flex items-center justify-center">
             <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           </div>
-          <span className="font-semibold text-lg">Diseño AI</span>
+          <span className="font-semibold text-lg">Condimento</span>
         </div>
         <div className="flex items-center gap-3">
           <StepIndicator currentStep={step} />
@@ -455,10 +455,10 @@ export default function Home() {
 
         {/* No brand kit warning */}
         {!brandKit && step === 'brief' && (
-          <div className="bg-[#FA5A1E]/10 border border-[#FA5A1E]/30 rounded-xl px-4 py-4 text-sm">
-            <p className="font-medium text-[#FF912D] mb-1">Primero configurá tu marca</p>
+          <div className="bg-[#e42820]/10 border border-[#e42820]/30 rounded-xl px-4 py-4 text-sm">
+            <p className="font-medium text-[#e42820] mb-1">Primero configurá tu marca</p>
             <p className="text-white/50 mb-3">Necesitás crear tu brand kit antes de generar creativos.</p>
-            <Link href="/config" className="bg-[#FA5A1E] hover:bg-[#FF912D] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+            <Link href="/config" className="bg-[#e42820] hover:bg-[#e42820] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
               Configurar marca
             </Link>
           </div>
@@ -481,12 +481,12 @@ export default function Home() {
                   onChange={e => setClientRequest(e.target.value)}
                   placeholder="Pegá el mensaje del cliente tal como llegó. Ej: 'Necesito algo para el lanzamiento de nuestra colección de verano...'"
                   rows={3}
-                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 focus:outline-none focus:border-[#FF912D] resize-none text-sm leading-relaxed"
+                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 focus:outline-none focus:border-[#e42820] resize-none text-sm leading-relaxed"
                 />
                 <button
                   onClick={generateBrief}
                   disabled={!clientRequest.trim() || generatingBrief}
-                  className="shrink-0 bg-[#FA5A1E]/80 hover:bg-[#FA5A1E] disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-3 rounded-xl transition-colors flex items-center gap-2 whitespace-nowrap"
+                  className="shrink-0 bg-[#e42820]/80 hover:bg-[#e42820] disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-3 rounded-xl transition-colors flex items-center gap-2 whitespace-nowrap"
                 >
                   {generatingBrief ? (
                     <><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />Generando...</>
@@ -510,7 +510,7 @@ export default function Home() {
                 onChange={e => setBrief(e.target.value)}
                 placeholder="El brief aparecerá acá. También podés escribirlo directamente."
                 rows={5}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 focus:outline-none focus:border-[#FF912D] resize-none text-sm leading-relaxed"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 focus:outline-none focus:border-[#e42820] resize-none text-sm leading-relaxed"
               />
             </div>
 
@@ -524,7 +524,7 @@ export default function Home() {
                     onClick={() => setConceptCount(n)}
                     className={`w-14 h-14 rounded-xl border text-lg font-semibold transition-all ${
                       conceptCount === n
-                        ? 'border-[#FF912D] bg-[#FA5A1E]/10 text-[#FF912D]'
+                        ? 'border-[#e42820] bg-[#e42820]/10 text-[#e42820]'
                         : 'border-white/10 hover:border-white/20 bg-white/5 text-white/60'
                     }`}
                   >
@@ -548,11 +548,11 @@ export default function Home() {
                     onClick={() => { setPeopleMode(opt.value); if (opt.value !== 'real') setReferenceImages([]); setProductDetailImages([]); }}
                     className={`p-4 rounded-xl border text-left transition-all ${
                       peopleMode === opt.value
-                        ? 'border-[#FF912D] bg-[#FA5A1E]/10'
+                        ? 'border-[#e42820] bg-[#e42820]/10'
                         : 'border-white/10 hover:border-white/20 bg-white/5'
                     }`}
                   >
-                    <svg className={`w-5 h-5 mb-2 ${peopleMode === opt.value ? 'text-[#FF912D]' : 'text-white/40'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className={`w-5 h-5 mb-2 ${peopleMode === opt.value ? 'text-[#e42820]' : 'text-white/40'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={opt.icon} />
                     </svg>
                     <p className="text-sm font-medium">{opt.label}</p>
@@ -614,29 +614,29 @@ export default function Home() {
             </div>
 
             {/* Reciclar KV */}
-            <div className={`rounded-xl border transition-all ${kvMode ? 'border-[#FF912D] bg-[#FA5A1E]/5' : 'border-white/10 bg-white/5'}`}>
+            <div className={`rounded-xl border transition-all ${kvMode ? 'border-[#e42820] bg-[#e42820]/5' : 'border-white/10 bg-white/5'}`}>
               <button
                 onClick={() => { setKvMode(v => !v); setKvReferenceImage(null); }}
                 className="w-full flex items-center justify-between px-4 py-3 text-left"
               >
                 <div className="flex items-center gap-3">
-                  <svg className={`w-5 h-5 ${kvMode ? 'text-[#FF912D]' : 'text-white/40'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className={`w-5 h-5 ${kvMode ? 'text-[#e42820]' : 'text-white/40'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
                   <div>
-                    <p className={`text-sm font-medium ${kvMode ? 'text-[#FF912D]' : 'text-white/70'}`}>Reciclar KV</p>
+                    <p className={`text-sm font-medium ${kvMode ? 'text-[#e42820]' : 'text-white/70'}`}>Reciclar KV</p>
                     <p className="text-xs text-white/40">Generá conceptos basados en un KV aprobado existente</p>
                   </div>
                 </div>
-                <div className={`w-9 h-5 rounded-full transition-colors ${kvMode ? 'bg-[#FA5A1E]' : 'bg-white/20'} flex items-center px-0.5`}>
+                <div className={`w-9 h-5 rounded-full transition-colors ${kvMode ? 'bg-[#e42820]' : 'bg-white/20'} flex items-center px-0.5`}>
                   <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform ${kvMode ? 'translate-x-4' : 'translate-x-0'}`} />
                 </div>
               </button>
               {kvMode && (
-                <div className="px-4 pb-4 space-y-3 border-t border-[#FA5A1E]/20 pt-3">
+                <div className="px-4 pb-4 space-y-3 border-t border-[#e42820]/20 pt-3">
                   <div className="flex gap-3 items-center">
                     {kvReferenceImage ? (
-                      <div className="relative w-24 h-24 rounded-xl overflow-hidden border border-[#FA5A1E]/30 shrink-0">
+                      <div className="relative w-24 h-24 rounded-xl overflow-hidden border border-[#e42820]/30 shrink-0">
                         <img src={`data:image/png;base64,${kvReferenceImage}`} alt="KV referencia" className="w-full h-full object-cover" />
                         <button
                           onClick={() => setKvReferenceImage(null)}
@@ -644,11 +644,11 @@ export default function Home() {
                         >×</button>
                       </div>
                     ) : (
-                      <label className="w-24 h-24 rounded-xl border-2 border-dashed border-[#FA5A1E]/40 hover:border-[#FF912D] flex flex-col items-center justify-center cursor-pointer transition-colors gap-1 shrink-0">
-                        <svg className="w-6 h-6 text-[#FF912D]/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <label className="w-24 h-24 rounded-xl border-2 border-dashed border-[#e42820]/40 hover:border-[#e42820] flex flex-col items-center justify-center cursor-pointer transition-colors gap-1 shrink-0">
+                        <svg className="w-6 h-6 text-[#e42820]/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
-                        <span className="text-xs text-[#FF912D]/60">KV</span>
+                        <span className="text-xs text-[#e42820]/60">KV</span>
                         <input type="file" accept="image/*" onChange={async e => {
                           const file = e.target.files?.[0];
                           if (!file) return;
@@ -659,7 +659,7 @@ export default function Home() {
                       </label>
                     )}
                     {kvReferenceImage && (
-                      <p className="text-xs text-[#FF912D]/80">KV cargado — se generarán variaciones adaptadas al brief.</p>
+                      <p className="text-xs text-[#e42820]/80">KV cargado — se generarán variaciones adaptadas al brief.</p>
                     )}
                   </div>
                 </div>
@@ -669,7 +669,7 @@ export default function Home() {
             <button
               onClick={generateConcepts}
               disabled={!brandKit || !brief.trim() || loading || (kvMode && !kvReferenceImage)}
-              className="bg-[#FA5A1E] hover:bg-[#FF912D] disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium px-6 py-3 rounded-xl transition-colors flex items-center gap-2"
+              className="bg-[#e42820] hover:bg-[#e42820] disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium px-6 py-3 rounded-xl transition-colors flex items-center gap-2"
             >
               {loading ? (
                 <>
@@ -721,7 +721,7 @@ export default function Home() {
                   <div key={img.id} className="relative">
                     <ImageCard image={img} selected={isSelected} onClick={() => toggleConceptSelection(img)} />
                     {isSelected && (
-                      <div className="absolute top-2 left-2 w-6 h-6 bg-[#FF912D] rounded-full flex items-center justify-center text-xs font-bold text-white">
+                      <div className="absolute top-2 left-2 w-6 h-6 bg-[#e42820] rounded-full flex items-center justify-center text-xs font-bold text-white">
                         {selIdx + 1}
                       </div>
                     )}
@@ -739,14 +739,14 @@ export default function Home() {
             </div>
 
             {productDetailImages.length > 0 && peopleMode !== 'none' && (
-              <div className="space-y-2 border border-[#FA5A1E]/20 bg-[#FA5A1E]/5 rounded-xl p-4">
-                <p className="text-xs font-medium text-[#FFB950]">Descripción del producto — editala para mejorar la fidelidad</p>
+              <div className="space-y-2 border border-[#e42820]/20 bg-[#e42820]/5 rounded-xl p-4">
+                <p className="text-xs font-medium text-[#e42820]">Descripción del producto — editala para mejorar la fidelidad</p>
                 <textarea
                   value={productDescription}
                   onChange={e => setProductDescription(e.target.value)}
                   rows={5}
                   placeholder="Describí el producto: tipo de prenda, color, estampado, detalles..."
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white/80 text-xs leading-relaxed focus:outline-none focus:border-[#FF912D] resize-none placeholder-white/20"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white/80 text-xs leading-relaxed focus:outline-none focus:border-[#e42820] resize-none placeholder-white/20"
                 />
               </div>
             )}
@@ -771,7 +771,7 @@ export default function Home() {
                   <button
                     onClick={generateSimilar}
                     disabled={loading}
-                    className="text-white/50 hover:text-[#FF912D] text-sm border border-white/10 hover:border-[#FA5A1E]/50 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40 flex items-center gap-1.5"
+                    className="text-white/50 hover:text-[#e42820] text-sm border border-white/10 hover:border-[#e42820]/50 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40 flex items-center gap-1.5"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -783,7 +783,7 @@ export default function Home() {
               <button
                 onClick={enterRefine}
                 disabled={selectedConcepts.length === 0 || loading}
-                className="bg-[#FA5A1E] hover:bg-[#FF912D] disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium px-6 py-3 rounded-xl transition-colors flex items-center gap-2"
+                className="bg-[#e42820] hover:bg-[#e42820] disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium px-6 py-3 rounded-xl transition-colors flex items-center gap-2"
               >
                 {loading ? (
                   <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{loadingMsg}{elapsedSec > 5 ? ` · ${elapsedSec}s` : ''}</>
@@ -803,7 +803,7 @@ export default function Home() {
                 <h2 className="text-2xl font-bold mb-1">
                   Afiná el concepto
                   {selectedConcepts.length > 1 && (
-                    <span className="ml-3 text-base font-normal text-[#FF912D]">{refineIndex + 1} de {selectedConcepts.length}</span>
+                    <span className="ml-3 text-base font-normal text-[#e42820]">{refineIndex + 1} de {selectedConcepts.length}</span>
                   )}
                 </h2>
                 <p className="text-white/50 text-sm">{refineImage.conceptName}</p>
@@ -852,7 +852,7 @@ export default function Home() {
                     <div className="space-y-1.5 max-h-32 overflow-y-auto">
                       {refineHistory.map((h, i) => (
                         <div key={i} className="bg-white/5 rounded-lg px-3 py-2 text-sm text-white/60 flex items-start gap-2">
-                          <span className="text-[#FF912D] mt-0.5">✓</span>{h}
+                          <span className="text-[#e42820] mt-0.5">✓</span>{h}
                         </div>
                       ))}
                     </div>
@@ -876,8 +876,8 @@ export default function Home() {
                           onClick={() => setRefineInput(preset)}
                           className={`text-xs px-3 py-1.5 rounded-lg transition-colors border ${
                             isClientPreset
-                              ? 'bg-[#FA5A1E]/10 border-[#FA5A1E]/30 text-[#FF912D] hover:bg-[#FA5A1E]/20'
-                              : 'bg-white/5 hover:bg-white/10 border-white/10 hover:border-[#FA5A1E]/50 text-white/60 hover:text-white'
+                              ? 'bg-[#e42820]/10 border-[#e42820]/30 text-[#e42820] hover:bg-[#e42820]/20'
+                              : 'bg-white/5 hover:bg-white/10 border-white/10 hover:border-[#e42820]/50 text-white/60 hover:text-white'
                           }`}
                         >
                           {preset}
@@ -896,7 +896,7 @@ export default function Home() {
                     onKeyDown={e => e.key === 'Enter' && !loading && applyRefinement()}
                     placeholder="O escribí tu ajuste..."
                     disabled={loading}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 focus:outline-none focus:border-[#FF912D] text-sm disabled:opacity-50"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 focus:outline-none focus:border-[#e42820] text-sm disabled:opacity-50"
                   />
                   <div className="flex gap-2">
                     <button
@@ -926,7 +926,7 @@ export default function Home() {
                     <button
                       onClick={saveRefinedAndNext}
                       disabled={loading}
-                      className="flex-1 bg-[#FA5A1E] hover:bg-[#FF912D] disabled:opacity-40 text-white font-medium px-4 py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                      className="flex-1 bg-[#e42820] hover:bg-[#e42820] disabled:opacity-40 text-white font-medium px-4 py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
                     >
                       Guardar y siguiente
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -937,7 +937,7 @@ export default function Home() {
                     <button
                       onClick={finishRefine}
                       disabled={loading}
-                      className="flex-1 bg-[#FA5A1E] hover:bg-[#FF912D] disabled:opacity-40 text-white font-medium px-4 py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                      className="flex-1 bg-[#e42820] hover:bg-[#e42820] disabled:opacity-40 text-white font-medium px-4 py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
                     >
                       Finalizar
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -992,7 +992,7 @@ export default function Home() {
             <div className="flex items-center gap-3 pt-2">
               <button
                 onClick={downloadAllSelected}
-                className="bg-[#FA5A1E] hover:bg-[#FF912D] text-white font-medium px-6 py-3 rounded-xl transition-colors flex items-center gap-2"
+                className="bg-[#e42820] hover:bg-[#e42820] text-white font-medium px-6 py-3 rounded-xl transition-colors flex items-center gap-2"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -1041,7 +1041,7 @@ export default function Home() {
                         onClick={() => setAdaptFormats(prev => prev.includes(f.key) ? prev.filter(x => x !== f.key) : [...prev, f.key])}
                         className={`px-4 py-2.5 rounded-xl border text-left transition-all ${
                           adaptFormats.includes(f.key)
-                            ? 'border-[#FF912D] bg-[#FA5A1E]/10'
+                            ? 'border-[#e42820] bg-[#e42820]/10'
                             : 'border-white/10 hover:border-white/20 bg-white/5'
                         }`}
                       >
