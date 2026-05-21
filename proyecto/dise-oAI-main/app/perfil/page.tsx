@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { createSupabaseBrowser } from '@/app/lib/supabase-browser';
 import { useRequireAuth } from '@/app/lib/use-auth';
+import Sidebar from '@/app/components/Sidebar';
 
 export default function PerfilPage() {
   const [apiKey, setApiKey] = useState('');
@@ -55,22 +55,15 @@ export default function PerfilPage() {
     return key.slice(0, 7) + '•'.repeat(20) + key.slice(-4);
   };
 
-  return (
-    <div className="min-h-screen bg-[#0a0a0c]">
-      <header className="bg-[#111111] border-b border-white/10 px-6 py-4 flex items-center justify-between text-white">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-[#e42820] flex items-center justify-center">
-            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          </div>
-          <span className="font-semibold text-lg">Condimento</span>
-        </div>
-        <Link href="/" className="text-sm text-white/50 hover:text-white/80 transition-colors border border-white/10 hover:border-white/20 px-3 py-1.5 rounded-lg">
-          ← Generar
-        </Link>
-      </header>
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/login';
+  };
 
+  return (
+    <div className="min-h-screen flex bg-[#0a0a0c]">
+      <Sidebar active="/perfil" onLogout={handleLogout} userEmail={email} />
+      <div className="flex-1 md:ml-56 min-h-screen pt-12 md:pt-0">
       <main className="max-w-lg mx-auto px-6 py-10 space-y-8">
         <div>
           <h1 className="text-2xl font-bold text-white mb-1">Perfil</h1>
@@ -152,6 +145,7 @@ export default function PerfilPage() {
           Volver al inicio
         </Link>
       </main>
+      </div>
     </div>
   );
 }

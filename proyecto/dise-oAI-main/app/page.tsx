@@ -8,6 +8,7 @@ import { BrandKit, GeneratedImage, Step, PeopleMode } from './types';
 import ImageCard from './components/ImageCard';
 import StepIndicator from './components/StepIndicator';
 import LoadingGrid from './components/LoadingGrid';
+import Sidebar from './components/Sidebar';
 
 export default function Home() {
   const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
@@ -113,7 +114,7 @@ export default function Home() {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
     const imgs = await Promise.all(files.slice(0, 2 - productDetailImages.length).map(readAsPng));
-    setProductDetailImages(prev => [...prev, ...imgs.map(d => d.split(',')[1] || d)].slice(0, 2));
+    setProductDetailImages(prev => [...prev, ...imgs].slice(0, 2));
     e.target.value = '';
   };
 
@@ -409,53 +410,18 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F0EBE3]">
-      {/* Header */}
-      <header className="bg-[#111111] border-b border-white/10 px-6 py-4 flex items-center justify-between text-white">
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[#e42820] flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <span className="font-semibold text-lg">Condimento</span>
+    <div className="min-h-screen flex bg-[#0a0a0c]">
+      <Sidebar active="/" onLogout={handleLogout} userEmail={userEmail} />
+      <div className="flex-1 md:ml-56 min-h-screen flex flex-col pt-12 md:pt-0">
+        {step !== 'brief' && (
+          <div className="border-b border-white/10 px-6 py-3 flex items-center gap-4 bg-[#111111]">
+            <StepIndicator currentStep={step} />
+            <button onClick={reset} className="ml-auto text-xs text-white/30 hover:text-white/60 transition-colors">
+              Nueva campaña
+            </button>
           </div>
-          {/* Main nav */}
-          <nav className="hidden sm:flex items-center gap-1">
-            <Link href="/" className="text-sm font-medium px-3 py-1.5 rounded-lg bg-white/10 text-white">
-              Creativos
-            </Link>
-            <Link href="/pdp" className="text-sm font-medium px-3 py-1.5 rounded-lg text-white/50 hover:text-white/80 hover:bg-white/5 transition-colors">
-              Imágenes PDP
-            </Link>
-          </nav>
-        </div>
-        <div className="flex items-center gap-3">
-          <StepIndicator currentStep={step} />
-          <Link
-            href="/config"
-            className="text-sm text-white/50 hover:text-white/80 transition-colors border border-white/10 hover:border-white/20 px-3 py-1.5 rounded-lg"
-          >
-            Mi marca
-          </Link>
-          <Link
-            href="/perfil"
-            className="text-sm text-white/50 hover:text-white/80 transition-colors border border-white/10 hover:border-white/20 px-3 py-1.5 rounded-lg"
-          >
-            Perfil
-          </Link>
-          <button
-            onClick={handleLogout}
-            className="text-sm text-white/40 hover:text-white/70 transition-colors px-2 py-1.5 rounded-lg"
-            title={userEmail}
-          >
-            Salir
-          </button>
-        </div>
-      </header>
-
-      <main className="max-w-5xl mx-auto px-6 py-10 space-y-10">
+        )}
+      <main className="max-w-5xl mx-auto w-full px-6 py-10 space-y-10">
 
         {/* Error */}
         {error && (
@@ -530,19 +496,22 @@ export default function Home() {
         {step === 'brief' && (
           <div className="space-y-8">
             <div>
-              <h1 className="text-3xl font-bold mb-2">Nueva pieza</h1>
-              <p className="text-white/50">Escribí el brief de la campaña y generá tus creativos.</p>
+              <h1 className="text-3xl font-bold text-white mb-1">Nueva campaña</h1>
+              <p className="text-white/40 text-sm">Describí lo que necesitás y la IA generará tus creativos.</p>
             </div>
 
             {/* Brief generator */}
             <div className="space-y-3">
-              <label className="text-sm font-medium text-white/70">Solicitud del cliente</label>
+              <div>
+                <label className="text-sm font-semibold text-white/80">¿Dime que quieres que diseñe para ti?</label>
+                <p className="text-xs text-white/35 mt-1">Sé específico: ¿hay descuentos? ¿Es un lanzamiento, una sale o una campaña de marca? Incluí fechas, productos destacados, mecánicas (cuotas, envío gratis) y cualquier detalle relevante.</p>
+              </div>
               <div className="flex gap-2 items-start">
                 <textarea
                   value={clientRequest}
                   onChange={e => setClientRequest(e.target.value)}
-                  placeholder="Pegá el mensaje del cliente tal como llegó. Ej: 'Necesito algo para el lanzamiento de nuestra colección de verano...'"
-                  rows={3}
+                  placeholder="Ej: 'Quiero lanzar la campaña de verano con 30% OFF en toda la colección. Los productos estrella son vestidos y trajes de baño. Público: mujeres 25-40. Paleta cálida, colores coral y turquesa. Termina el 31 de enero.'"
+                  rows={4}
                   className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 focus:outline-none focus:border-[#e42820] resize-none text-sm leading-relaxed"
                 />
                 <button
@@ -629,7 +598,7 @@ export default function Home() {
                 <div className="flex gap-3 flex-wrap">
                   {productDetailImages.map((img, i) => (
                     <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-white/10">
-                      <img src={`data:image/png;base64,${img}`} alt={`prod ${i+1}`} className="w-full h-full object-cover" />
+                      <img src={img} alt={`prod ${i+1}`} className="w-full h-full object-cover" />
                       <button
                         onClick={() => setProductDetailImages(prev => prev.filter((_, idx) => idx !== i))}
                         className="absolute top-1 right-1 w-5 h-5 bg-black/70 rounded-full flex items-center justify-center text-white/80 hover:text-white text-xs"
@@ -1118,6 +1087,7 @@ export default function Home() {
           </div>
         )}
       </main>
+      </div>
     </div>
   );
 }

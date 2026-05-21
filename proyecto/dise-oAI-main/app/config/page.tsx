@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { BrandKit } from '@/app/types';
 import { useRequireAuth } from '@/app/lib/use-auth';
+import { createSupabaseBrowser } from '@/app/lib/supabase-browser';
+import Sidebar from '@/app/components/Sidebar';
 
 async function extractTextFromPdf(file: File): Promise<string> {
   const pdfjsLib = await import('pdfjs-dist');
@@ -41,6 +43,7 @@ const SECONDARY_LABELS = ['S1', 'S2', 'S3'];
 
 export default function ConfigPage() {
   useRequireAuth();
+  const supabase = createSupabaseBrowser();
   const [form, setForm] = useState(EMPTY_FORM);
   const [hasKit, setHasKit] = useState(false);
   const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
@@ -194,22 +197,15 @@ export default function ConfigPage() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-[#0a0a0c]">
-      <header className="bg-[#111111] border-b border-white/10 px-6 py-4 flex items-center justify-between text-white">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-[#e42820] flex items-center justify-center">
-            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          </div>
-          <span className="font-semibold text-lg">Condimento</span>
-        </div>
-        <Link href="/" className="text-sm text-white/50 hover:text-white/80 transition-colors border border-white/10 hover:border-white/20 px-3 py-1.5 rounded-lg">
-          ← Generar
-        </Link>
-      </header>
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/login';
+  };
 
+  return (
+    <div className="min-h-screen flex bg-[#0a0a0c]">
+      <Sidebar active="/config" onLogout={handleLogout} />
+      <div className="flex-1 md:ml-56 min-h-screen pt-12 md:pt-0">
       <main className="max-w-2xl mx-auto px-6 py-10">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white mb-1">Mi marca</h1>
@@ -443,6 +439,7 @@ export default function ConfigPage() {
           Volver al inicio
         </Link>
       </main>
+      </div>
     </div>
   );
 }
