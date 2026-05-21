@@ -20,7 +20,11 @@ export default function LoginPage() {
     setSuccess('');
 
     if (isSignUp) {
-      const { error } = await supabase.auth.signUp({ email, password });
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: `${window.location.origin}/` },
+      });
       if (error) { setError(error.message); }
       else { setSuccess('Revisá tu email para confirmar la cuenta.'); }
     } else {
