@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { createSupabaseBrowser } from '@/app/lib/supabase-browser';
+import { useRequireAuth } from '@/app/lib/use-auth';
 
 export default function PerfilPage() {
   const [apiKey, setApiKey] = useState('');
@@ -12,6 +13,7 @@ export default function PerfilPage() {
   const [email, setEmail] = useState('');
   const [showKey, setShowKey] = useState(false);
 
+  useRequireAuth();
   const supabase = createSupabaseBrowser();
 
   useEffect(() => {

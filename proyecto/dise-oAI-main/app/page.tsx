@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { createSupabaseBrowser } from '@/app/lib/supabase-browser';
+import { useRequireAuth } from '@/app/lib/use-auth';
 import { BrandKit, GeneratedImage, Step, PeopleMode } from './types';
 import ImageCard from './components/ImageCard';
 import StepIndicator from './components/StepIndicator';
@@ -45,6 +46,7 @@ export default function Home() {
   const [refineImageHistory, setRefineImageHistory] = useState<string[]>([]);
   const refineInputRef = useRef<HTMLInputElement>(null);
 
+  useRequireAuth();
   const supabase = createSupabaseBrowser();
 
   const startLoading = (msg: string) => {

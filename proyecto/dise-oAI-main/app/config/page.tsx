@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { BrandKit } from '@/app/types';
+import { useRequireAuth } from '@/app/lib/use-auth';
 
 async function extractTextFromPdf(file: File): Promise<string> {
   const pdfjsLib = await import('pdfjs-dist');
@@ -39,6 +40,7 @@ const PRIMARY_LABELS = ['P1', 'P2', 'P3'];
 const SECONDARY_LABELS = ['S1', 'S2', 'S3'];
 
 export default function ConfigPage() {
+  useRequireAuth();
   const [form, setForm] = useState(EMPTY_FORM);
   const [hasKit, setHasKit] = useState(false);
   const [extracting, setExtracting] = useState(false);
