@@ -31,8 +31,7 @@ export default function Home() {
   const [peopleMode, setPeopleMode] = useState<PeopleMode>('none');
   const [productDetailImages, setProductDetailImages] = useState<string[]>([]);
   const [referenceImages, setReferenceImages] = useState<string[]>([]);
-  const [kvMode, setKvMode] = useState(false);
-  const [kvReferenceImage, setKvReferenceImage] = useState<string | null>(null);
+
 
   const [concepts, setConcepts] = useState<GeneratedImage[]>([]);
   const [generatingCount, setGeneratingCount] = useState(0);
@@ -171,15 +170,14 @@ export default function Home() {
 
   const generateConcepts = async () => {
     if (!brandKit || !brief.trim()) return;
-    if (kvMode && !kvReferenceImage) return;
-    const count = kvMode ? conceptCount : conceptCount;
+    const count = conceptCount;
     setGeneratingCount(count);
     setConcepts([]);
     setSelectedConcepts([]);
     setProductDescription('');
     setPersonDescription('');
     setStep('concepts');
-    startLoading(kvMode ? 'Reciclando KV...' : 'Generando conceptos...');
+    startLoading('Generando conceptos...');
     setError('');
     try {
       const res = await fetch('/api/generate-concepts', {
@@ -192,7 +190,6 @@ export default function Home() {
           productDetailImages,
           referenceImages,
           count,
-          ...(kvMode && kvReferenceImage ? { styleReferenceImages: [kvReferenceImage] } : {}),
         }),
       });
       if (!res.ok) throw new Error(await res.text());
@@ -401,8 +398,6 @@ export default function Home() {
     setPeopleMode('none');
     setProductDetailImages([]);
     setReferenceImages([]);
-    setKvMode(false);
-    setKvReferenceImage(null);
     setAdaptFormats([]);
     setAdaptedImages([]);
   };
@@ -680,62 +675,9 @@ export default function Home() {
               )}
             </div>
 
-            {/* Reciclar KV */}
-            <div className={`rounded-xl border transition-all ${kvMode ? 'border-[#e42820] bg-[#e42820]/5' : 'border-white/10 bg-white/5'}`}>
-              <button
-                onClick={() => { setKvMode(v => !v); setKvReferenceImage(null); }}
-                className="w-full flex items-center justify-between px-4 py-3 text-left"
-              >
-                <div className="flex items-center gap-3">
-                  <svg className={`w-5 h-5 ${kvMode ? 'text-[#e42820]' : 'text-white/40'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  <div>
-                    <p className={`text-sm font-medium ${kvMode ? 'text-[#e42820]' : 'text-white/70'}`}>Reciclar KV</p>
-                    <p className="text-xs text-white/40">Generá conceptos basados en un KV aprobado existente</p>
-                  </div>
-                </div>
-                <div className={`w-9 h-5 rounded-full transition-colors ${kvMode ? 'bg-[#e42820]' : 'bg-white/20'} flex items-center px-0.5`}>
-                  <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform ${kvMode ? 'translate-x-4' : 'translate-x-0'}`} />
-                </div>
-              </button>
-              {kvMode && (
-                <div className="px-4 pb-4 space-y-3 border-t border-[#e42820]/20 pt-3">
-                  <div className="flex gap-3 items-center">
-                    {kvReferenceImage ? (
-                      <div className="relative w-24 h-24 rounded-xl overflow-hidden border border-[#e42820]/30 shrink-0">
-                        <img src={`data:image/png;base64,${kvReferenceImage}`} alt="KV referencia" className="w-full h-full object-cover" />
-                        <button
-                          onClick={() => setKvReferenceImage(null)}
-                          className="absolute top-1 right-1 w-5 h-5 bg-black/70 rounded-full flex items-center justify-center text-white/80 hover:text-white text-xs"
-                        >×</button>
-                      </div>
-                    ) : (
-                      <label className="w-24 h-24 rounded-xl border-2 border-dashed border-[#e42820]/40 hover:border-[#e42820] flex flex-col items-center justify-center cursor-pointer transition-colors gap-1 shrink-0">
-                        <svg className="w-6 h-6 text-[#e42820]/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        <span className="text-xs text-[#e42820]/60">KV</span>
-                        <input type="file" accept="image/*" onChange={async e => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          const png = await readAsPng(file);
-                          setKvReferenceImage(png.split(',')[1] || png);
-                          e.target.value = '';
-                        }} className="hidden" />
-                      </label>
-                    )}
-                    {kvReferenceImage && (
-                      <p className="text-xs text-[#e42820]/80">KV cargado — se generarán variaciones adaptadas al brief.</p>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
             <button
               onClick={generateConcepts}
-              disabled={!brandKit || !brief.trim() || loading || (kvMode && !kvReferenceImage)}
+              disabled={!brandKit || !brief.trim() || loading}
               className="bg-[#e42820] hover:bg-[#e42820] disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium px-6 py-3 rounded-xl transition-colors flex items-center gap-2"
             >
               {loading ? (
