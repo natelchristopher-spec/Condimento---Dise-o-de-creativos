@@ -2,13 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { BrandKit } from '@/app/types';
 import { buildBrandKitContext } from '@/app/api/brandKitContext';
+import { getUserContext } from '@/app/lib/get-user-context';
 
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
+  const ctx = await getUserContext();
+  if (!ctx) return NextResponse.json({ error: 'Configurá tu API key de OpenAI en el perfil.' }, { status: 401 });
+
   const { clientRequest, brandKit }: { clientRequest: string; brandKit: BrandKit | null } = await req.json();
 
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const openai = new OpenAI({ apiKey: ctx.openaiApiKey });
 
   const brandContext = brandKit ? `\nBRAND KIT DEL CLIENTE:\n${buildBrandKitContext(brandKit)}` : '';
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI, { toFile } from 'openai';
+import { getUserContext } from '@/app/lib/get-user-context';
 
 export const maxDuration = 300;
 
@@ -64,12 +65,15 @@ const FORMAT_CONFIG: Record<Format, { size: string; prompt: string }> = {
 };
 
 export async function POST(req: NextRequest) {
+  const ctx = await getUserContext();
+  if (!ctx) return NextResponse.json({ error: 'Configurá tu API key de OpenAI en el perfil.' }, { status: 401 });
+
   const { imageBase64, format }: { imageBase64: string; format: Format } = await req.json();
 
   const config = FORMAT_CONFIG[format];
   if (!config) return NextResponse.json({ error: 'Invalid format' }, { status: 400 });
 
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const openai = new OpenAI({ apiKey: ctx.openaiApiKey });
 
   try {
     const buffer = Buffer.from(imageBase64, 'base64');

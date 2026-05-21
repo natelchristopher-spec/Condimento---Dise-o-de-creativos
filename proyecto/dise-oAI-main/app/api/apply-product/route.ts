@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI, { toFile } from 'openai';
+import { getUserContext } from '@/app/lib/get-user-context';
 
 export const maxDuration = 300;
 
 export async function POST(req: NextRequest) {
+  const ctx = await getUserContext();
+  if (!ctx) return NextResponse.json({ error: 'Configurá tu API key de OpenAI en el perfil.' }, { status: 401 });
+
   const { conceptImageBase64, productDetailImages, productDescription, peopleMode, personDescription }: {
     conceptImageBase64: string;
     productDetailImages: string[];
@@ -12,7 +16,7 @@ export async function POST(req: NextRequest) {
     personDescription: string;
   } = await req.json();
 
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const openai = new OpenAI({ apiKey: ctx.openaiApiKey });
 
   const hasProductImage = productDetailImages.length > 0;
   const hasPerson = peopleMode === 'real' && personDescription;

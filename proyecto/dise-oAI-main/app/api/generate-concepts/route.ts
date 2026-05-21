@@ -3,6 +3,7 @@ import OpenAI, { toFile } from 'openai';
 import type { ChatCompletionContentPart } from 'openai/resources/chat/completions';
 import { BrandKit } from '@/app/types';
 import { buildBrandKitContext } from '@/app/api/brandKitContext';
+import { getUserContext } from '@/app/lib/get-user-context';
 
 function isRefusal(text: string): boolean {
   if (!text || text.length < 30) return true;
@@ -117,10 +118,16 @@ async function generateWithGptImage2(
 }
 
 export async function POST(req: NextRequest) {
+  const ctx = await getUserContext();
+  if (!ctx) {
+    const stream = new ReadableStream({ start(c) { c.enqueue(new TextEncoder().encode('data: {"error":"Configurá tu API key de OpenAI en el perfil."}\n\n')); c.close(); } });
+    return new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } });
+  }
+
   const {
     brief, brandKit, peopleMode = 'none',
     productDetailImages = [], referenceImages = [],
-    styleReferenceImages = [], count = 6,
+    styleReferenceImages = [], count = 4,
   }: {
     brief: string;
     brandKit: BrandKit;
@@ -131,11 +138,11 @@ export async function POST(req: NextRequest) {
     count: number;
   } = await req.json();
 
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const openai = new OpenAI({ apiKey: ctx.openaiApiKey });
   const brandKitContext = buildBrandKitContext(brandKit);
 
   const isSimilarMode = styleReferenceImages.length > 0;
-  const targetCount = isSimilarMode ? Math.max(1, Math.min(count, 6)) : 6;
+  const targetCount = Math.max(1, Math.min(count, 4));
   // Raw base64 → data URLs for Responses API / vision
   const styleReferenceDataUrls = styleReferenceImages.map(
     (b64: string) => b64.startsWith('data:') ? b64 : `data:image/png;base64,${b64}`

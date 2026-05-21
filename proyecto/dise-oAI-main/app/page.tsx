@@ -2,26 +2,18 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import { createSupabaseBrowser } from '@/app/lib/supabase-browser';
 import { BrandKit, GeneratedImage, Step, PeopleMode } from './types';
 import ImageCard from './components/ImageCard';
 import StepIndicator from './components/StepIndicator';
 import LoadingGrid from './components/LoadingGrid';
-import SessionDrawer from './components/SessionDrawer';
-import { dbSaveSession, dbGetAllSessions, dbDeleteSession, type SavedSession } from './lib/db';
-
-const LAST_SESSION_KEY = 'disenoai_last_session_id';
 
 export default function Home() {
-  const [clients, setClients] = useState<BrandKit[]>([]);
-  const [selectedClient, setSelectedClient] = useState<BrandKit | null>(null);
+  const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
+  const [userEmail, setUserEmail] = useState('');
   const [brief, setBrief] = useState('');
   const [clientRequest, setClientRequest] = useState('');
   const [generatingBrief, setGeneratingBrief] = useState(false);
-
-  const [showDrawer, setShowDrawer] = useState(false);
-  const [savedSessions, setSavedSessions] = useState<SavedSession[]>([]);
-  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [adaptFormats, setAdaptFormats] = useState<string[]>([]);
   const [adaptedImages, setAdaptedImages] = useState<{ format: string; label: string; conceptId: string; base64: string }[]>([]);
@@ -33,6 +25,7 @@ export default function Home() {
   const loadingStartRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [error, setError] = useState('');
 
+  const [conceptCount, setConceptCount] = useState(3);
   const [peopleMode, setPeopleMode] = useState<PeopleMode>('none');
   const [productDetailImages, setProductDetailImages] = useState<string[]>([]);
   const [referenceImages, setReferenceImages] = useState<string[]>([]);
@@ -52,6 +45,7 @@ export default function Home() {
   const [refineImageHistory, setRefineImageHistory] = useState<string[]>([]);
   const refineInputRef = useRef<HTMLInputElement>(null);
 
+  const supabase = createSupabaseBrowser();
 
   const startLoading = (msg: string) => {
     setLoading(true);
@@ -68,8 +62,19 @@ export default function Home() {
   };
 
   useEffect(() => {
-    fetch('/api/brand-kits').then(r => r.json()).then(setClients).catch(console.error);
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) setUserEmail(data.user.email || '');
+    });
+    fetch('/api/brand-kits').then(r => r.json()).then(kit => {
+      if (kit && !kit.error) setBrandKit(kit);
+    }).catch(console.error);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/login';
+  };
 
   const readAsPng = (file: File): Promise<string> =>
     new Promise(resolve => {
@@ -87,14 +92,10 @@ export default function Home() {
           }
           try {
             const canvas = document.createElement('canvas');
-            canvas.width = w;
-            canvas.height = h;
+            canvas.width = w; canvas.height = h;
             canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
-            const result = canvas.toDataURL('image/jpeg', 0.75);
-            resolve(result.length > 100 ? result : dataUrl);
-          } catch {
-            resolve(dataUrl);
-          }
+            resolve(canvas.toDataURL('image/png'));
+          } catch { resolve(dataUrl); }
         };
         img.onerror = () => resolve(dataUrl);
         img.src = dataUrl;
@@ -103,36 +104,53 @@ export default function Home() {
       reader.readAsDataURL(file);
     });
 
-  const handleProductDetailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleProductDetailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    files.forEach(async file => {
-      const png = await readAsPng(file);
-      setProductDetailImages(prev => prev.length < 2 ? [...prev, png] : prev);
-    });
+    if (!files.length) return;
+    const imgs = await Promise.all(files.slice(0, 2 - productDetailImages.length).map(readAsPng));
+    setProductDetailImages(prev => [...prev, ...imgs.map(d => d.split(',')[1] || d)].slice(0, 2));
     e.target.value = '';
   };
 
-  const handleReferenceImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleReferenceImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    files.forEach(async file => {
-      const png = await readAsPng(file);
-      setReferenceImages(prev => prev.length < 2 ? [...prev, png] : prev);
-    });
+    if (!files.length) return;
+    const imgs = await Promise.all(files.slice(0, 2 - referenceImages.length).map(readAsPng));
+    setReferenceImages(prev => [...prev, ...imgs.map(d => d.startsWith('data:') ? d : `data:image/png;base64,${d}`)].slice(0, 2));
     e.target.value = '';
   };
 
-  const parseConceptStream = async (res: Response, onImage: (img: GeneratedImage) => void): Promise<{ productDescription: string; personDescription: string }> => {
+  const generateBrief = async () => {
+    if (!clientRequest.trim()) return;
+    setGeneratingBrief(true);
+    try {
+      const res = await fetch('/api/generate-brief', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientRequest, brandKit }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const { brief: generated } = await res.json();
+      setBrief(generated);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error generando brief');
+    } finally {
+      setGeneratingBrief(false);
+    }
+  };
+
+  const parseConceptStream = async (res: Response, onImage: (img: GeneratedImage) => void) => {
     const reader = res.body!.getReader();
     const decoder = new TextDecoder();
-    let buffer = '';
+    let buf = '';
     let productDesc = '';
     let personDesc = '';
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const parts = buffer.split('\n\n');
-      buffer = parts.pop() ?? '';
+      buf += decoder.decode(value, { stream: true });
+      const parts = buf.split('\n\n');
+      buf = parts.pop() || '';
       for (const part of parts) {
         if (!part.startsWith('data: ')) continue;
         try {
@@ -146,9 +164,9 @@ export default function Home() {
   };
 
   const generateConcepts = async () => {
-    if (!selectedClient || !brief.trim()) return;
+    if (!brandKit || !brief.trim()) return;
     if (kvMode && !kvReferenceImage) return;
-    const count = kvMode ? 5 : 6;
+    const count = kvMode ? conceptCount : conceptCount;
     setGeneratingCount(count);
     setConcepts([]);
     setSelectedConcepts([]);
@@ -163,11 +181,12 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           brief,
-          brandKit: selectedClient,
+          brandKit,
           peopleMode,
           productDetailImages,
           referenceImages,
-          ...(kvMode && kvReferenceImage ? { styleReferenceImages: [kvReferenceImage], count: 5 } : {}),
+          count,
+          ...(kvMode && kvReferenceImage ? { styleReferenceImages: [kvReferenceImage] } : {}),
         }),
       });
       if (!res.ok) throw new Error(await res.text());
@@ -185,11 +204,11 @@ export default function Home() {
   };
 
   const generateSimilar = async () => {
-    if (selectedConcepts.length === 0 || !selectedClient || !brief.trim()) return;
-    const newCount = 6 - selectedConcepts.length;
+    if (selectedConcepts.length === 0 || !brandKit || !brief.trim()) return;
+    const newCount = conceptCount - selectedConcepts.length;
     if (newCount <= 0) return;
     const pinned = [...selectedConcepts];
-    setGeneratingCount(6);
+    setGeneratingCount(conceptCount);
     setConcepts([...pinned]);
     startLoading(`Generando ${newCount} similar${newCount > 1 ? 'es' : ''}...`);
     setError('');
@@ -199,7 +218,7 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           brief,
-          brandKit: selectedClient,
+          brandKit,
           peopleMode,
           productDetailImages,
           referenceImages,
@@ -220,186 +239,149 @@ export default function Home() {
     }
   };
 
-  const generateBrief = async () => {
-    if (!clientRequest.trim()) return;
-    setGeneratingBrief(true);
+  const toggleConceptSelection = (img: GeneratedImage) => {
+    setSelectedConcepts(prev => {
+      const exists = prev.find(c => c.id === img.id);
+      if (exists) return prev.filter(c => c.id !== img.id);
+      if (prev.length >= 3) return prev;
+      return [...prev, img];
+    });
+  };
+
+  const applyRefinement = async () => {
+    if (!refineInput.trim() || !refineImage || !brandKit) return;
+    const instruction = refineInput.trim();
+    setRefineInput('');
+    startLoading('Aplicando ajuste...');
+    setError('');
     try {
-      const res = await fetch('/api/generate-brief', {
+      const res = await fetch('/api/adjust-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clientRequest, brandKit: selectedClient }),
+        body: JSON.stringify({
+          imageBase64: refineImage.base64,
+          instruction,
+          productDetailImages,
+        }),
       });
-      if (!res.ok) throw new Error('Error generando brief');
-      const data = await res.json();
-      setBrief(data.brief || '');
-    } catch {
-      setError('No se pudo generar el brief. Escribilo manualmente.');
+      if (!res.ok) throw new Error(await res.text());
+      const { base64, error: apiError } = await res.json();
+      if (apiError) throw new Error(apiError);
+      setRefineImageHistory(prev => [...prev, refineImage.base64]);
+      setRefineHistory(prev => [...prev, instruction]);
+      const updated = { ...refineImage, base64 };
+      setRefineImage(updated);
+      setSelectedConcepts(prev => prev.map(c => c.id === refineImage.id ? updated : c));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error aplicando ajuste');
     } finally {
-      setGeneratingBrief(false);
+      stopLoading();
+      setTimeout(() => refineInputRef.current?.focus(), 50);
     }
+  };
+
+  const undoRefinement = () => {
+    if (!refineImageHistory.length || !refineImage) return;
+    const prev = refineImageHistory[refineImageHistory.length - 1];
+    setRefineImageHistory(h => h.slice(0, -1));
+    setRefineHistory(h => h.slice(0, -1));
+    const restored = { ...refineImage, base64: prev };
+    setRefineImage(restored);
+    setSelectedConcepts(prev2 => prev2.map(c => c.id === refineImage.id ? restored : c));
+  };
+
+  const enterRefine = async () => {
+    if (selectedConcepts.length === 0 || !brandKit) return;
+    const first = selectedConcepts[0];
+    setRefineIndex(0);
+    setRefineHistory([]);
+    setRefineImageHistory([]);
+    setRefineInput('');
+
+    if (productDetailImages.length > 0 && peopleMode !== 'real') {
+      startLoading('Aplicando producto...');
+      setError('');
+      try {
+        const res = await fetch('/api/apply-product', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            conceptImageBase64: first.base64,
+            productDetailImages,
+            productDescription,
+            peopleMode,
+            personDescription,
+          }),
+        });
+        const { base64 } = await res.json();
+        const updated = base64 ? { ...first, base64 } : first;
+        setRefineImage(updated);
+        setSelectedConcepts(prev => prev.map(c => c.id === first.id ? updated : c));
+      } catch {
+        setRefineImage(first);
+      } finally {
+        stopLoading();
+      }
+    } else {
+      setRefineImage(first);
+    }
+    setStep('refine');
+  };
+
+  const saveRefinedAndNext = () => {
+    const nextIndex = refineIndex + 1;
+    const next = selectedConcepts[nextIndex];
+    setRefineIndex(nextIndex);
+    setRefineHistory([]);
+    setRefineImageHistory([]);
+    setRefineInput('');
+    setRefineImage(next);
+  };
+
+  const finishRefine = () => setStep('done');
+
+  const downloadAllSelected = () => {
+    selectedConcepts.forEach((img, i) => {
+      const a = document.createElement('a');
+      a.href = `data:image/png;base64,${img.base64}`;
+      a.download = `${brandKit?.name || 'concepto'}-${i + 1}-${img.conceptName.replace(/\s+/g, '-')}.png`;
+      a.click();
+    });
   };
 
   const generateAdaptations = async () => {
     if (adaptFormats.length === 0 || selectedConcepts.length === 0) return;
     setGeneratingAdaptations(true);
-    setAdaptedImages([]);
-    const FORMAT_LABELS: Record<string, string> = {
-      story: 'Story 9:16', feed45: 'Feed 4:5', square: 'Cuadrado 1:1', landscape: 'Landscape 16:9',
-      pmax_square: 'PMax 1:1', pmax_landscape: 'PMax 1.91:1', pmax_portrait: 'PMax 4:5',
-      banner_desktop: 'Banner Desktop', banner_mobile: 'Banner Mobile', webpush: 'Webpush',
-      mailing: 'Mailing',
-    };
     try {
-      const tasks = selectedConcepts.flatMap(concept =>
-        adaptFormats.map(format => ({ concept, format }))
-      );
       const results = await Promise.all(
-        tasks.map(async ({ concept, format }) => {
-          const res = await fetch('/api/adapt-size', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ imageBase64: concept.base64, format }),
-          });
-          if (!res.ok) return null;
-          const data = await res.json();
-          if (!data.base64) return null;
-          return { format, label: FORMAT_LABELS[format] || format, conceptId: concept.id, base64: data.base64 };
-        })
+        selectedConcepts.flatMap(concept =>
+          adaptFormats.map(async format => {
+            const res = await fetch('/api/adapt-size', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ imageBase64: concept.base64, format }),
+            });
+            if (!res.ok) return null;
+            const data = await res.json();
+            const FORMAT_LABELS: Record<string, string> = {
+              story: 'Story 9:16', feed45: 'Feed 4:5', square: 'Cuadrado 1:1', landscape: 'Landscape 16:9',
+              pmax_square: 'PMax 1:1', pmax_landscape: 'PMax 1.91:1', pmax_portrait: 'PMax 4:5',
+              banner_desktop: 'Banner Desktop', banner_mobile: 'Banner Mobile', webpush: 'Webpush', mailing: 'Mailing',
+            };
+            return { format, label: FORMAT_LABELS[format] || format, conceptId: concept.id, base64: data.base64 };
+          })
+        )
       );
       setAdaptedImages(results.filter(Boolean) as { format: string; label: string; conceptId: string; base64: string }[]);
-    } catch {
-      setError('Error generando adaptaciones');
     } finally {
       setGeneratingAdaptations(false);
     }
   };
 
-  const toggleConceptSelection = (img: GeneratedImage) => {
-    setSelectedConcepts(prev =>
-      prev.find(c => c.id === img.id) ? prev.filter(c => c.id !== img.id) : [...prev, img]
-    );
-  };
-
-  const enterRefine = async () => {
-    if (selectedConcepts.length === 0) return;
-    const isProductEcommerce = peopleMode === 'none' && productDetailImages.length > 0;
-    // In e-commerce mode the product is already embedded via images.edit — skip apply-product
-    if (productDetailImages.length > 0 && !isProductEcommerce) {
-      startLoading(`Aplicando producto a ${selectedConcepts.length} concepto${selectedConcepts.length > 1 ? 's' : ''}... (puede tardar 1-2 min)`);
-      setError('');
-      try {
-        const results = await Promise.all(
-          selectedConcepts.map(async concept => {
-            const res = await fetch('/api/apply-product', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                conceptImageBase64: concept.base64,
-                productDetailImages,
-                productDescription,
-                peopleMode,
-                personDescription,
-              }),
-            });
-            if (!res.ok) return { concept, applied: false };
-            const data = await res.json();
-            return {
-              concept: data.base64 ? { ...concept, base64: data.base64 } : concept,
-              applied: data.applied === true,
-            };
-          })
-        );
-        const applied = results.map(r => r.concept);
-        const anyFailed = results.some(r => !r.applied);
-        if (anyFailed) {
-          setError('No se pudo aplicar el producto en uno o más conceptos. Se usará el concepto original para afinar.');
-        }
-        setSelectedConcepts(applied);
-        setRefineIndex(0);
-        setRefineImage(applied[0]);
-        setRefineHistory([]);
-        setStep('refine');
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Error aplicando producto');
-      } finally {
-        stopLoading();
-      }
-      return;
-    }
-    setRefineIndex(0);
-    setRefineImage(selectedConcepts[0]);
-    setRefineHistory([]);
-    setStep('refine');
-  };
-
-  const saveRefinedAndNext = () => {
-    if (!refineImage) return;
-    const updated = selectedConcepts.map((c, i) => i === refineIndex ? refineImage : c);
-    setSelectedConcepts(updated);
-    const nextIndex = refineIndex + 1;
-    if (nextIndex < updated.length) {
-      setRefineIndex(nextIndex);
-      setRefineImage(updated[nextIndex]);
-      setRefineHistory([]);
-      setRefineImageHistory([]);
-    }
-  };
-
-  const downloadAllSelected = () => {
-    selectedConcepts.forEach((img, i) => {
-      setTimeout(() => {
-        const a = document.createElement('a');
-        a.href = `data:image/png;base64,${img.base64}`;
-        a.download = `${selectedClient?.name || 'concepto'}-${img.conceptName.replace(/\s+/g, '-')}.png`;
-        a.click();
-      }, i * 300);
-    });
-  };
-
-  const applyRefinement = async () => {
-    if (!refineImage || !refineInput.trim()) return;
-    startLoading('Aplicando ajuste...');
-    setError('');
-    const instruction = refineInput.trim();
-    setRefineInput('');
-    try {
-      const res = await fetch('/api/adjust-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: refineImage.base64, instruction, productDetailImages }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
-      setRefineImageHistory(prev => [...prev, refineImage.base64]);
-      setRefineImage(prev => prev ? { ...prev, id: Math.random().toString(36).slice(2), base64: data.base64 } : prev);
-      setRefineHistory(prev => [...prev, instruction]);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error aplicando refinamiento');
-    } finally {
-      stopLoading();
-      setTimeout(() => refineInputRef.current?.focus(), 100);
-    }
-  };
-
-  const undoRefinement = () => {
-    if (refineImageHistory.length === 0) return;
-    const prev = refineImageHistory[refineImageHistory.length - 1];
-    setRefineImageHistory(h => h.slice(0, -1));
-    setRefineImage(img => img ? { ...img, id: Math.random().toString(36).slice(2), base64: prev } : img);
-    setRefineHistory(h => h.slice(0, -1));
-  };
-
-  const finishRefine = () => {
-    if (!refineImage) return;
-    const updated = selectedConcepts.map((c, i) => i === refineIndex ? refineImage : c);
-    setSelectedConcepts(updated);
-    setStep('done');
-  };
-
-
   const reset = () => {
     setStep('brief');
     setBrief('');
+    setClientRequest('');
     setConcepts([]);
     setSelectedConcepts([]);
     setRefineIndex(0);
@@ -415,8 +397,8 @@ export default function Home() {
     setReferenceImages([]);
     setKvMode(false);
     setKvReferenceImage(null);
-    setCurrentSessionId(null);
-    localStorage.removeItem(LAST_SESSION_KEY);
+    setAdaptFormats([]);
+    setAdaptedImages([]);
   };
 
   const regenerateConcepts = async () => {
@@ -425,231 +407,39 @@ export default function Home() {
     await generateConcepts();
   };
 
-  const applySessionData = useCallback((d: Record<string, unknown>, allClients: BrandKit[]) => {
-    setBrief((d.brief as string) || '');
-    setClientRequest((d.clientRequest as string) || '');
-    setPeopleMode((d.peopleMode as PeopleMode) || 'none');
-    setConcepts((d.concepts as GeneratedImage[]) || []);
-    setSelectedConcepts((d.selectedConcepts as GeneratedImage[]) || []);
-    setProductDescription((d.productDescription as string) || '');
-    setPersonDescription((d.personDescription as string) || '');
-    setRefineImage((d.refineImage as GeneratedImage | null) || null);
-    setRefineHistory((d.refineHistory as string[]) || []);
-    setRefineImageHistory((d.refineImageHistory as string[]) || []);
-    setRefineIndex((d.refineIndex as number) || 0);
-    setProductDetailImages((d.productDetailImages as string[]) || []);
-    setReferenceImages((d.referenceImages as string[]) || []);
-    setAdaptFormats((d.adaptFormats as string[]) || []);
-    setAdaptedImages((d.adaptedImages as { format: string; label: string; conceptId: string; base64: string }[]) || []);
-    const cid = d.selectedClientId as string | null;
-    if (cid) {
-      const found = allClients.find(k => k.id === cid);
-      if (found) setSelectedClient(found);
-    } else {
-      setSelectedClient(null);
-    }
-    const s = (d.step as string) || 'brief';
-    setStep((s === 'adjust' ? 'refine' : s) as Step);
-  }, []);
-
-  // Load brand kits + sessions on mount, restore last active session
-  useEffect(() => {
-    Promise.all([
-      fetch('/api/brand-kits').then(r => r.json()).catch(() => []),
-      dbGetAllSessions().catch(() => []),
-    ]).then(([allClients, sessions]: [BrandKit[], SavedSession[]]) => {
-      setClients(allClients);
-      setSavedSessions(sessions);
-      const lastId = localStorage.getItem(LAST_SESSION_KEY);
-      if (lastId) {
-        const last = sessions.find(s => s.id === lastId);
-        if (last) {
-          setCurrentSessionId(last.id);
-          applySessionData(last.data, allClients);
-        }
-      }
-    }).catch(console.error);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Auto-save to IndexedDB (debounced 1.5s) whenever state changes
-  useEffect(() => {
-    if (step === 'brief' && !brief.trim() && !selectedClient) return;
-
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(async () => {
-      let sessionId = currentSessionId;
-      if (!sessionId) {
-        sessionId = Math.random().toString(36).slice(2) + Date.now().toString(36);
-        setCurrentSessionId(sessionId);
-        localStorage.setItem(LAST_SESSION_KEY, sessionId);
-      }
-
-      const now = new Date().toISOString();
-      const data = {
-        step, brief, clientRequest,
-        selectedClientId: selectedClient?.id || null,
-        peopleMode, concepts, selectedConcepts,
-        productDescription, personDescription,
-        refineImage, refineHistory, refineImageHistory,
-        refineIndex, productDetailImages, referenceImages,
-        adaptFormats, adaptedImages,
-      };
-
-      setSavedSessions(prev => {
-        const existing = prev.find(s => s.id === sessionId);
-        const updated: SavedSession = {
-          id: sessionId!,
-          clientName: selectedClient?.name || 'Sin cliente',
-          clientId: selectedClient?.id || null,
-          step,
-          brief,
-          createdAt: existing?.createdAt || now,
-          updatedAt: now,
-          data,
-        };
-        dbSaveSession(updated).catch(console.error);
-        localStorage.setItem(LAST_SESSION_KEY, sessionId!);
-        const rest = prev.filter(s => s.id !== sessionId);
-        return [updated, ...rest];
-      });
-    }, 1500);
-
-    return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, brief, selectedClient, peopleMode, concepts, selectedConcepts, productDescription, personDescription, refineIndex, refineImage, refineHistory, refineImageHistory, adaptFormats, adaptedImages]);
-
-  const newSession = () => {
-    setCurrentSessionId(null);
-    localStorage.removeItem(LAST_SESSION_KEY);
-    setStep('brief');
-    setBrief('');
-    setClientRequest('');
-    setSelectedClient(null);
-    setPeopleMode('none');
-    setConcepts([]);
-    setSelectedConcepts([]);
-    setProductDescription('');
-    setPersonDescription('');
-    setRefineImage(null);
-    setRefineHistory([]);
-    setRefineImageHistory([]);
-    setRefineIndex(0);
-    setProductDetailImages([]);
-    setReferenceImages([]);
-    setKvMode(false);
-    setKvReferenceImage(null);
-    setAdaptFormats([]);
-    setAdaptedImages([]);
-    setError('');
-  };
-
-  const loadSessionFromDrawer = useCallback((s: SavedSession) => {
-    setCurrentSessionId(s.id);
-    localStorage.setItem(LAST_SESSION_KEY, s.id);
-    applySessionData(s.data, clients);
-  }, [clients, applySessionData]);
-
-  const deleteSessionFromDrawer = async (id: string) => {
-    await dbDeleteSession(id);
-    setSavedSessions(prev => prev.filter(s => s.id !== id));
-    if (currentSessionId === id) newSession();
-  };
-
-  const exportSession = () => {
-    const session = {
-      step, brief,
-      selectedClientId: selectedClient?.id || null,
-      peopleMode, concepts, selectedConcepts,
-      productDescription, personDescription,
-      refineImage, refineHistory, refineImageHistory,
-    };
-    const blob = new Blob([JSON.stringify(session)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `sesion-${selectedClient?.name || 'disenoai'}-${Date.now()}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
-  };
-
-  const importSession = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const s = JSON.parse(reader.result as string);
-        applySessionData(s, clients);
-      } catch { setError('No se pudo importar la sesión — archivo inválido.'); }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  };
-
   return (
     <div className="min-h-screen bg-[#F0EBE3]">
-      <SessionDrawer
-        open={showDrawer}
-        sessions={savedSessions}
-        currentId={currentSessionId}
-        onClose={() => setShowDrawer(false)}
-        onLoad={loadSessionFromDrawer}
-        onDelete={deleteSessionFromDrawer}
-        onNew={newSession}
-      />
-
       {/* Header */}
       <header className="bg-[#111111] border-b border-white/10 px-6 py-4 flex items-center justify-between text-white">
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowDrawer(true)}
-            title="Biblioteca de sesiones"
-            className="w-8 h-8 rounded-lg bg-[#FA5A1E] hover:bg-[#FF912D] transition-colors flex items-center justify-center relative"
-          >
+          <div className="w-8 h-8 rounded-lg bg-[#FA5A1E] flex items-center justify-center">
             <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            {savedSessions.length > 0 && (
-              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-[#FF912D] rounded-full text-[8px] font-bold text-white flex items-center justify-center">
-                {savedSessions.length > 9 ? '9+' : savedSessions.length}
-              </span>
-            )}
-          </button>
+          </div>
           <span className="font-semibold text-lg">Diseño AI</span>
         </div>
         <div className="flex items-center gap-3">
           <StepIndicator currentStep={step} />
-          {step !== 'brief' && (
-            <button
-              onClick={exportSession}
-              title="Guardar sesión como archivo"
-              className="text-sm text-white/50 hover:text-white/80 transition-colors border border-white/10 hover:border-white/20 px-3 py-1.5 rounded-lg flex items-center gap-1.5"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              Guardar
-            </button>
-          )}
-          <label
-            title="Retomar sesión guardada"
-            className="text-sm text-white/50 hover:text-white/80 transition-colors border border-white/10 hover:border-white/20 px-3 py-1.5 rounded-lg cursor-pointer flex items-center gap-1.5"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l4-4m0 0l4 4m-4-4v12" />
-            </svg>
-            Retomar
-            <input type="file" accept=".json" onChange={importSession} className="hidden" />
-          </label>
           <Link
             href="/config"
             className="text-sm text-white/50 hover:text-white/80 transition-colors border border-white/10 hover:border-white/20 px-3 py-1.5 rounded-lg"
           >
-            Clientes
+            Mi marca
           </Link>
+          <Link
+            href="/perfil"
+            className="text-sm text-white/50 hover:text-white/80 transition-colors border border-white/10 hover:border-white/20 px-3 py-1.5 rounded-lg"
+          >
+            Perfil
+          </Link>
+          <button
+            onClick={handleLogout}
+            className="text-sm text-white/40 hover:text-white/70 transition-colors px-2 py-1.5 rounded-lg"
+            title={userEmail}
+          >
+            Salir
+          </button>
         </div>
       </header>
 
@@ -663,49 +453,23 @@ export default function Home() {
           </div>
         )}
 
+        {/* No brand kit warning */}
+        {!brandKit && step === 'brief' && (
+          <div className="bg-[#FA5A1E]/10 border border-[#FA5A1E]/30 rounded-xl px-4 py-4 text-sm">
+            <p className="font-medium text-[#FF912D] mb-1">Primero configurá tu marca</p>
+            <p className="text-white/50 mb-3">Necesitás crear tu brand kit antes de generar creativos.</p>
+            <Link href="/config" className="bg-[#FA5A1E] hover:bg-[#FF912D] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+              Configurar marca
+            </Link>
+          </div>
+        )}
+
         {/* Step: BRIEF */}
         {step === 'brief' && (
           <div className="space-y-8">
             <div>
               <h1 className="text-3xl font-bold mb-2">Nueva pieza</h1>
-              <p className="text-white/50">Seleccioná el cliente y escribí el brief de la campaña.</p>
-            </div>
-
-            {/* Client selector */}
-            <div className="space-y-3">
-              <label className="text-sm font-medium text-white/70">Cliente</label>
-              {clients.length === 0 ? (
-                <div className="border border-dashed border-white/20 rounded-xl p-6 text-center">
-                  <p className="text-white/40 text-sm mb-3">No hay clientes configurados</p>
-                  <Link href="/config" className="text-[#FF912D] hover:text-[#FFB950] text-sm font-medium">
-                    + Crear primer cliente
-                  </Link>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                  {clients.map(client => (
-                    <button
-                      key={client.id}
-                      onClick={() => setSelectedClient(client)}
-                      className={`p-4 rounded-xl border text-left transition-all ${
-                        selectedClient?.id === client.id
-                          ? 'border-[#FF912D] bg-[#FA5A1E]/10'
-                          : 'border-white/10 hover:border-white/20 bg-white/5'
-                      }`}
-                    >
-                      <div className="flex gap-1 mb-2 flex-wrap">
-                        {[client.primary1, client.primary2, client.primary3, client.secondary1, client.secondary2, client.secondary3].map((c, i) => (
-                          <div key={i} className="w-3.5 h-3.5 rounded-full border border-black/20" style={{ backgroundColor: c }} />
-                        ))}
-                      </div>
-                      <p className="text-sm font-medium truncate">{client.name}</p>
-                      {client.referencePiecesStyle && (
-                        <p className="text-xs text-[#FF912D] mt-1">✓ {client.referencePiecesThumbnails?.length || 0} piezas ref.</p>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <p className="text-white/50">Escribí el brief de la campaña y generá tus creativos.</p>
             </div>
 
             {/* Brief generator */}
@@ -715,7 +479,7 @@ export default function Home() {
                 <textarea
                   value={clientRequest}
                   onChange={e => setClientRequest(e.target.value)}
-                  placeholder="Pegá el mensaje del cliente tal como llegó. Ej: 'Hola! Necesito algo para el lanzamiento de nuestra colección de verano, algo fresco y colorido para Instagram...'"
+                  placeholder="Pegá el mensaje del cliente tal como llegó. Ej: 'Necesito algo para el lanzamiento de nuestra colección de verano...'"
                   rows={3}
                   className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 focus:outline-none focus:border-[#FF912D] resize-none text-sm leading-relaxed"
                 />
@@ -736,7 +500,6 @@ export default function Home() {
                   )}
                 </button>
               </div>
-              <p className="text-xs text-white/30">GPT-4o convierte el mensaje en un brief creativo estructurado.</p>
             </div>
 
             {/* Brief input */}
@@ -749,16 +512,36 @@ export default function Home() {
                 rows={5}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 focus:outline-none focus:border-[#FF912D] resize-none text-sm leading-relaxed"
               />
-              <p className="text-xs text-white/30">Editá el brief antes de generar los conceptos.</p>
+            </div>
+
+            {/* Concept count selector */}
+            <div className="space-y-3">
+              <label className="text-sm font-medium text-white/70">¿Cuántos conceptos querés generar?</label>
+              <div className="flex gap-3">
+                {[1, 2, 3, 4].map(n => (
+                  <button
+                    key={n}
+                    onClick={() => setConceptCount(n)}
+                    className={`w-14 h-14 rounded-xl border text-lg font-semibold transition-all ${
+                      conceptCount === n
+                        ? 'border-[#FF912D] bg-[#FA5A1E]/10 text-[#FF912D]'
+                        : 'border-white/10 hover:border-white/20 bg-white/5 text-white/60'
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-white/30">Más conceptos = más tiempo y más crédito de OpenAI.</p>
             </div>
 
             {/* People mode */}
             <div className="space-y-3">
-              <label className="text-sm font-medium text-white/70">Personas en la imagen</label>
+              <label className="text-sm font-medium text-white/70">Tipo de imagen</label>
               <div className="grid grid-cols-2 gap-3">
                 {([
-                  { value: 'none', label: 'PRODUCTO', desc: 'Cuando querés hacer el anuncio alrededor de un producto', icon: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
-                  { value: 'real', label: 'FASHION', desc: 'Cuando querés mostrar personas usando el producto', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
+                  { value: 'none', label: 'PRODUCTO', desc: 'Anuncio alrededor del producto', icon: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
+                  { value: 'real', label: 'FASHION', desc: 'Personas usando el producto', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
                 ] as const).map(opt => (
                   <button
                     key={opt.value}
@@ -778,14 +561,13 @@ export default function Home() {
                 ))}
               </div>
 
-              {/* Product detail upload — always shown */}
               <div className="space-y-2">
                 <p className="text-xs font-medium text-white/60">Foto del producto / estampado en detalle</p>
-                <p className="text-xs text-white/30">Primer plano del estampado o producto sobre fondo neutro — más detalle = mejor resultado.</p>
+                <p className="text-xs text-white/30">Primer plano sobre fondo neutro — más detalle = mejor resultado.</p>
                 <div className="flex gap-3 flex-wrap">
                   {productDetailImages.map((img, i) => (
                     <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-white/10">
-                      <img src={img} alt={`prod ${i+1}`} className="w-full h-full object-cover" />
+                      <img src={`data:image/png;base64,${img}`} alt={`prod ${i+1}`} className="w-full h-full object-cover" />
                       <button
                         onClick={() => setProductDetailImages(prev => prev.filter((_, idx) => idx !== i))}
                         className="absolute top-1 right-1 w-5 h-5 bg-black/70 rounded-full flex items-center justify-center text-white/80 hover:text-white text-xs"
@@ -804,11 +586,9 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Person reference upload — only in 'real' mode */}
               {peopleMode === 'real' && (
                 <div className="space-y-2">
                   <p className="text-xs font-medium text-white/60">Foto de la persona usando el producto</p>
-                  <p className="text-xs text-white/30">La persona ya vistiendo el producto — referencia para el modelo.</p>
                   <div className="flex gap-3 flex-wrap">
                     {referenceImages.map((img, i) => (
                       <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-white/10">
@@ -845,7 +625,7 @@ export default function Home() {
                   </svg>
                   <div>
                     <p className={`text-sm font-medium ${kvMode ? 'text-[#FF912D]' : 'text-white/70'}`}>Reciclar KV</p>
-                    <p className="text-xs text-white/40">Generá 5 conceptos basados en un KV aprobado existente</p>
+                    <p className="text-xs text-white/40">Generá conceptos basados en un KV aprobado existente</p>
                   </div>
                 </div>
                 <div className={`w-9 h-5 rounded-full transition-colors ${kvMode ? 'bg-[#FA5A1E]' : 'bg-white/20'} flex items-center px-0.5`}>
@@ -854,7 +634,6 @@ export default function Home() {
               </button>
               {kvMode && (
                 <div className="px-4 pb-4 space-y-3 border-t border-[#FA5A1E]/20 pt-3">
-                  <p className="text-xs text-white/50">Subí el KV que querés usar como referencia visual. Se generarán 5 conceptos que siguen su línea gráfica adaptados al brief de arriba.</p>
                   <div className="flex gap-3 items-center">
                     {kvReferenceImage ? (
                       <div className="relative w-24 h-24 rounded-xl overflow-hidden border border-[#FA5A1E]/30 shrink-0">
@@ -874,14 +653,13 @@ export default function Home() {
                           const file = e.target.files?.[0];
                           if (!file) return;
                           const png = await readAsPng(file);
-                          // strip data URL prefix — store raw base64
                           setKvReferenceImage(png.split(',')[1] || png);
                           e.target.value = '';
                         }} className="hidden" />
                       </label>
                     )}
                     {kvReferenceImage && (
-                      <p className="text-xs text-[#FF912D]/80">KV cargado — se generarán 5 variaciones adaptadas al brief.</p>
+                      <p className="text-xs text-[#FF912D]/80">KV cargado — se generarán variaciones adaptadas al brief.</p>
                     )}
                   </div>
                 </div>
@@ -890,7 +668,7 @@ export default function Home() {
 
             <button
               onClick={generateConcepts}
-              disabled={!selectedClient || !brief.trim() || loading || (kvMode && !kvReferenceImage)}
+              disabled={!brandKit || !brief.trim() || loading || (kvMode && !kvReferenceImage)}
               className="bg-[#FA5A1E] hover:bg-[#FF912D] disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium px-6 py-3 rounded-xl transition-colors flex items-center gap-2"
             >
               {loading ? (
@@ -898,16 +676,9 @@ export default function Home() {
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   {loadingMsg}{elapsedSec > 5 ? ` · ${elapsedSec}s` : ''}
                 </>
-              ) : kvMode ? (
-                <>
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  Reciclar KV → 5 conceptos
-                </>
               ) : (
                 <>
-                  Generar 6 conceptos
+                  Generar {conceptCount} concepto{conceptCount > 1 ? 's' : ''}
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                   </svg>
@@ -923,7 +694,7 @@ export default function Home() {
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="text-2xl font-bold mb-1">Elegí hasta 3 conceptos</h2>
-                <p className="text-white/50 text-sm">Seleccioná los que más te gustan para afinarlos y enviarle al cliente</p>
+                <p className="text-white/50 text-sm">Seleccioná los que más te gustan para afinarlos</p>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -942,98 +713,85 @@ export default function Home() {
               </div>
             </div>
 
-            <>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {concepts.map(img => {
-                    const selIdx = selectedConcepts.findIndex(c => c.id === img.id);
-                    const isSelected = selIdx !== -1;
-                    return (
-                      <div key={img.id} className="relative">
-                        <ImageCard
-                          image={img}
-                          selected={isSelected}
-                          onClick={() => toggleConceptSelection(img)}
-                        />
-                        {isSelected && (
-                          <div className="absolute top-2 left-2 w-6 h-6 bg-[#FF912D] rounded-full flex items-center justify-center text-xs font-bold text-white">
-                            {selIdx + 1}
-                          </div>
-                        )}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {concepts.map(img => {
+                const selIdx = selectedConcepts.findIndex(c => c.id === img.id);
+                const isSelected = selIdx !== -1;
+                return (
+                  <div key={img.id} className="relative">
+                    <ImageCard image={img} selected={isSelected} onClick={() => toggleConceptSelection(img)} />
+                    {isSelected && (
+                      <div className="absolute top-2 left-2 w-6 h-6 bg-[#FF912D] rounded-full flex items-center justify-center text-xs font-bold text-white">
+                        {selIdx + 1}
                       </div>
-                    );
-                  })}
-                  {loading && Array.from({ length: Math.max(0, generatingCount - concepts.length) }).map((_, i) => (
-                    <div key={`skeleton-${i}`} className="aspect-[2/3] rounded-xl border border-white/10 bg-white/5 animate-pulse flex flex-col justify-end p-3 gap-2">
-                      <div className="flex items-center justify-center flex-1">
-                        <div className="w-6 h-6 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
-                      </div>
-                      <div className="h-2.5 bg-white/20 rounded-full w-2/3" />
-                    </div>
-                  ))}
+                    )}
+                  </div>
+                );
+              })}
+              {loading && Array.from({ length: Math.max(0, generatingCount - concepts.length) }).map((_, i) => (
+                <div key={`skeleton-${i}`} className="aspect-[2/3] rounded-xl border border-white/10 bg-white/5 animate-pulse flex flex-col justify-end p-3 gap-2">
+                  <div className="flex items-center justify-center flex-1">
+                    <div className="w-6 h-6 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
+                  </div>
+                  <div className="h-2.5 bg-white/20 rounded-full w-2/3" />
                 </div>
+              ))}
+            </div>
 
-                {/* Product description editor — only for fashion/person mode; e-commerce uses images.edit directly */}
-                {productDetailImages.length > 0 && peopleMode !== 'none' && (
-                  <div className="space-y-2 border border-[#FA5A1E]/20 bg-[#FA5A1E]/5 rounded-xl p-4">
-                    <div className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-[#FF912D] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <p className="text-xs font-medium text-[#FFB950]">Descripción del producto — editala antes de afinar para mejorar la fidelidad</p>
-                    </div>
-                    <textarea
-                      value={productDescription}
-                      onChange={e => setProductDescription(e.target.value)}
-                      rows={5}
-                      placeholder="La IA no pudo generar una descripción automática. Describí el producto manualmente: tipo de prenda, color, estampado, detalles..."
-                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white/80 text-xs leading-relaxed focus:outline-none focus:border-[#FF912D] resize-none placeholder-white/20"
-                    />
-                  </div>
-                )}
+            {productDetailImages.length > 0 && peopleMode !== 'none' && (
+              <div className="space-y-2 border border-[#FA5A1E]/20 bg-[#FA5A1E]/5 rounded-xl p-4">
+                <p className="text-xs font-medium text-[#FFB950]">Descripción del producto — editala para mejorar la fidelidad</p>
+                <textarea
+                  value={productDescription}
+                  onChange={e => setProductDescription(e.target.value)}
+                  rows={5}
+                  placeholder="Describí el producto: tipo de prenda, color, estampado, detalles..."
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white/80 text-xs leading-relaxed focus:outline-none focus:border-[#FF912D] resize-none placeholder-white/20"
+                />
+              </div>
+            )}
 
-                <div className="flex items-center justify-between pt-2 flex-wrap gap-3">
-                  <div className="flex items-center gap-3">
-                    <p className="text-white/40 text-sm">
-                      {selectedConcepts.length === 0 ? 'Hacé click para seleccionar' : `${selectedConcepts.length} concepto${selectedConcepts.length > 1 ? 's' : ''} seleccionado${selectedConcepts.length > 1 ? 's' : ''}`}
-                    </p>
-                    {selectedConcepts.length > 0 && (
-                      <button
-                        onClick={downloadAllSelected}
-                        className="text-white/50 hover:text-white/80 text-sm border border-white/10 hover:border-white/20 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                        </svg>
-                        Descargar todos
-                      </button>
-                    )}
-                    {selectedConcepts.length > 0 && selectedConcepts.length < 6 && (
-                      <button
-                        onClick={generateSimilar}
-                        disabled={loading}
-                        title="Genera variaciones que siguen la línea visual de los seleccionados"
-                        className="text-white/50 hover:text-white/80 text-sm border border-white/10 hover:border-[#FA5A1E]/50 hover:text-[#FF912D] px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40 flex items-center gap-1.5"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        {loading ? `${elapsedSec > 0 ? `${elapsedSec}s...` : 'Generando...'}` : `Generar ${6 - selectedConcepts.length} similares`}
-                      </button>
-                    )}
-                  </div>
+            <div className="flex items-center justify-between pt-2 flex-wrap gap-3">
+              <div className="flex items-center gap-3">
+                <p className="text-white/40 text-sm">
+                  {selectedConcepts.length === 0 ? 'Hacé click para seleccionar' : `${selectedConcepts.length} seleccionado${selectedConcepts.length > 1 ? 's' : ''}`}
+                </p>
+                {selectedConcepts.length > 0 && (
                   <button
-                    onClick={enterRefine}
-                    disabled={selectedConcepts.length === 0 || loading}
-                    className="bg-[#FA5A1E] hover:bg-[#FF912D] disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium px-6 py-3 rounded-xl transition-colors flex items-center gap-2"
+                    onClick={downloadAllSelected}
+                    className="text-white/50 hover:text-white/80 text-sm border border-white/10 hover:border-white/20 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
                   >
-                    {loading ? (
-                      <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{loadingMsg}{elapsedSec > 5 ? ` · ${elapsedSec}s` : ''}</>
-                    ) : (
-                      <>Afinar {selectedConcepts.length > 1 ? `${selectedConcepts.length} conceptos` : 'concepto'}<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg></>
-                    )}
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Descargar todos
                   </button>
-                </div>
-            </>
+                )}
+                {selectedConcepts.length > 0 && selectedConcepts.length < conceptCount && (
+                  <button
+                    onClick={generateSimilar}
+                    disabled={loading}
+                    className="text-white/50 hover:text-[#FF912D] text-sm border border-white/10 hover:border-[#FA5A1E]/50 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40 flex items-center gap-1.5"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    {loading ? `${elapsedSec > 0 ? `${elapsedSec}s...` : 'Generando...'}` : `Generar ${conceptCount - selectedConcepts.length} similares`}
+                  </button>
+                )}
+              </div>
+              <button
+                onClick={enterRefine}
+                disabled={selectedConcepts.length === 0 || loading}
+                className="bg-[#FA5A1E] hover:bg-[#FF912D] disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium px-6 py-3 rounded-xl transition-colors flex items-center gap-2"
+              >
+                {loading ? (
+                  <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{loadingMsg}{elapsedSec > 5 ? ` · ${elapsedSec}s` : ''}</>
+                ) : (
+                  <>Afinar {selectedConcepts.length > 1 ? `${selectedConcepts.length} conceptos` : 'concepto'}<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg></>
+                )}
+              </button>
+            </div>
           </div>
         )}
 
@@ -1056,7 +814,6 @@ export default function Home() {
             </div>
 
             <div className="grid md:grid-cols-2 gap-8 items-start">
-              {/* Image preview */}
               <div className="space-y-3">
                 <div className="rounded-xl overflow-hidden border border-white/10 relative">
                   <img
@@ -1067,8 +824,8 @@ export default function Home() {
                   {loading && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30 backdrop-blur-[2px]">
                       <div className="w-8 h-8 border-3 border-white/30 border-t-white rounded-full animate-spin mb-2" style={{ borderWidth: '3px' }} />
-                      <p className="text-[#ffffff] text-sm font-medium">{loadingMsg || 'Aplicando...'}</p>
-                      {elapsedSec > 3 && <p className="text-[#ffffff]/60 text-xs mt-1">{elapsedSec}s</p>}
+                      <p className="text-white text-sm font-medium">{loadingMsg || 'Aplicando...'}</p>
+                      {elapsedSec > 3 && <p className="text-white/60 text-xs mt-1">{elapsedSec}s</p>}
                     </div>
                   )}
                 </div>
@@ -1076,7 +833,7 @@ export default function Home() {
                   onClick={() => {
                     const a = document.createElement('a');
                     a.href = `data:image/png;base64,${refineImage.base64}`;
-                    a.download = `${selectedClient?.name || 'concepto'}-${refineImage.conceptName.replace(/\s+/g, '-')}.png`;
+                    a.download = `${brandKit?.name || 'concepto'}-${refineImage.conceptName.replace(/\s+/g, '-')}.png`;
                     a.click();
                   }}
                   className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white text-sm px-4 py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2"
@@ -1088,7 +845,6 @@ export default function Home() {
                 </button>
               </div>
 
-              {/* Refinement panel */}
               <div className="space-y-4">
                 {refineHistory.length > 0 && (
                   <div className="space-y-2">
@@ -1103,44 +859,17 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* Presets */}
                 <div className="space-y-2">
                   <p className="text-xs text-white/40 font-medium uppercase tracking-wider">Ajustes rápidos</p>
                   <div className="flex flex-wrap gap-2">
                     {[
-                      ...(selectedClient?.quickAdjustments || []),
+                      ...(brandKit?.quickAdjustments || []),
                       ...(productDetailImages.length > 0 && peopleMode === 'none'
-                        ? [
-                            'Fondo más oscuro',
-                            'Fondo blanco limpio',
-                            'Fondo con textura industrial',
-                            'Más contraste',
-                            'Producto más grande',
-                            'Producto centrado',
-                            'Agregar sombra al producto',
-                            'Composición más minimalista',
-                            'Agregar texto del evento',
-                            'Resaltar detalles del producto',
-                            'Colores más vibrantes',
-                            'Agregar texto de marca',
-                          ]
-                        : [
-                            'Fondo más oscuro',
-                            'Fondo blanco limpio',
-                            'Más contraste',
-                            'Iluminación más suave',
-                            'Estampado más visible',
-                            'Colores más vibrantes',
-                            'Modelo mujer joven',
-                            'Modelo hombre joven',
-                            'Quitar personas',
-                            'Solo producto flat lay',
-                            'Composición más centrada',
-                            'Agregar texto de marca',
-                          ]
+                        ? ['Fondo más oscuro', 'Fondo blanco limpio', 'Fondo con textura industrial', 'Más contraste', 'Producto más grande', 'Producto centrado', 'Agregar sombra al producto', 'Composición más minimalista', 'Colores más vibrantes']
+                        : ['Fondo más oscuro', 'Fondo blanco limpio', 'Más contraste', 'Iluminación más suave', 'Colores más vibrantes', 'Modelo mujer joven', 'Modelo hombre joven', 'Solo producto flat lay', 'Agregar texto de marca']
                       ),
                     ].map((preset, i) => {
-                      const isClientPreset = i < (selectedClient?.quickAdjustments?.length || 0);
+                      const isClientPreset = i < (brandKit?.quickAdjustments?.length || 0);
                       return (
                         <button
                           key={`${preset}-${i}`}
@@ -1181,8 +910,7 @@ export default function Home() {
                       <button
                         onClick={undoRefinement}
                         disabled={loading}
-                        title="Deshacer último ajuste"
-                        className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 disabled:opacity-40 text-white/60 hover:text-white px-3 py-3 rounded-xl transition-colors flex items-center gap-1.5 text-sm"
+                        className="bg-white/5 hover:bg-white/10 border border-white/10 disabled:opacity-40 text-white/60 hover:text-white px-3 py-3 rounded-xl transition-colors flex items-center gap-1.5 text-sm"
                       >
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
@@ -1228,7 +956,7 @@ export default function Home() {
           <div className="space-y-6">
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-2xl font-bold mb-1">¡Listos para entregar!</h2>
+                <h2 className="text-2xl font-bold mb-1">¡Listos para descargar!</h2>
                 <p className="text-white/50 text-sm">{selectedConcepts.length} concepto{selectedConcepts.length > 1 ? 's' : ''} finalizado{selectedConcepts.length > 1 ? 's' : ''}</p>
               </div>
               <button onClick={() => setStep('refine')} className="text-white/40 hover:text-white/70 text-sm transition-colors">
@@ -1247,7 +975,7 @@ export default function Home() {
                     onClick={() => {
                       const a = document.createElement('a');
                       a.href = `data:image/png;base64,${img.base64}`;
-                      a.download = `${selectedClient?.name || 'concepto'}-${i + 1}-${img.conceptName.replace(/\s+/g, '-')}.png`;
+                      a.download = `${brandKit?.name || 'concepto'}-${i + 1}-${img.conceptName.replace(/\s+/g, '-')}.png`;
                       a.click();
                     }}
                     className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white text-xs px-3 py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5"
@@ -1283,11 +1011,11 @@ export default function Home() {
             <div className="border-t border-white/10 pt-6 space-y-4">
               <div>
                 <h3 className="text-base font-semibold mb-1">Adaptaciones de tamaño</h3>
-                <p className="text-white/40 text-sm">Generá los mismos conceptos en otros formatos para distintas plataformas.</p>
+                <p className="text-white/40 text-sm">Generá los mismos conceptos en otros formatos.</p>
               </div>
               {[
                 { group: 'RRSS', items: [
-                  { key: 'story', label: 'Story 9:16', desc: 'Instagram / TikTok / Reels' },
+                  { key: 'story', label: 'Story 9:16', desc: 'Instagram / TikTok' },
                   { key: 'feed45', label: 'Feed 4:5', desc: 'Instagram / Facebook' },
                   { key: 'square', label: 'Cuadrado 1:1', desc: 'Instagram / Facebook' },
                   { key: 'landscape', label: 'Landscape 16:9', desc: 'Facebook / YouTube' },
@@ -1298,7 +1026,7 @@ export default function Home() {
                   { key: 'pmax_portrait', label: '4:5', desc: 'PMax · Display' },
                 ]},
                 { group: 'Banners & Email', items: [
-                  { key: 'banner_desktop', label: 'Banner Desktop', desc: '1950×450 web' },
+                  { key: 'banner_desktop', label: 'Banner Desktop', desc: '1950×450' },
                   { key: 'banner_mobile', label: 'Banner Mobile', desc: '800×800' },
                   { key: 'webpush', label: 'Webpush', desc: '720×360' },
                   { key: 'mailing', label: 'Mailing', desc: '600×alto email' },
@@ -1307,20 +1035,20 @@ export default function Home() {
                 <div key={group} className="space-y-2">
                   <p className="text-xs text-white/40 font-medium uppercase tracking-wider">{group}</p>
                   <div className="flex flex-wrap gap-3">
-                {items.map(f => (
-                  <button
-                    key={f.key}
-                    onClick={() => setAdaptFormats(prev => prev.includes(f.key) ? prev.filter(x => x !== f.key) : [...prev, f.key])}
-                    className={`px-4 py-2.5 rounded-xl border text-left transition-all ${
-                      adaptFormats.includes(f.key)
-                        ? 'border-[#FF912D] bg-[#FA5A1E]/10'
-                        : 'border-white/10 hover:border-white/20 bg-white/5'
-                    }`}
-                  >
-                    <p className="text-sm font-medium">{f.label}</p>
-                    <p className="text-xs text-white/40">{f.desc}</p>
-                  </button>
-                ))}
+                    {items.map(f => (
+                      <button
+                        key={f.key}
+                        onClick={() => setAdaptFormats(prev => prev.includes(f.key) ? prev.filter(x => x !== f.key) : [...prev, f.key])}
+                        className={`px-4 py-2.5 rounded-xl border text-left transition-all ${
+                          adaptFormats.includes(f.key)
+                            ? 'border-[#FF912D] bg-[#FA5A1E]/10'
+                            : 'border-white/10 hover:border-white/20 bg-white/5'
+                        }`}
+                      >
+                        <p className="text-sm font-medium">{f.label}</p>
+                        <p className="text-xs text-white/40">{f.desc}</p>
+                      </button>
+                    ))}
                   </div>
                 </div>
               ))}
@@ -1358,7 +1086,7 @@ export default function Home() {
                               const url = URL.createObjectURL(new Blob([Uint8Array.from(atob(img.base64), c => c.charCodeAt(0))], { type: 'image/png' }));
                               const a = document.createElement('a');
                               a.href = url;
-                              a.download = `${selectedClient?.name || 'concepto'}-${img.label.replace(/\s+/g, '-')}-${i + 1}.png`;
+                              a.download = `${brandKit?.name || 'concepto'}-${img.label.replace(/\s+/g, '-')}-${i + 1}.png`;
                               document.body.appendChild(a);
                               a.click();
                               document.body.removeChild(a);

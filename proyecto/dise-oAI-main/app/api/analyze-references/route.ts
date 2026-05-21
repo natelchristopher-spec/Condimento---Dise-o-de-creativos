@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { getUserContext } from '@/app/lib/get-user-context';
 
 export async function POST(req: NextRequest) {
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const ctx = await getUserContext();
+  if (!ctx) return NextResponse.json({ error: 'Configurá tu API key de OpenAI en el perfil.' }, { status: 401 });
+
+  const openai = new OpenAI({ apiKey: ctx.openaiApiKey });
   const { images }: { images: string[] } = await req.json();
 
   if (!images?.length) return NextResponse.json({ error: 'No images provided' }, { status: 400 });

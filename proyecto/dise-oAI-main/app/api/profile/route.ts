@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { supabase } from '@/app/lib/supabase';
-import { BrandKit } from '@/app/types';
 import { cookies } from 'next/headers';
 
 async function getUserId(): Promise<string | null> {
@@ -20,26 +19,24 @@ export async function GET() {
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { data, error } = await supabase
-    .from('brand_kits')
-    .select('id, data')
-    .eq('user_id', userId)
-    .limit(1)
+    .from('profiles')
+    .select('openai_api_key')
+    .eq('id', userId)
     .single();
 
-  if (error && error.code === 'PGRST116') return NextResponse.json(null);
+  if (error && error.code === 'PGRST116') return NextResponse.json({ openai_api_key: null });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ id: data.id, ...data.data });
+  return NextResponse.json({ openai_api_key: data.openai_api_key });
 }
 
 export async function POST(req: NextRequest) {
   const userId = await getUserId();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const kit: BrandKit = await req.json();
-  const { error } = await supabase.from('brand_kits').upsert({
+  const { openai_api_key } = await req.json();
+  const { error } = await supabase.from('profiles').upsert({
     id: userId,
-    user_id: userId,
-    data: kit,
+    openai_api_key,
     updated_at: new Date().toISOString(),
   });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
