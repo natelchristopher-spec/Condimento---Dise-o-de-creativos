@@ -1,0 +1,118 @@
+import { NextRequest, NextResponse } from 'next/server';
+import OpenAI, { toFile } from 'openai';
+
+export const maxDuration = 300;
+
+export async function POST(req: NextRequest) {
+  const { conceptImageBase64, productDetailImages, productDescription, peopleMode, personDescription }: {
+    conceptImageBase64: string;
+    productDetailImages: string[];
+    productDescription: string;
+    peopleMode: 'none' | 'real';
+    personDescription: string;
+  } = await req.json();
+
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+  const hasProductImage = productDetailImages.length > 0;
+  const hasPerson = peopleMode === 'real' && personDescription;
+
+  if (!hasProductImage) {
+    return NextResponse.json({ base64: conceptImageBase64, applied: false });
+  }
+
+  const personPart = hasPerson
+    ? `\nPERSONA: ${personDescription}. La persona lleva puesto exactamente este producto.`
+    : '';
+
+  const productPart = productDescription
+    ? `\nPRODUCTO A APLICAR (reproducir exactamente, sin simplificar):\n${productDescription}`
+    : '\nPRODUCTO A APLICAR: el producto exacto que aparece en la segunda imagen de referencia.';
+
+  const multiProductNote = productDetailImages.length > 1
+    ? `\nHay ${productDetailImages.length} imágenes de referencia de productos — aplicá TODOS los productos visibles en cada imagen (ej: remera + pantalón, campera + falda).`
+    : '';
+
+  const prompt = `Tomá este concepto visual de moda y ÚNICAMENTE reemplazá las prendas/productos de la persona por los productos exactos que aparecen en las imágenes de referencia. TODO lo demás debe quedar IDÉNTICO.
+${productPart}
+${personPart}
+${multiProductNote}
+
+QUÉ CAMBIAR:
+- Las prendas/ropa de la persona → reemplazarlas por los productos de referencia exactos
+
+QUÉ NO TOCAR (debe quedar pixel-perfect igual):
+- TODOS los textos, tipografías, títulos, subtítulos, slogans y copy que aparecen en la imagen
+- El fondo, colores del fondo, degradados y texturas
+- La composición y layout general
+- La iluminación y mood
+- Logos, íconos o elementos gráficos de marca
+- La pose y posición de la persona
+
+REGLAS de producto:
+- Cada prenda debe verse EXACTAMENTE igual a su imagen de referencia: mismo color, mismo estampado, misma silueta
+- Si hay múltiples prendas de referencia, aplicá TODAS
+- Estilo fashion editorial premium, fotorrealista`;
+
+  const conceptDataUrl = `data:image/png;base64,${conceptImageBase64}`;
+  const productImageContent = productDetailImages.map(img => ({
+    type: 'input_image' as const, image_url: img, detail: 'high' as const,
+  }));
+
+  // Primary: Responses API con gpt-4o como orquestador (entiende imágenes de entrada)
+  // y gpt-image-2 como herramienta de generación
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await (openai.responses.create as any)({
+      model: 'gpt-4o',
+      input: [{
+        role: 'user',
+        content: [
+          { type: 'input_image', image_url: conceptDataUrl, detail: 'high' },
+          ...productImageContent,
+          { type: 'input_text', text: prompt },
+        ],
+      }],
+      tools: [{
+        type: 'image_generation',
+        model: 'gpt-image-2',
+        quality: 'high',
+        size: '1024x1536',
+      }],
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for (const block of (response.output || [])) {
+      if (block.type === 'image_generation_call' && block.result) {
+        return NextResponse.json({ base64: block.result, applied: true });
+      }
+    }
+    console.error('apply-product: Responses API returned no image block');
+  } catch (err) {
+    console.error('apply-product Responses API (gpt-4o) failed:', err);
+  }
+
+  // Fallback: images.edit con prompt descriptivo fuerte
+  try {
+    const buffer = Buffer.from(conceptImageBase64, 'base64');
+    const imageFile = await toFile(buffer, 'image.png', { type: 'image/png' });
+    const editPrompt = productDescription
+      ? `Replace the main clothing/garment in this fashion image with the following product, preserving all composition, background, lighting and style. Product to apply: ${productDescription}.${personPart}`
+      : `Replace the main clothing/garment in this fashion editorial image with the product from the reference. Keep the composition, background, lighting, and overall mood exactly the same.${personPart}`;
+
+    const response = await openai.images.edit({
+      model: 'gpt-image-2',
+      image: imageFile,
+      prompt: editPrompt,
+      size: '1024x1536',
+      quality: 'high',
+    });
+    const base64 = response.data?.[0]?.b64_json || '';
+    if (base64) return NextResponse.json({ base64, applied: true });
+    console.error('apply-product: images.edit returned empty b64_json');
+  } catch (err) {
+    console.error('apply-product images.edit fallback failed:', err);
+  }
+
+  // Last resort: return original with flag so client can warn the user
+  return NextResponse.json({ base64: conceptImageBase64, applied: false });
+}
