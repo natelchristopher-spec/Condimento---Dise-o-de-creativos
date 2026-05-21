@@ -10,6 +10,7 @@ export default function PerfilPage() {
   const [savedKey, setSavedKey] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
   const [email, setEmail] = useState('');
   const [showKey, setShowKey] = useState(false);
 
@@ -29,6 +30,7 @@ export default function PerfilPage() {
   const handleSave = async () => {
     if (!apiKey.trim()) return;
     setSaving(true);
+    const isFirstTime = !savedKey;
     try {
       await fetch('/api/profile', {
         method: 'POST',
@@ -37,7 +39,12 @@ export default function PerfilPage() {
       });
       setSavedKey(apiKey.trim());
       setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      if (isFirstTime) {
+        setRedirecting(true);
+        setTimeout(() => { window.location.href = '/config'; }, 1500);
+      } else {
+        setTimeout(() => setSaved(false), 2000);
+      }
     } finally {
       setSaving(false);
     }
@@ -120,7 +127,7 @@ export default function PerfilPage() {
             }`}
           >
             {saved ? (
-              <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>Guardada</>
+              <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>{redirecting ? 'Guardada — configurando tu marca...' : 'Guardada'}</>
             ) : saving ? 'Guardando...' : 'Guardar API key'}
           </button>
 

@@ -11,6 +11,7 @@ import LoadingGrid from './components/LoadingGrid';
 
 export default function Home() {
   const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
+  const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
   const [userEmail, setUserEmail] = useState('');
   const [brief, setBrief] = useState('');
   const [clientRequest, setClientRequest] = useState('');
@@ -70,6 +71,9 @@ export default function Home() {
     fetch('/api/brand-kits').then(r => r.json()).then(kit => {
       if (kit && !kit.error) setBrandKit(kit);
     }).catch(console.error);
+    fetch('/api/profile').then(r => r.json()).then(data => {
+      setHasApiKey(!!data.openai_api_key);
+    }).catch(() => setHasApiKey(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -413,13 +417,24 @@ export default function Home() {
     <div className="min-h-screen bg-[#F0EBE3]">
       {/* Header */}
       <header className="bg-[#111111] border-b border-white/10 px-6 py-4 flex items-center justify-between text-white">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-[#e42820] flex items-center justify-center">
-            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-[#e42820] flex items-center justify-center">
+              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <span className="font-semibold text-lg">Condimento</span>
           </div>
-          <span className="font-semibold text-lg">Condimento</span>
+          {/* Main nav */}
+          <nav className="hidden sm:flex items-center gap-1">
+            <Link href="/" className="text-sm font-medium px-3 py-1.5 rounded-lg bg-white/10 text-white">
+              Creativos
+            </Link>
+            <Link href="/pdp" className="text-sm font-medium px-3 py-1.5 rounded-lg text-white/50 hover:text-white/80 hover:bg-white/5 transition-colors">
+              Imágenes PDP
+            </Link>
+          </nav>
         </div>
         <div className="flex items-center gap-3">
           <StepIndicator currentStep={step} />
@@ -455,14 +470,64 @@ export default function Home() {
           </div>
         )}
 
-        {/* No brand kit warning */}
-        {!brandKit && step === 'brief' && (
-          <div className="bg-[#e42820]/10 border border-[#e42820]/30 rounded-xl px-4 py-4 text-sm">
-            <p className="font-medium text-[#e42820] mb-1">Primero configurá tu marca</p>
-            <p className="text-white/50 mb-3">Necesitás crear tu brand kit antes de generar creativos.</p>
-            <Link href="/config" className="bg-[#e42820] hover:bg-[#e42820] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-              Configurar marca
-            </Link>
+        {/* Onboarding wizard — shown when setup is incomplete */}
+        {step === 'brief' && hasApiKey !== null && (!hasApiKey || !brandKit) && (
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4">
+            <div>
+              <h2 className="font-semibold text-base">Configuración inicial</h2>
+              <p className="text-sm text-white/50 mt-0.5">Completá estos dos pasos antes de empezar a generar.</p>
+            </div>
+            <div className="space-y-3">
+              {/* Step 1: API key */}
+              <div className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${
+                hasApiKey ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-[#e42820]/40 bg-[#e42820]/5'
+              }`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
+                  hasApiKey ? 'bg-emerald-500/20 text-emerald-400' : 'bg-[#e42820]/20 text-[#e42820]'
+                }`}>
+                  {hasApiKey ? '✓' : '1'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-medium ${hasApiKey ? 'text-emerald-400' : 'text-white'}`}>
+                    {hasApiKey ? 'API key de OpenAI configurada' : 'Agregá tu API key de OpenAI'}
+                  </p>
+                  {!hasApiKey && (
+                    <p className="text-xs text-white/40 mt-0.5">La necesitás para generar imágenes con IA.</p>
+                  )}
+                </div>
+                {!hasApiKey && (
+                  <Link href="/perfil" className="shrink-0 bg-[#e42820] text-white text-xs font-medium px-4 py-2 rounded-lg hover:bg-[#c41f18] transition-colors">
+                    Configurar
+                  </Link>
+                )}
+              </div>
+
+              {/* Step 2: Brand kit */}
+              <div className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${
+                brandKit ? 'border-emerald-500/30 bg-emerald-500/5' :
+                hasApiKey ? 'border-[#e42820]/40 bg-[#e42820]/5' : 'border-white/10 bg-white/5 opacity-50'
+              }`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
+                  brandKit ? 'bg-emerald-500/20 text-emerald-400' :
+                  hasApiKey ? 'bg-[#e42820]/20 text-[#e42820]' : 'bg-white/10 text-white/40'
+                }`}>
+                  {brandKit ? '✓' : '2'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-medium ${brandKit ? 'text-emerald-400' : hasApiKey ? 'text-white' : 'text-white/40'}`}>
+                    {brandKit ? 'Brand kit configurado' : 'Configurá tu brand kit'}
+                  </p>
+                  {!brandKit && hasApiKey && (
+                    <p className="text-xs text-white/40 mt-0.5">Subí tu manual de marca o completalo manualmente.</p>
+                  )}
+                </div>
+                {!brandKit && hasApiKey && (
+                  <Link href="/config" className="shrink-0 bg-[#e42820] text-white text-xs font-medium px-4 py-2 rounded-lg hover:bg-[#c41f18] transition-colors">
+                    Configurar
+                  </Link>
+                )}
+              </div>
+            </div>
           </div>
         )}
 

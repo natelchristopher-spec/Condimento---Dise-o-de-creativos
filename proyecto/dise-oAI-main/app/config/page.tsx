@@ -43,6 +43,7 @@ export default function ConfigPage() {
   useRequireAuth();
   const [form, setForm] = useState(EMPTY_FORM);
   const [hasKit, setHasKit] = useState(false);
+  const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
   const [extracting, setExtracting] = useState(false);
   const [analyzingRefs, setAnalyzingRefs] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -56,6 +57,9 @@ export default function ConfigPage() {
         setHasKit(true);
       }
     }).catch(console.error);
+    fetch('/api/profile').then(r => r.json()).then(data => {
+      setHasApiKey(!!data.openai_api_key);
+    }).catch(() => setHasApiKey(false));
   }, []);
 
   const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -211,6 +215,19 @@ export default function ConfigPage() {
           <h1 className="text-3xl font-bold text-white mb-1">Mi marca</h1>
           <p className="text-white/40 text-sm">Configurá el brand kit de tu marca. Se usará en todas tus generaciones.</p>
         </div>
+
+        {hasApiKey === false && (
+          <div className="mb-6 bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-4 text-sm flex items-start gap-3">
+            <span className="text-amber-400 text-base mt-0.5">⚠</span>
+            <div>
+              <p className="font-medium text-amber-400 mb-1">Primero configurá tu API key de OpenAI</p>
+              <p className="text-white/50 mb-3">La extracción automática desde PDF necesita tu API key. Podés completar el formulario manualmente, pero no podrás usar "Importar desde PDF" hasta configurarla.</p>
+              <Link href="/perfil" className="inline-block bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold px-4 py-2 rounded-lg transition-colors">
+                Ir a Perfil → agregar API key
+              </Link>
+            </div>
+          </div>
+        )}
 
         <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-6">
           <div className="flex items-center justify-between">
