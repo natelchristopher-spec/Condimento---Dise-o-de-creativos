@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import OpenAI from 'openai';
+import OpenAI, { toFile } from 'openai';
 import type { ChatCompletionContentPart } from 'openai/resources/chat/completions';
 import { BrandKit } from '@/app/types';
 import { buildBrandKitContext } from '@/app/lib/brandKitContext';
