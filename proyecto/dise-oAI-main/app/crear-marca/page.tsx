@@ -242,7 +242,7 @@ export default function CrearMarcaPage() {
                   <button
                     onClick={scrapeUrl}
                     disabled={!storeUrl.trim() || scrapingUrl}
-                    className="bg-gray-900 hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors flex items-center gap-2 shrink-0"
+                    className="bg-[#e42820] hover:bg-[#c41f18] disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors flex items-center gap-2 shrink-0"
                   >
                     {scrapingUrl ? (
                       <><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />Leyendo...</>
