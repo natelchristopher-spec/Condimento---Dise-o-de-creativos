@@ -324,7 +324,7 @@ export default function Home() {
     setRefineImageHistory([]);
     setRefineInput('');
 
-    if (productDetailImages.length > 0 && peopleMode !== 'real') {
+    if (productDetailImages.length > 0 && peopleMode === 'real') {
       startLoading('Aplicando producto...');
       setError('');
       try {
