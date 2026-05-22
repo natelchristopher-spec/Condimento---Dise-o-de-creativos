@@ -771,18 +771,6 @@ export default function Home() {
               ))}
             </div>
 
-            {productDetailImages.length > 0 && peopleMode !== 'none' && (
-              <div className="space-y-2 border border-[#e42820]/20 bg-[#e42820]/5 rounded-xl p-4">
-                <p className="text-xs font-medium text-[#e42820]">Descripción del producto — editala para mejorar la fidelidad</p>
-                <textarea
-                  value={productDescription}
-                  onChange={e => setProductDescription(e.target.value)}
-                  rows={5}
-                  placeholder="Describí el producto: tipo de prenda, color, estampado, detalles..."
-                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-gray-700 text-xs leading-relaxed focus:outline-none focus:border-[#e42820] resize-none placeholder-gray-300"
-                />
-              </div>
-            )}
 
             <div className="flex items-center justify-between pt-2 flex-wrap gap-3">
               <div className="flex items-center gap-3">
