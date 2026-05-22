@@ -135,10 +135,17 @@ export async function POST(req: NextRequest) {
   }
 
   const lifestyleInstruction = !hasPeople
-    ? '3. LIFESTYLE IMAGE — el producto en su contexto natural de uso, sin personas. Ambientación real y cercana.'
+    ? '3. LIFESTYLE IMAGE — el producto en su contexto natural de uso, sin personas. Ambientación real y cercana (gym, baño, cocina, escritorio según el tipo de producto).'
     : pdpMode === 'fashion'
-      ? '3. LIFESTYLE IMAGE — persona vistiendo la prenda en una situación cotidiana auténtica y aspiracional.'
-      : '3. LIFESTYLE IMAGE — persona usando, sosteniendo, consumiendo o aplicando el producto en una situación cotidiana auténtica.';
+      ? '3. LIFESTYLE IMAGE — persona vistiendo la prenda en una situación cotidiana auténtica y aspiracional. La prenda debe verse con su color, corte y silueta exactos — es el estado natural del producto.'
+      : `3. LIFESTYLE IMAGE — persona en el contexto natural donde se usa este producto. REGLA DE MÍNIMO RIESGO: mostrá la interacción más segura posible según el tipo de producto:
+   - Reloj / accesorio: producto puesto en la muñeca o cuerpo (forma controlada y conocida)
+   - Ropa / calzado: producto siendo usado (forma controlada y conocida)
+   - Suplemento / proteína: persona sosteniendo el envase cerrado o abierto junto a equipamiento de gym — NO mezclar, NO tomar (no sabemos si es polvo, líquido, etc.)
+   - Cosmético / skincare: producto sobre mesada o en mano — NO aplicar en cara (no sabemos textura, color al contacto)
+   - Alimento / bebida: producto en su packaging en contexto de mesa o cocina — NO mostrarlo consumiéndose
+   - Electrónico / gadget: producto en mano o siendo usado pasivamente
+   PRINCIPIO: el producto debe aparecer en su forma original y reconocible, no en estado de consumo/aplicación.`;
 
   const systemPrompt = `Sos un director creativo senior especializado en PDPs de e-commerce.
 Generá exactamente 6 planes de imagen para el carrusel de producto, formato cuadrado 1:1.

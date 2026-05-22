@@ -83,12 +83,14 @@ function buildSlideVisualRules(hasPeople: boolean, pdpMode: string): Record<stri
     ...SLIDE_VISUAL_RULES_BASE,
     lifestyle: hasPeople
       ? pdpMode === 'fashion'
-        ? 'COMPOSITION: person wearing/using the product in a real-life aspirational context. ONE short tagline in big bold text. No bullet lists, no specs grid. Editorial photography feel.'
-        : 'COMPOSITION: person naturally using, holding, or applying the product in a real-life context (drinking a shake, applying cream, wearing a watch, etc.). ONE short tagline in big bold text. Authentic, aspirational.'
-      : 'COMPOSITION: product in its natural use environment (gym, desk, kitchen, bathroom, etc.) WITHOUT people. ONE short tagline in big bold text. No bullet lists, no numbered steps.',
+        ? 'COMPOSITION: person wearing the garment with exact color and silhouette. Real-life aspirational setting. ONE short tagline in big bold text. Editorial feel.'
+        : 'COMPOSITION: person in the product\'s natural context. MINIMUM RISK — product must appear in its original recognizable form. Safe interactions: watch on wrist, supplement jar held or on gym surface (NOT being mixed or drunk), skincare product on counter or in hand (NOT applied to face), electronics in hand or passively used. ONE short tagline in big bold text. NO bullet lists.'
+      : 'COMPOSITION: product in its natural use environment (gym, bathroom counter, kitchen, desk, etc.) WITHOUT people. ONE short tagline in big bold text. No bullet lists, no numbered steps.',
     howto: hasPeople
-      ? 'COMPOSITION: 3 numbered steps (1→2→3) shown with hands or person interacting with the product. Infographic style. ACTION verbs only — no benefit bullets.'
-      : 'COMPOSITION: 3 horizontal numbered steps (1→2→3) infographic style. Small visual of the product per step. No benefit bullets — ACTION verbs only (Mezclar, Aplicar, Consumir, Lavar).',
+      ? pdpMode === 'fashion'
+        ? 'COMPOSITION: 3 numbered steps (1→2→3) showing how to wear/care for the garment. Hands or person shown. Infographic style. ACTION verbs only.'
+        : 'COMPOSITION: 3 numbered steps (1→2→3). MINIMUM RISK: show the product being opened, measured, placed, or handled — NOT consumed/applied/mixed. Product appears in its original form in each step. Infographic style with ACTION verbs.'
+      : 'COMPOSITION: 3 horizontal numbered steps (1→2→3) infographic style. Product shown in its original recognizable form per step. No benefit bullets — ACTION verbs only.',
   };
 }
 
@@ -205,10 +207,15 @@ export async function POST(req: NextRequest) {
     }
 
     const lifestyleInstruction = !hasPeople
-      ? '3. LIFESTYLE IMAGE — el producto integrado en su contexto natural de uso (escritorio, cocina, gym, suplemento junto a pesas, crema junto al espejo, reloj sobre madera, etc.), sin personas. El ambiente rodea al producto de forma natural y cercana.'
+      ? '3. LIFESTYLE IMAGE — el producto en su contexto natural de uso sin personas (gym, baño, cocina, escritorio, etc.). El ambiente rodea el producto de forma natural y cercana. Sin copy de bullets.'
       : pdpMode === 'fashion'
-        ? '3. LIFESTYLE IMAGE — una persona vistiendo la prenda en una situación cotidiana auténtica y aspiracional. La persona debe verse natural. Genera deseo y conexión emocional.'
-        : '3. LIFESTYLE IMAGE — una persona usando, sosteniendo, consumiendo o aplicando el producto en una situación cotidiana auténtica (tomando el suplemento, aplicando la crema, usando el dispositivo, etc.). Natural y aspiracional.';
+        ? '3. LIFESTYLE IMAGE — persona vistiendo la prenda con su color, corte y silueta exactos. Situación cotidiana auténtica y aspiracional. La prenda debe verse tal como es.'
+        : `3. LIFESTYLE IMAGE — persona en el contexto donde se usa el producto. MÍNIMO RIESGO — el producto aparece en su forma original:
+   - Reloj/accesorio: puesto en la muñeca (forma natural conocida)
+   - Suplemento/proteína: sostenido en mano o sobre superficie de gym — NO mezclar ni tomar
+   - Cosmético/skincare: sobre mesada o en mano — NO aplicar en cara
+   - Alimento: en packaging en contexto de mesa/cocina — NO consumiéndose
+   - Electrónico: en mano o en uso pasivo (auriculares puestos, pantalla visible)`;
 
     const systemPrompt = `Sos un director creativo senior especializado en PDPs de e-commerce (Shopify / Tienda Nube).
 Dado un brief de producto y brand kit, generá exactamente 6 prompts de imagen — uno por cada tipo del sistema SPICY PDP.
