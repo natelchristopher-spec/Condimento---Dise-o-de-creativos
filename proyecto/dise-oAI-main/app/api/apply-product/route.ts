@@ -53,8 +53,15 @@ QUÉ NO TOCAR (debe quedar pixel-perfect igual):
 - Logos, íconos o elementos gráficos de marca
 - La pose y posición de la persona
 
+REGLAS DE COLOR — CRÍTICO:
+- El color de cada prenda debe ser IDÉNTICO al de la imagen de referencia. NO aclarar, NO oscurecer, NO desaturar, NO cambiar la temperatura de color.
+- Si el pantalón es beige, debe quedar beige exacto — no blanco, no crema, no gris.
+- Si es negro, que sea negro — no gris oscuro.
+- Analizá el color de la imagen de referencia y replicalo con máxima fidelidad aunque la iluminación de la escena sea diferente.
+- El color de la prenda debe dominar y mantenerse fiel incluso bajo las luces de la escena.
+
 REGLAS de producto:
-- Cada prenda debe verse EXACTAMENTE igual a su imagen de referencia: mismo color, mismo estampado, misma silueta
+- Cada prenda debe verse EXACTAMENTE igual a su imagen de referencia: mismo color, mismo estampado, misma silueta, mismo tejido
 - Si hay múltiples prendas de referencia, aplicá TODAS
 - Estilo fashion editorial premium, fotorrealista`;
 

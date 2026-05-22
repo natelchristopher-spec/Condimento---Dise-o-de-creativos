@@ -29,14 +29,14 @@ const PRODUCT_DESCRIPTION_PROMPT = `Sos un técnico de producto de moda de alta 
 
 Describí en este orden exacto:
 
-1. TIPO DE PRENDA: categoría (remera, vestido, campera, etc.), silueta y corte (oversize, entallado, recto, etc.), largo
-2. COLOR BASE Y FONDO: tono exacto y profundidad (no "azul" sino "azul marino oscuro casi negro", "blanco roto cálido", etc.)
-3. ESTAMPADO / PRINT (es lo más crítico): describí CADA elemento gráfico individualmente — qué forma tiene, de qué color exacto, qué tamaño relativo al total de la prenda, cómo se distribuye (all-over, centrado, borde, repetición, etc.), orientación, y cómo contrasta con el fondo. Si hay texto, copialo exactamente.
-4. MATERIALES Y TEXTURA: acabado (mate, satinado, brillante), peso visual, transparencia
-5. DETALLES DE CONFECCIÓN: cuello (redondo, V, polo, etc.), mangas (largo, corte), puños, bolsillos, costuras decorativas, piping, botones, cierres, terminaciones
+1. TIPO DE PRENDA: categoría (remera, pantalón, vestido, campera, etc.), silueta y corte (oversize, entallado, recto, cargo, etc.), largo
+2. COLOR BASE — ES LO MÁS CRÍTICO: describí el color con máxima precisión. NO uses solo el nombre del color. Usá referencias concretas: tono exacto (ej: "beige arena cálido, similar al tono de la arena seca", "verde oliva apagado con subtono amarillo", "negro carbón con leve subtono azulado"). Describí cómo se comporta bajo la luz (¿aclara? ¿cambia de tono?), su saturación (¿es vivo o apagado?) y su temperatura (¿frío o cálido?). Si es un color sólido, remarcalo. Si tiene variaciones de tono por pliegues o tejido, describí esas variaciones.
+3. ESTAMPADO / PRINT (si existe): describí CADA elemento gráfico individualmente — qué forma tiene, de qué color exacto, tamaño relativo, distribución, orientación, contraste. Si no hay estampado, indicar "color sólido uniforme".
+4. MATERIALES Y TEXTURA: acabado (mate, satinado, brillante), tejido visible (denim, gabardina, punto, etc.), peso visual, transparencia
+5. DETALLES DE CONFECCIÓN: tiro (alto, medio, bajo), piernas (ancho, ajuste), bolsillos, cintura (elástico, cierre, trabillas), costuras decorativas, terminaciones, cualquier detalle funcional
 6. ELEMENTOS ÚNICOS: cualquier detalle que diferencie esta prenda de una genérica
 
-IMPORTANTE sobre el estampado: nunca escribas "estampado floral" — describí cada flor, su color, tamaño y posición. El nivel de especificidad del estampado determina si la IA lo reproduce correctamente.`;
+CRÍTICO para pantalones y prendas de color sólido: el color debe quedar completamente fiel. Si es beige, describí exactamente qué tipo de beige. Si es negro, indicá si tiene subtono. La IA tiende a desaturar o cambiar la temperatura del color — tu descripción debe ser lo suficientemente específica para evitarlo.`;
 
 async function describeProductWithVision(openai: OpenAI, imageDataUrl: string): Promise<string> {
   const response = await openai.chat.completions.create({
