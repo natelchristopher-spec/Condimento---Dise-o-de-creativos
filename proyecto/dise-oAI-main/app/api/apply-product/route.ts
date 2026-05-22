@@ -80,7 +80,7 @@ REGLAS de producto:
       tools: [{
         type: 'image_generation',
         model: 'gpt-image-2',
-        quality: 'medium',
+        quality: 'high',
         size: '1024x1536',
       }],
     });

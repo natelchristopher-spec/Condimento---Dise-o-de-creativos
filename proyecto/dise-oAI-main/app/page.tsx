@@ -380,7 +380,8 @@ export default function Home() {
         const updated = base64 ? { ...next, base64 } : next;
         setRefineImage(updated);
         setSelectedConcepts(prev => prev.map(c => c.id === next.id ? updated : c));
-      } catch {
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Error aplicando producto al concepto');
         setRefineImage(next);
       } finally {
         stopLoading();
