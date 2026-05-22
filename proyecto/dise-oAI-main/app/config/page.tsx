@@ -203,7 +203,7 @@ export default function ConfigPage() {
   };
 
   return (
-    <div className="min-h-screen flex bg-[#0a0a0c]">
+    <div className="min-h-screen flex bg-[#25252a]">
       <Sidebar active="/config" onLogout={handleLogout} />
       <div className="flex-1 md:ml-56 min-h-screen pt-12 md:pt-0">
       <main className="max-w-2xl mx-auto px-6 py-10">
