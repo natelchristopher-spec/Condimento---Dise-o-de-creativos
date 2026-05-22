@@ -399,13 +399,15 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
             }
 
             // Fallback: images.edit — accepts input photos, no org verification required
+            // Only product photos are passed — person reference photos are NOT included because
+            // images.edit treats all inputs as editable source material and would blend/misuse them.
             if (!base64) {
               try {
                 const imageFiles = await Promise.all(
-                  inputImages.slice(0, 4).map(async (dataUrl, i) => {
+                  productDataUrls.slice(0, 2).map(async (dataUrl, i) => {
                     const b64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
                     const mimeType = dataUrl.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
-                    return toFile(Buffer.from(b64, 'base64'), `input_${i}.${mimeType === 'image/png' ? 'png' : 'jpg'}`, { type: mimeType });
+                    return toFile(Buffer.from(b64, 'base64'), `product_${i}.${mimeType === 'image/png' ? 'png' : 'jpg'}`, { type: mimeType });
                   })
                 );
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
