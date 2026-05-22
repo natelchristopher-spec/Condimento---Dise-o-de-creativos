@@ -62,32 +62,32 @@ export default function PerfilPage() {
   };
 
   return (
-    <div className="min-h-screen flex bg-[#25252a]">
+    <div className="min-h-screen flex bg-gray-50">
       <Sidebar active="/perfil" onLogout={handleLogout} userEmail={email} />
       <div className="flex-1 md:ml-56 min-h-screen pt-12 md:pt-0">
       <main className="max-w-lg mx-auto px-6 py-10 space-y-8">
         <div>
-          <h1 className="text-2xl font-bold text-white mb-1">Perfil</h1>
-          <p className="text-white/40 text-sm">{email}</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">Perfil</h1>
+          <p className="text-gray-500 text-sm">{email}</p>
         </div>
 
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-5">
+        <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-5">
           <div>
-            <h2 className="text-base font-semibold text-white mb-1">API Key de OpenAI</h2>
-            <p className="text-white/40 text-xs">Las imágenes se generan con tu propia cuenta de OpenAI. Los costos van directamente a tu cuenta.</p>
+            <h2 className="text-base font-semibold text-gray-900 mb-1">API Key de OpenAI</h2>
+            <p className="text-gray-500 text-xs">Las imágenes se generan con tu propia cuenta de OpenAI. Los costos van directamente a tu cuenta.</p>
           </div>
 
           {savedKey && (
-            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3 flex items-center gap-2">
-              <svg className="w-4 h-4 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 flex items-center gap-2">
+              <svg className="w-4 h-4 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-              <span className="text-emerald-400 text-sm font-mono">{maskKey(savedKey)}</span>
+              <span className="text-emerald-700 text-sm font-mono">{maskKey(savedKey)}</span>
             </div>
           )}
 
           <div className="space-y-2">
-            <label className="text-sm text-white/60">
+            <label className="text-sm text-gray-600">
               {savedKey ? 'Reemplazar API key' : 'Pegá tu API key'}
             </label>
             <div className="relative">
@@ -96,12 +96,12 @@ export default function PerfilPage() {
                 value={apiKey}
                 onChange={e => setApiKey(e.target.value)}
                 placeholder="sk-proj-..."
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-12 text-white placeholder-white/25 focus:outline-none focus:border-[#e42820] text-sm font-mono"
+                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 pr-12 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] text-sm font-mono"
               />
               <button
                 type="button"
                 onClick={() => setShowKey(v => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   {showKey
@@ -117,7 +117,7 @@ export default function PerfilPage() {
             onClick={handleSave}
             disabled={!apiKey.trim() || saving || apiKey === savedKey}
             className={`w-full font-medium px-4 py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-sm ${
-              saved ? 'bg-emerald-600 text-white' : 'bg-[#e42820] hover:bg-[#e42820] disabled:opacity-40 disabled:cursor-not-allowed text-white'
+              saved ? 'bg-emerald-600 text-white' : 'bg-[#e42820] hover:bg-[#c41f18] disabled:opacity-40 disabled:cursor-not-allowed text-white'
             }`}
           >
             {saved ? (
@@ -125,9 +125,9 @@ export default function PerfilPage() {
             ) : saving ? 'Guardando...' : 'Guardar API key'}
           </button>
 
-          <div className="border-t border-white/10 pt-4 space-y-2">
-            <p className="text-xs text-white/30 font-medium">¿Dónde obtengo mi API key?</p>
-            <ol className="text-xs text-white/40 space-y-1 list-decimal list-inside">
+          <div className="border-t border-gray-200 pt-4 space-y-2">
+            <p className="text-xs text-gray-500 font-medium">¿Dónde obtengo mi API key?</p>
+            <ol className="text-xs text-gray-500 space-y-1 list-decimal list-inside">
               <li>Entrá a platform.openai.com</li>
               <li>Menú izquierdo → API Keys</li>
               <li>Create new secret key</li>
@@ -138,7 +138,7 @@ export default function PerfilPage() {
 
         <Link
           href="/"
-          className="flex items-center justify-center gap-2 text-sm text-white/50 hover:text-white/80 transition-colors py-2"
+          className="flex items-center justify-center gap-2 text-sm text-gray-500 hover:text-gray-800 transition-colors py-2"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />

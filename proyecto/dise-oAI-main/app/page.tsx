@@ -160,6 +160,9 @@ export default function Home() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al scrapear');
       setClientRequest(data.clientRequest);
+      if (data.productImageBase64) {
+        setProductDetailImages([data.productImageBase64]);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo leer la URL');
     } finally {
@@ -433,13 +436,13 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex bg-[#25252a]">
+    <div className="min-h-screen flex bg-gray-50">
       <Sidebar active="/" onLogout={handleLogout} userEmail={userEmail} />
       <div className="flex-1 md:ml-56 min-h-screen flex flex-col pt-12 md:pt-0">
         {step !== 'brief' && (
-          <div className="border-b border-white/10 px-6 py-3 flex items-center gap-4 bg-[#111111]">
+          <div className="border-b border-gray-200 px-6 py-3 flex items-center gap-4 bg-white">
             <StepIndicator currentStep={step} />
-            <button onClick={reset} className="ml-auto text-xs text-white/30 hover:text-white/60 transition-colors">
+            <button onClick={reset} className="ml-auto text-xs text-gray-400 hover:text-gray-500 transition-colors">
               Nueva campaña
             </button>
           </div>
@@ -456,10 +459,10 @@ export default function Home() {
 
         {/* Onboarding wizard — shown when setup is incomplete */}
         {step === 'brief' && hasApiKey !== null && (!hasApiKey || !brandKit) && (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4">
+          <div className="rounded-2xl border border-gray-200 bg-white p-6 space-y-4">
             <div>
               <h2 className="font-semibold text-base">Configuración inicial</h2>
-              <p className="text-sm text-white/50 mt-0.5">Completá estos dos pasos antes de empezar a generar.</p>
+              <p className="text-sm text-gray-500 mt-0.5">Completá estos dos pasos antes de empezar a generar.</p>
             </div>
             <div className="space-y-3">
               {/* Step 1: API key */}
@@ -476,11 +479,11 @@ export default function Home() {
                     {hasApiKey ? 'API key de OpenAI configurada' : 'Agregá tu API key de OpenAI'}
                   </p>
                   {!hasApiKey && (
-                    <p className="text-xs text-white/40 mt-0.5">La necesitás para generar imágenes con IA.</p>
+                    <p className="text-xs text-gray-500 mt-0.5">La necesitás para generar imágenes con IA.</p>
                   )}
                 </div>
                 {!hasApiKey && (
-                  <Link href="/perfil" className="shrink-0 bg-[#e42820] text-white text-xs font-medium px-4 py-2 rounded-lg hover:bg-[#c41f18] transition-colors">
+                  <Link href="/perfil" className="shrink-0 bg-[#e42820] text-gray-900 text-xs font-medium px-4 py-2 rounded-lg hover:bg-[#c41f18] transition-colors">
                     Configurar
                   </Link>
                 )}
@@ -489,24 +492,24 @@ export default function Home() {
               {/* Step 2: Brand kit */}
               <div className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${
                 brandKit ? 'border-emerald-500/30 bg-emerald-500/5' :
-                hasApiKey ? 'border-[#e42820]/40 bg-[#e42820]/5' : 'border-white/10 bg-white/5 opacity-50'
+                hasApiKey ? 'border-[#e42820]/40 bg-[#e42820]/5' : 'border-gray-200 bg-white opacity-50'
               }`}>
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
                   brandKit ? 'bg-emerald-500/20 text-emerald-400' :
-                  hasApiKey ? 'bg-[#e42820]/20 text-[#e42820]' : 'bg-white/10 text-white/40'
+                  hasApiKey ? 'bg-[#e42820]/20 text-[#e42820]' : 'bg-gray-100 text-gray-500'
                 }`}>
                   {brandKit ? '✓' : '2'}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-medium ${brandKit ? 'text-emerald-400' : hasApiKey ? 'text-white' : 'text-white/40'}`}>
+                  <p className={`text-sm font-medium ${brandKit ? 'text-emerald-400' : hasApiKey ? 'text-white' : 'text-gray-500'}`}>
                     {brandKit ? 'Brand kit configurado' : 'Configurá tu brand kit'}
                   </p>
                   {!brandKit && hasApiKey && (
-                    <p className="text-xs text-white/40 mt-0.5">Subí tu manual de marca o completalo manualmente.</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Subí tu manual de marca o completalo manualmente.</p>
                   )}
                 </div>
                 {!brandKit && hasApiKey && (
-                  <Link href="/config" className="shrink-0 bg-[#e42820] text-white text-xs font-medium px-4 py-2 rounded-lg hover:bg-[#c41f18] transition-colors">
+                  <Link href="/config" className="shrink-0 bg-[#e42820] text-gray-900 text-xs font-medium px-4 py-2 rounded-lg hover:bg-[#c41f18] transition-colors">
                     Configurar
                   </Link>
                 )}
@@ -519,13 +522,13 @@ export default function Home() {
         {step === 'brief' && (
           <div className="space-y-8">
             <div>
-              <h1 className="text-3xl font-bold text-white mb-1">Nueva campaña</h1>
-              <p className="text-white/40 text-sm">Describí lo que necesitás y la IA generará tus creativos.</p>
+              <h1 className="text-3xl font-bold text-gray-900 mb-1">Nueva campaña</h1>
+              <p className="text-gray-500 text-sm">Describí lo que necesitás y la IA generará tus creativos.</p>
             </div>
 
             {/* URL scraper */}
             <div className="space-y-2">
-              <label className="text-xs font-medium text-white/50 uppercase tracking-wider">Importar desde URL de producto</label>
+              <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Importar desde URL de producto</label>
               <div className="flex gap-2">
                 <input
                   type="url"
@@ -533,12 +536,12 @@ export default function Home() {
                   onChange={e => setProductUrl(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && !scrapingUrl && scrapeProduct()}
                   placeholder="https://tienda.com/producto/..."
-                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-white/20 focus:outline-none focus:border-[#e42820] text-sm"
+                  className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#e42820] text-sm"
                 />
                 <button
                   onClick={scrapeProduct}
                   disabled={!productUrl.trim() || scrapingUrl}
-                  className="shrink-0 bg-white/8 hover:bg-white/12 disabled:opacity-40 disabled:cursor-not-allowed border border-white/10 hover:border-white/20 text-white/70 hover:text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-all flex items-center gap-2"
+                  className="shrink-0 bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed border border-gray-200 hover:border-gray-300 text-gray-600 hover:text-gray-900 text-sm font-medium px-4 py-2.5 rounded-xl transition-all flex items-center gap-2"
                 >
                   {scrapingUrl ? (
                     <><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />Leyendo...</>
@@ -552,14 +555,14 @@ export default function Home() {
                   )}
                 </button>
               </div>
-              <p className="text-[11px] text-white/25">Pegá la URL del producto y la IA extrae precio, descuentos, cuotas y arma la solicitud automáticamente.</p>
+              <p className="text-[11px] text-gray-400">Pegá la URL del producto y la IA extrae precio, descuentos, cuotas y arma la solicitud automáticamente.</p>
             </div>
 
             {/* Brief generator */}
             <div className="space-y-3">
               <div>
-                <label className="text-sm font-semibold text-white/80">¿Dime que quieres que diseñe para ti?</label>
-                <p className="text-xs text-white/35 mt-1">Sé específico: ¿hay descuentos? ¿Es un lanzamiento, una sale o una campaña de marca? Incluí fechas, productos destacados, mecánicas (cuotas, envío gratis) y cualquier detalle relevante.</p>
+                <label className="text-sm font-semibold text-gray-700">¿Dime que quieres que diseñe para ti?</label>
+                <p className="text-xs text-gray-900/35 mt-1">Sé específico: ¿hay descuentos? ¿Es un lanzamiento, una sale o una campaña de marca? Incluí fechas, productos destacados, mecánicas (cuotas, envío gratis) y cualquier detalle relevante.</p>
               </div>
               <div className="flex gap-2 items-start">
                 <textarea
@@ -567,12 +570,12 @@ export default function Home() {
                   onChange={e => setClientRequest(e.target.value)}
                   placeholder="Ej: 'Quiero lanzar la campaña de verano con 30% OFF en toda la colección. Los productos estrella son vestidos y trajes de baño. Público: mujeres 25-40. Paleta cálida, colores coral y turquesa. Termina el 31 de enero.'"
                   rows={4}
-                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 focus:outline-none focus:border-[#e42820] resize-none text-sm leading-relaxed"
+                  className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] resize-none text-sm leading-relaxed"
                 />
                 <button
                   onClick={generateBrief}
                   disabled={!clientRequest.trim() || generatingBrief}
-                  className="shrink-0 bg-[#e42820]/80 hover:bg-[#e42820] disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-3 rounded-xl transition-colors flex items-center gap-2 whitespace-nowrap"
+                  className="shrink-0 bg-[#e42820]/80 hover:bg-[#e42820] disabled:opacity-40 disabled:cursor-not-allowed text-gray-900 text-sm font-medium px-4 py-3 rounded-xl transition-colors flex items-center gap-2 whitespace-nowrap"
                 >
                   {generatingBrief ? (
                     <><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />Generando...</>
@@ -590,19 +593,19 @@ export default function Home() {
 
             {/* Brief input */}
             <div className="space-y-3">
-              <label className="text-sm font-medium text-white/70">Brief de campaña</label>
+              <label className="text-sm font-medium text-gray-600">Brief de campaña</label>
               <textarea
                 value={brief}
                 onChange={e => setBrief(e.target.value)}
                 placeholder="El brief aparecerá acá. También podés escribirlo directamente."
                 rows={5}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 focus:outline-none focus:border-[#e42820] resize-none text-sm leading-relaxed"
+                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] resize-none text-sm leading-relaxed"
               />
             </div>
 
             {/* Concept count selector */}
             <div className="space-y-3">
-              <label className="text-sm font-medium text-white/70">¿Cuántos conceptos querés generar?</label>
+              <label className="text-sm font-medium text-gray-600">¿Cuántos conceptos querés generar?</label>
               <div className="flex gap-2">
                 {[1, 2, 3, 4, 5, 6].map(n => (
                   <button
@@ -611,23 +614,23 @@ export default function Home() {
                     className={`w-12 h-12 rounded-xl border text-base font-semibold transition-all ${
                       conceptCount === n
                         ? 'border-[#e42820] bg-[#e42820]/10 text-[#e42820]'
-                        : 'border-white/10 hover:border-white/20 bg-white/5 text-white/60'
+                        : 'border-gray-200 hover:border-gray-300 bg-white text-gray-500'
                     }`}
                   >
                     {n}
                   </button>
                 ))}
               </div>
-              <p className="text-xs text-white/30">Cada número corresponde a un framework distinto. Más conceptos = más tiempo y crédito de OpenAI.</p>
+              <p className="text-xs text-gray-400">Cada número corresponde a un framework distinto. Más conceptos = más tiempo y crédito de OpenAI.</p>
             </div>
 
             {/* People mode */}
             <div className="space-y-3">
-              <label className="text-sm font-medium text-white/70">Tipo de imagen</label>
+              <label className="text-sm font-medium text-gray-600">Tipo de imagen</label>
               <div className="grid grid-cols-2 gap-3">
                 {([
                   { value: 'none', label: 'PRODUCTO', desc: 'Hero · Oferta · Beneficio · Feature · Problema/Solución · Uso cotidiano', icon: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
-                  { value: 'real', label: 'FASHION', desc: 'Lifestyle · Aspiracional · Transformación · Uso diario · Detalle · Mood', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
+                  { value: 'real', label: 'FASHION', desc: 'Oferta · Lifestyle · Aspiracional · Transformación · Uso diario · Detalle', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
                 ] as const).map(opt => (
                   <button
                     key={opt.value}
@@ -635,37 +638,37 @@ export default function Home() {
                     className={`p-4 rounded-xl border text-left transition-all ${
                       peopleMode === opt.value
                         ? 'border-[#e42820] bg-[#e42820]/10'
-                        : 'border-white/10 hover:border-white/20 bg-white/5'
+                        : 'border-gray-200 hover:border-gray-300 bg-white'
                     }`}
                   >
-                    <svg className={`w-5 h-5 mb-2 ${peopleMode === opt.value ? 'text-[#e42820]' : 'text-white/40'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className={`w-5 h-5 mb-2 ${peopleMode === opt.value ? 'text-[#e42820]' : 'text-gray-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={opt.icon} />
                     </svg>
                     <p className="text-sm font-medium">{opt.label}</p>
-                    <p className="text-xs text-white/40 mt-0.5">{opt.desc}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{opt.desc}</p>
                   </button>
                 ))}
               </div>
 
               <div className="space-y-2">
-                <p className="text-xs font-medium text-white/60">Foto del producto / estampado en detalle</p>
-                <p className="text-xs text-white/30">Primer plano sobre fondo neutro — más detalle = mejor resultado.</p>
+                <p className="text-xs font-medium text-gray-500">Foto del producto / estampado en detalle</p>
+                <p className="text-xs text-gray-400">Primer plano sobre fondo neutro — más detalle = mejor resultado.</p>
                 <div className="flex gap-3 flex-wrap">
                   {productDetailImages.map((img, i) => (
-                    <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-white/10">
+                    <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-gray-200">
                       <img src={img} alt={`prod ${i+1}`} className="w-full h-full object-cover" />
                       <button
                         onClick={() => setProductDetailImages(prev => prev.filter((_, idx) => idx !== i))}
-                        className="absolute top-1 right-1 w-5 h-5 bg-black/70 rounded-full flex items-center justify-center text-white/80 hover:text-white text-xs"
+                        className="absolute top-1 right-1 w-5 h-5 bg-black/70 rounded-full flex items-center justify-center text-gray-700 hover:text-gray-900 text-xs"
                       >×</button>
                     </div>
                   ))}
                   {productDetailImages.length < 2 && (
-                    <label className="w-20 h-20 rounded-xl border border-dashed border-white/20 hover:border-white/40 flex flex-col items-center justify-center cursor-pointer transition-colors gap-1">
-                      <svg className="w-5 h-5 text-white/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <label className="w-20 h-20 rounded-xl border border-dashed border-gray-300 hover:border-white/40 flex flex-col items-center justify-center cursor-pointer transition-colors gap-1">
+                      <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                       </svg>
-                      <span className="text-xs text-white/30">Foto</span>
+                      <span className="text-xs text-gray-400">Foto</span>
                       <input type="file" accept="image/*" multiple onChange={handleProductDetailUpload} className="hidden" />
                     </label>
                   )}
@@ -674,23 +677,23 @@ export default function Home() {
 
               {peopleMode === 'real' && (
                 <div className="space-y-2">
-                  <p className="text-xs font-medium text-white/60">Foto de la persona usando el producto</p>
+                  <p className="text-xs font-medium text-gray-500">Foto de la persona usando el producto</p>
                   <div className="flex gap-3 flex-wrap">
                     {referenceImages.map((img, i) => (
-                      <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-white/10">
+                      <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-gray-200">
                         <img src={img} alt={`ref ${i+1}`} className="w-full h-full object-cover" />
                         <button
                           onClick={() => setReferenceImages(prev => prev.filter((_, idx) => idx !== i))}
-                          className="absolute top-1 right-1 w-5 h-5 bg-black/70 rounded-full flex items-center justify-center text-white/80 hover:text-white text-xs"
+                          className="absolute top-1 right-1 w-5 h-5 bg-black/70 rounded-full flex items-center justify-center text-gray-700 hover:text-gray-900 text-xs"
                         >×</button>
                       </div>
                     ))}
                     {referenceImages.length < 2 && (
-                      <label className="w-20 h-20 rounded-xl border border-dashed border-white/20 hover:border-white/40 flex flex-col items-center justify-center cursor-pointer transition-colors gap-1">
-                        <svg className="w-5 h-5 text-white/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <label className="w-20 h-20 rounded-xl border border-dashed border-gray-300 hover:border-white/40 flex flex-col items-center justify-center cursor-pointer transition-colors gap-1">
+                        <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                         </svg>
-                        <span className="text-xs text-white/30">Foto</span>
+                        <span className="text-xs text-gray-400">Foto</span>
                         <input type="file" accept="image/*" multiple onChange={handleReferenceImageUpload} className="hidden" />
                       </label>
                     )}
@@ -702,7 +705,7 @@ export default function Home() {
             <button
               onClick={generateConcepts}
               disabled={!brandKit || !brief.trim() || loading}
-              className="bg-[#e42820] hover:bg-[#e42820] disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium px-6 py-3 rounded-xl transition-colors flex items-center gap-2"
+              className="bg-[#e42820] hover:bg-[#e42820] disabled:opacity-40 disabled:cursor-not-allowed text-gray-900 font-medium px-6 py-3 rounded-xl transition-colors flex items-center gap-2"
             >
               {loading ? (
                 <>
@@ -727,20 +730,20 @@ export default function Home() {
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="text-2xl font-bold mb-1">Elegí hasta 3 conceptos</h2>
-                <p className="text-white/50 text-sm">Seleccioná los que más te gustan para afinarlos</p>
+                <p className="text-gray-500 text-sm">Seleccioná los que más te gustan para afinarlos</p>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={regenerateConcepts}
                   disabled={loading}
-                  className="text-sm text-white/50 hover:text-white/80 transition-colors border border-white/10 hover:border-white/20 px-3 py-1.5 rounded-lg disabled:opacity-40 flex items-center gap-1.5"
+                  className="text-sm text-gray-500 hover:text-gray-700 transition-colors border border-gray-200 hover:border-gray-300 px-3 py-1.5 rounded-lg disabled:opacity-40 flex items-center gap-1.5"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
                   Regenerar
                 </button>
-                <button onClick={reset} className="text-white/40 hover:text-white/70 text-sm transition-colors">
+                <button onClick={reset} className="text-gray-500 hover:text-gray-600 text-sm transition-colors">
                   ← Volver
                 </button>
               </div>
@@ -754,7 +757,7 @@ export default function Home() {
                   <div key={img.id} className="relative">
                     <ImageCard image={img} selected={isSelected} onClick={() => toggleConceptSelection(img)} />
                     {isSelected && (
-                      <div className="absolute top-2 left-2 w-6 h-6 bg-[#e42820] rounded-full flex items-center justify-center text-xs font-bold text-white">
+                      <div className="absolute top-2 left-2 w-6 h-6 bg-[#e42820] rounded-full flex items-center justify-center text-xs font-bold text-gray-900">
                         {selIdx + 1}
                       </div>
                     )}
@@ -762,11 +765,11 @@ export default function Home() {
                 );
               })}
               {loading && Array.from({ length: Math.max(0, generatingCount - concepts.length) }).map((_, i) => (
-                <div key={`skeleton-${i}`} className="aspect-[2/3] rounded-xl border border-white/10 bg-white/5 animate-pulse flex flex-col justify-end p-3 gap-2">
+                <div key={`skeleton-${i}`} className="aspect-[2/3] rounded-xl border border-gray-200 bg-white animate-pulse flex flex-col justify-end p-3 gap-2">
                   <div className="flex items-center justify-center flex-1">
-                    <div className="w-6 h-6 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
+                    <div className="w-6 h-6 border-2 border-gray-300 border-t-white/60 rounded-full animate-spin" />
                   </div>
-                  <div className="h-2.5 bg-white/20 rounded-full w-2/3" />
+                  <div className="h-2.5 bg-gray-300 rounded-full w-2/3" />
                 </div>
               ))}
             </div>
@@ -779,20 +782,20 @@ export default function Home() {
                   onChange={e => setProductDescription(e.target.value)}
                   rows={5}
                   placeholder="Describí el producto: tipo de prenda, color, estampado, detalles..."
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white/80 text-xs leading-relaxed focus:outline-none focus:border-[#e42820] resize-none placeholder-white/20"
+                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-gray-700 text-xs leading-relaxed focus:outline-none focus:border-[#e42820] resize-none placeholder-gray-300"
                 />
               </div>
             )}
 
             <div className="flex items-center justify-between pt-2 flex-wrap gap-3">
               <div className="flex items-center gap-3">
-                <p className="text-white/40 text-sm">
+                <p className="text-gray-500 text-sm">
                   {selectedConcepts.length === 0 ? 'Hacé click para seleccionar' : `${selectedConcepts.length} seleccionado${selectedConcepts.length > 1 ? 's' : ''}`}
                 </p>
                 {selectedConcepts.length > 0 && (
                   <button
                     onClick={downloadAllSelected}
-                    className="text-white/50 hover:text-white/80 text-sm border border-white/10 hover:border-white/20 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
+                    className="text-gray-500 hover:text-gray-700 text-sm border border-gray-200 hover:border-gray-300 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -804,7 +807,7 @@ export default function Home() {
                   <button
                     onClick={generateSimilar}
                     disabled={loading}
-                    className="text-white/50 hover:text-[#e42820] text-sm border border-white/10 hover:border-[#e42820]/50 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40 flex items-center gap-1.5"
+                    className="text-gray-500 hover:text-[#e42820] text-sm border border-gray-200 hover:border-[#e42820]/50 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40 flex items-center gap-1.5"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -816,7 +819,7 @@ export default function Home() {
               <button
                 onClick={enterRefine}
                 disabled={selectedConcepts.length === 0 || loading}
-                className="bg-[#e42820] hover:bg-[#e42820] disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium px-6 py-3 rounded-xl transition-colors flex items-center gap-2"
+                className="bg-[#e42820] hover:bg-[#e42820] disabled:opacity-40 disabled:cursor-not-allowed text-gray-900 font-medium px-6 py-3 rounded-xl transition-colors flex items-center gap-2"
               >
                 {loading ? (
                   <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{loadingMsg}{elapsedSec > 5 ? ` · ${elapsedSec}s` : ''}</>
@@ -839,16 +842,16 @@ export default function Home() {
                     <span className="ml-3 text-base font-normal text-[#e42820]">{refineIndex + 1} de {selectedConcepts.length}</span>
                   )}
                 </h2>
-                <p className="text-white/50 text-sm">{refineImage.conceptName}</p>
+                <p className="text-gray-500 text-sm">{refineImage.conceptName}</p>
               </div>
-              <button onClick={() => setStep('concepts')} className="text-white/40 hover:text-white/70 text-sm transition-colors">
+              <button onClick={() => setStep('concepts')} className="text-gray-500 hover:text-gray-600 text-sm transition-colors">
                 ← Volver
               </button>
             </div>
 
             <div className="grid md:grid-cols-2 gap-8 items-start">
               <div className="space-y-3">
-                <div className="rounded-xl overflow-hidden border border-white/10 relative">
+                <div className="rounded-xl overflow-hidden border border-gray-200 relative">
                   <img
                     src={`data:image/png;base64,${refineImage.base64}`}
                     alt="Concepto"
@@ -858,7 +861,7 @@ export default function Home() {
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30 backdrop-blur-[2px]">
                       <div className="w-8 h-8 border-3 border-white/30 border-t-white rounded-full animate-spin mb-2" style={{ borderWidth: '3px' }} />
                       <p className="text-white text-sm font-medium">{loadingMsg || 'Aplicando...'}</p>
-                      {elapsedSec > 3 && <p className="text-white/60 text-xs mt-1">{elapsedSec}s</p>}
+                      {elapsedSec > 3 && <p className="text-gray-500 text-xs mt-1">{elapsedSec}s</p>}
                     </div>
                   )}
                 </div>
@@ -869,7 +872,7 @@ export default function Home() {
                     a.download = `${brandKit?.name || 'concepto'}-${refineImage.conceptName.replace(/\s+/g, '-')}.png`;
                     a.click();
                   }}
-                  className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white text-sm px-4 py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2"
+                  className="w-full bg-white hover:bg-gray-100 border border-gray-200 text-gray-500 hover:text-gray-900 text-sm px-4 py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -881,10 +884,10 @@ export default function Home() {
               <div className="space-y-4">
                 {refineHistory.length > 0 && (
                   <div className="space-y-2">
-                    <p className="text-xs text-white/40 font-medium uppercase tracking-wider">Aplicados</p>
+                    <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Aplicados</p>
                     <div className="space-y-1.5 max-h-32 overflow-y-auto">
                       {refineHistory.map((h, i) => (
-                        <div key={i} className="bg-white/5 rounded-lg px-3 py-2 text-sm text-white/60 flex items-start gap-2">
+                        <div key={i} className="bg-white rounded-lg px-3 py-2 text-sm text-gray-500 flex items-start gap-2">
                           <span className="text-[#e42820] mt-0.5">✓</span>{h}
                         </div>
                       ))}
@@ -893,7 +896,7 @@ export default function Home() {
                 )}
 
                 <div className="space-y-2">
-                  <p className="text-xs text-white/40 font-medium uppercase tracking-wider">Ajustes rápidos</p>
+                  <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Ajustes rápidos</p>
                   <div className="flex flex-wrap gap-2">
                     {[
                       ...(brandKit?.quickAdjustments || []),
@@ -910,7 +913,7 @@ export default function Home() {
                           className={`text-xs px-3 py-1.5 rounded-lg transition-colors border ${
                             isClientPreset
                               ? 'bg-[#e42820]/10 border-[#e42820]/30 text-[#e42820] hover:bg-[#e42820]/20'
-                              : 'bg-white/5 hover:bg-white/10 border-white/10 hover:border-[#e42820]/50 text-white/60 hover:text-white'
+                              : 'bg-white hover:bg-gray-100 border-gray-200 hover:border-[#e42820]/50 text-gray-500 hover:text-gray-900'
                           }`}
                         >
                           {preset}
@@ -929,13 +932,13 @@ export default function Home() {
                     onKeyDown={e => e.key === 'Enter' && !loading && applyRefinement()}
                     placeholder="O escribí tu ajuste..."
                     disabled={loading}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 focus:outline-none focus:border-[#e42820] text-sm disabled:opacity-50"
+                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] text-sm disabled:opacity-50"
                   />
                   <div className="flex gap-2">
                     <button
                       onClick={applyRefinement}
                       disabled={!refineInput.trim() || loading}
-                      className="flex-1 bg-white/10 hover:bg-white/15 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium px-4 py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                      className="flex-1 bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed text-gray-900 font-medium px-4 py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
                     >
                       {loading ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{elapsedSec > 0 ? `${elapsedSec}s...` : 'Aplicando...'}</> : 'Aplicar'}
                     </button>
@@ -943,7 +946,7 @@ export default function Home() {
                       <button
                         onClick={undoRefinement}
                         disabled={loading}
-                        className="bg-white/5 hover:bg-white/10 border border-white/10 disabled:opacity-40 text-white/60 hover:text-white px-3 py-3 rounded-xl transition-colors flex items-center gap-1.5 text-sm"
+                        className="bg-white hover:bg-gray-100 border border-gray-200 disabled:opacity-40 text-gray-500 hover:text-gray-900 px-3 py-3 rounded-xl transition-colors flex items-center gap-1.5 text-sm"
                       >
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
@@ -959,7 +962,7 @@ export default function Home() {
                     <button
                       onClick={saveRefinedAndNext}
                       disabled={loading}
-                      className="flex-1 bg-[#e42820] hover:bg-[#e42820] disabled:opacity-40 text-white font-medium px-4 py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                      className="flex-1 bg-[#e42820] hover:bg-[#e42820] disabled:opacity-40 text-gray-900 font-medium px-4 py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
                     >
                       Guardar y siguiente
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -970,7 +973,7 @@ export default function Home() {
                     <button
                       onClick={finishRefine}
                       disabled={loading}
-                      className="flex-1 bg-[#e42820] hover:bg-[#e42820] disabled:opacity-40 text-white font-medium px-4 py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                      className="flex-1 bg-[#e42820] hover:bg-[#e42820] disabled:opacity-40 text-gray-900 font-medium px-4 py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
                     >
                       Finalizar
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -990,9 +993,9 @@ export default function Home() {
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="text-2xl font-bold mb-1">¡Listos para descargar!</h2>
-                <p className="text-white/50 text-sm">{selectedConcepts.length} concepto{selectedConcepts.length > 1 ? 's' : ''} finalizado{selectedConcepts.length > 1 ? 's' : ''}</p>
+                <p className="text-gray-500 text-sm">{selectedConcepts.length} concepto{selectedConcepts.length > 1 ? 's' : ''} finalizado{selectedConcepts.length > 1 ? 's' : ''}</p>
               </div>
-              <button onClick={() => setStep('refine')} className="text-white/40 hover:text-white/70 text-sm transition-colors">
+              <button onClick={() => setStep('refine')} className="text-gray-500 hover:text-gray-600 text-sm transition-colors">
                 ← Volver a afinación
               </button>
             </div>
@@ -1000,10 +1003,10 @@ export default function Home() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {selectedConcepts.map((img, i) => (
                 <div key={img.id} className="space-y-2">
-                  <div className="rounded-xl overflow-hidden border border-white/10">
+                  <div className="rounded-xl overflow-hidden border border-gray-200">
                     <img src={`data:image/png;base64,${img.base64}`} alt={img.conceptName} className="w-full" />
                   </div>
-                  <p className="text-xs text-white/50 text-center truncate">{img.conceptName}</p>
+                  <p className="text-xs text-gray-500 text-center truncate">{img.conceptName}</p>
                   <button
                     onClick={() => {
                       const a = document.createElement('a');
@@ -1011,7 +1014,7 @@ export default function Home() {
                       a.download = `${brandKit?.name || 'concepto'}-${i + 1}-${img.conceptName.replace(/\s+/g, '-')}.png`;
                       a.click();
                     }}
-                    className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white text-xs px-3 py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                    className="w-full bg-white hover:bg-gray-100 border border-gray-200 text-gray-500 hover:text-gray-900 text-xs px-3 py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -1025,7 +1028,7 @@ export default function Home() {
             <div className="flex items-center gap-3 pt-2">
               <button
                 onClick={downloadAllSelected}
-                className="bg-[#e42820] hover:bg-[#e42820] text-white font-medium px-6 py-3 rounded-xl transition-colors flex items-center gap-2"
+                className="bg-[#e42820] hover:bg-[#e42820] text-gray-900 font-medium px-6 py-3 rounded-xl transition-colors flex items-center gap-2"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -1034,17 +1037,17 @@ export default function Home() {
               </button>
               <button
                 onClick={reset}
-                className="text-white/40 hover:text-white/70 text-sm transition-colors border border-white/10 hover:border-white/20 px-4 py-3 rounded-xl"
+                className="text-gray-500 hover:text-gray-600 text-sm transition-colors border border-gray-200 hover:border-gray-300 px-4 py-3 rounded-xl"
               >
                 Nueva campaña
               </button>
             </div>
 
             {/* Adaptaciones de tamaño */}
-            <div className="border-t border-white/10 pt-6 space-y-4">
+            <div className="border-t border-gray-200 pt-6 space-y-4">
               <div>
                 <h3 className="text-base font-semibold mb-1">Adaptaciones de tamaño</h3>
-                <p className="text-white/40 text-sm">Generá los mismos conceptos en otros formatos.</p>
+                <p className="text-gray-500 text-sm">Generá los mismos conceptos en otros formatos.</p>
               </div>
               {[
                 { group: 'RRSS', items: [
@@ -1066,7 +1069,7 @@ export default function Home() {
                 ]},
               ].map(({ group, items }) => (
                 <div key={group} className="space-y-2">
-                  <p className="text-xs text-white/40 font-medium uppercase tracking-wider">{group}</p>
+                  <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">{group}</p>
                   <div className="flex flex-wrap gap-3">
                     {items.map(f => (
                       <button
@@ -1075,11 +1078,11 @@ export default function Home() {
                         className={`px-4 py-2.5 rounded-xl border text-left transition-all ${
                           adaptFormats.includes(f.key)
                             ? 'border-[#e42820] bg-[#e42820]/10'
-                            : 'border-white/10 hover:border-white/20 bg-white/5'
+                            : 'border-gray-200 hover:border-gray-300 bg-white'
                         }`}
                       >
                         <p className="text-sm font-medium">{f.label}</p>
-                        <p className="text-xs text-white/40">{f.desc}</p>
+                        <p className="text-xs text-gray-500">{f.desc}</p>
                       </button>
                     ))}
                   </div>
@@ -1088,7 +1091,7 @@ export default function Home() {
               <button
                 onClick={generateAdaptations}
                 disabled={adaptFormats.length === 0 || generatingAdaptations}
-                className="bg-white/10 hover:bg-white/15 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium px-5 py-2.5 rounded-xl transition-colors flex items-center gap-2 text-sm"
+                className="bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed text-gray-900 font-medium px-5 py-2.5 rounded-xl transition-colors flex items-center gap-2 text-sm"
               >
                 {generatingAdaptations ? (
                   <><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />Generando adaptaciones...</>
@@ -1104,16 +1107,16 @@ export default function Home() {
 
               {adaptedImages.length > 0 && (
                 <div className="space-y-3">
-                  <p className="text-xs text-white/40 font-medium uppercase tracking-wider">Adaptaciones generadas</p>
+                  <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Adaptaciones generadas</p>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {adaptedImages.map((img, i) => {
                       const concept = selectedConcepts.find(c => c.id === img.conceptId);
                       return (
                         <div key={i} className="space-y-2">
-                          <div className="rounded-xl overflow-hidden border border-white/10">
+                          <div className="rounded-xl overflow-hidden border border-gray-200">
                             <img src={`data:image/png;base64,${img.base64}`} alt={img.label} className="w-full" />
                           </div>
-                          <p className="text-xs text-white/50 text-center">{img.label} · {concept?.conceptName || ''}</p>
+                          <p className="text-xs text-gray-500 text-center">{img.label} · {concept?.conceptName || ''}</p>
                           <button
                             onClick={() => {
                               const url = URL.createObjectURL(new Blob([Uint8Array.from(atob(img.base64), c => c.charCodeAt(0))], { type: 'image/png' }));
@@ -1125,7 +1128,7 @@ export default function Home() {
                               document.body.removeChild(a);
                               setTimeout(() => URL.revokeObjectURL(url), 5000);
                             }}
-                            className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white text-xs px-3 py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                            className="w-full bg-white hover:bg-gray-100 border border-gray-200 text-gray-500 hover:text-gray-900 text-xs px-3 py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5"
                           >
                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />

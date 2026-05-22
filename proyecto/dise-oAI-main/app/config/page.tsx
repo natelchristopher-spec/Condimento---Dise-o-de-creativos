@@ -203,13 +203,13 @@ export default function ConfigPage() {
   };
 
   return (
-    <div className="min-h-screen flex bg-[#25252a]">
+    <div className="min-h-screen flex bg-gray-50">
       <Sidebar active="/config" onLogout={handleLogout} />
       <div className="flex-1 md:ml-56 min-h-screen pt-12 md:pt-0">
       <main className="max-w-2xl mx-auto px-6 py-10">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-1">Mi marca</h1>
-          <p className="text-white/40 text-sm">Configurá el brand kit de tu marca. Se usará en todas tus generaciones.</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-1">Mi marca</h1>
+          <p className="text-gray-500 text-sm">Configurá el brand kit de tu marca. Se usará en todas tus generaciones.</p>
         </div>
 
         {hasApiKey === false && (
@@ -217,7 +217,7 @@ export default function ConfigPage() {
             <span className="text-amber-400 text-base mt-0.5">⚠</span>
             <div>
               <p className="font-medium text-amber-400 mb-1">Primero configurá tu API key de OpenAI</p>
-              <p className="text-white/50 mb-3">La extracción automática desde PDF necesita tu API key. Podés completar el formulario manualmente, pero no podrás usar "Importar desde PDF" hasta configurarla.</p>
+              <p className="text-gray-500 mb-3">La extracción automática desde PDF necesita tu API key. Podés completar el formulario manualmente, pero no podrás usar "Importar desde PDF" hasta configurarla.</p>
               <Link href="/perfil" className="inline-block bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold px-4 py-2 rounded-lg transition-colors">
                 Ir a Perfil → agregar API key
               </Link>
@@ -225,10 +225,10 @@ export default function ConfigPage() {
           </div>
         )}
 
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-6">
+        <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-lg text-white">{hasKit ? 'Editar brand kit' : 'Crear brand kit'}</h2>
-            <label className={`cursor-pointer flex items-center gap-2 text-sm px-4 py-2 rounded-xl border transition-colors ${extracting ? 'opacity-50 cursor-not-allowed border-white/10 text-white/40' : 'border-[#e42820]/40 text-[#e42820] hover:bg-[#e42820]/10 hover:border-[#e42820]'}`}>
+            <h2 className="font-semibold text-lg text-gray-900">{hasKit ? 'Editar brand kit' : 'Crear brand kit'}</h2>
+            <label className={`cursor-pointer flex items-center gap-2 text-sm px-4 py-2 rounded-xl border transition-colors ${extracting ? 'opacity-50 cursor-not-allowed border-gray-200 text-gray-500' : 'border-[#e42820]/40 text-[#e42820] hover:bg-[#e42820]/10 hover:border-[#e42820]'}`}>
               {extracting ? (
                 <><div className="w-4 h-4 border-2 border-[#e42820]/30 border-t-[#e42820] rounded-full animate-spin" />Leyendo manual...</>
               ) : (
@@ -240,43 +240,43 @@ export default function ConfigPage() {
 
           {/* Name */}
           <div className="space-y-2">
-            <label className="text-sm text-white/60">Nombre de la marca</label>
+            <label className="text-sm text-gray-600">Nombre de la marca</label>
             <input
               type="text"
               value={form.name}
               onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
               placeholder="Ej: Mi Tienda"
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 focus:outline-none focus:border-[#e42820] text-sm"
+              className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] text-sm"
             />
           </div>
 
           {/* Colors */}
           <div className="space-y-3">
             <div>
-              <label className="text-sm text-white/60">Paleta primaria</label>
-              <p className="text-xs text-white/30 mt-0.5">Los 3 colores principales de tu marca</p>
+              <label className="text-sm text-gray-600">Paleta primaria</label>
+              <p className="text-xs text-gray-400 mt-0.5">Los 3 colores principales de tu marca</p>
             </div>
             <div className="grid grid-cols-3 gap-3">
               {(['primary1', 'primary2', 'primary3'] as const).map((key, i) => (
                 <div key={key} className="space-y-1.5">
-                  <p className="text-xs text-white/40">{PRIMARY_LABELS[i]}</p>
-                  <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2">
+                  <p className="text-xs text-gray-500">{PRIMARY_LABELS[i]}</p>
+                  <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2">
                     <input type="color" value={form[key] as string} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} className="w-7 h-7 rounded cursor-pointer border-0 bg-transparent" />
-                    <span className="text-xs text-white/60 font-mono">{form[key] as string}</span>
+                    <span className="text-xs text-gray-600 font-mono">{form[key] as string}</span>
                   </div>
                 </div>
               ))}
             </div>
             <div>
-              <label className="text-sm text-white/60">Paleta secundaria</label>
+              <label className="text-sm text-gray-600">Paleta secundaria</label>
             </div>
             <div className="grid grid-cols-3 gap-3">
               {(['secondary1', 'secondary2', 'secondary3'] as const).map((key, i) => (
                 <div key={key} className="space-y-1.5">
-                  <p className="text-xs text-white/40">{SECONDARY_LABELS[i]}</p>
-                  <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2">
+                  <p className="text-xs text-gray-500">{SECONDARY_LABELS[i]}</p>
+                  <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2">
                     <input type="color" value={form[key] as string} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} className="w-7 h-7 rounded cursor-pointer border-0 bg-transparent" />
-                    <span className="text-xs text-white/60 font-mono">{form[key] as string}</span>
+                    <span className="text-xs text-gray-600 font-mono">{form[key] as string}</span>
                   </div>
                 </div>
               ))}
@@ -285,55 +285,55 @@ export default function ConfigPage() {
 
           {/* Typography */}
           <div className="space-y-2">
-            <label className="text-sm text-white/60">Tipografía</label>
+            <label className="text-sm text-gray-600">Tipografía</label>
             <input
               type="text"
               value={form.typography}
               onChange={e => setForm(f => ({ ...f, typography: e.target.value }))}
               placeholder="Ej: Montserrat (principal), Playfair Display (acento)"
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 focus:outline-none focus:border-[#e42820] text-sm"
+              className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] text-sm"
             />
           </div>
 
           {/* Style */}
           <div className="space-y-2">
-            <label className="text-sm text-white/60">Estilo y descripción de marca</label>
+            <label className="text-sm text-gray-600">Estilo y descripción de marca</label>
             <textarea
               value={form.styleDescription}
               onChange={e => setForm(f => ({ ...f, styleDescription: e.target.value }))}
               placeholder="Estilo visual, tono, audiencia, reglas de diseño, prohibiciones, aplicaciones en RRSS..."
               rows={5}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 focus:outline-none focus:border-[#e42820] resize-none text-sm leading-relaxed"
+              className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] resize-none text-sm leading-relaxed"
             />
           </div>
 
           {/* Reference pieces */}
           <div className="space-y-3">
             <div>
-              <label className="text-sm text-white/60">Piezas anteriores aprobadas</label>
-              <p className="text-xs text-white/30 mt-0.5">GPT-4o analiza el estilo visual y lo usa como referencia. Máx 5 piezas.</p>
+              <label className="text-sm text-gray-600">Piezas anteriores aprobadas</label>
+              <p className="text-xs text-gray-400 mt-0.5">GPT-4o analiza el estilo visual y lo usa como referencia. Máx 5 piezas.</p>
             </div>
             <div className="flex gap-3 flex-wrap">
               {(form.referencePiecesThumbnails || []).map((img, i) => (
-                <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-white/10">
+                <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-gray-200">
                   <img src={img} alt={`ref ${i+1}`} className="w-full h-full object-cover" />
                   <button
                     onClick={() => removeReferencePiece(i)}
                     disabled={analyzingRefs}
-                    className="absolute top-1 right-1 w-5 h-5 bg-black/70 rounded-full flex items-center justify-center text-white/80 hover:text-white text-xs"
+                    className="absolute top-1 right-1 w-5 h-5 bg-black/70 rounded-full flex items-center justify-center text-gray-900/80 hover:text-gray-900 text-xs"
                   >×</button>
                 </div>
               ))}
               {(form.referencePiecesThumbnails || []).length < 5 && (
-                <label className={`w-20 h-20 rounded-xl border border-dashed flex flex-col items-center justify-center gap-1 transition-colors ${analyzingRefs ? 'opacity-50 cursor-not-allowed border-white/10' : 'border-white/20 hover:border-white/40 cursor-pointer'}`}>
+                <label className={`w-20 h-20 rounded-xl border border-dashed flex flex-col items-center justify-center gap-1 transition-colors ${analyzingRefs ? 'opacity-50 cursor-not-allowed border-gray-200' : 'border-gray-300 hover:border-white/40 cursor-pointer'}`}>
                   {analyzingRefs ? (
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   ) : (
                     <>
-                      <svg className="w-5 h-5 text-white/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                       </svg>
-                      <span className="text-xs text-white/30">Pieza</span>
+                      <span className="text-xs text-gray-400">Pieza</span>
                     </>
                   )}
                   <input type="file" accept="image/*" multiple onChange={handleReferencePiecesUpload} disabled={analyzingRefs} className="hidden" />
@@ -343,19 +343,19 @@ export default function ConfigPage() {
             {form.referencePiecesStyle && (
               <div className="bg-[#e42820]/5 border border-[#e42820]/20 rounded-xl p-3">
                 <p className="text-xs text-[#e42820] font-medium mb-1">Estilo extraído</p>
-                <p className="text-xs text-white/50 leading-relaxed line-clamp-3">{form.referencePiecesStyle}</p>
+                <p className="text-xs text-gray-500 leading-relaxed line-clamp-3">{form.referencePiecesStyle}</p>
               </div>
             )}
           </div>
 
           {/* Logo */}
           <div className="space-y-2">
-            <label className="text-sm text-white/60">Logo (opcional)</label>
+            <label className="text-sm text-gray-600">Logo (opcional)</label>
             <div className="flex items-center gap-4">
               {form.logoBase64 && (
-                <img src={form.logoBase64} alt="Logo" className="w-16 h-16 rounded-xl object-contain bg-white/10 p-2" />
+                <img src={form.logoBase64} alt="Logo" className="w-16 h-16 rounded-xl object-contain bg-gray-100 p-2" />
               )}
-              <label className="cursor-pointer bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl px-4 py-3 text-sm text-white/60 hover:text-white transition-colors flex items-center gap-2">
+              <label className="cursor-pointer bg-white/5 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-600 hover:text-gray-900 transition-colors flex items-center gap-2">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                 </svg>
@@ -363,7 +363,7 @@ export default function ConfigPage() {
                 <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
               </label>
               {form.logoBase64 && (
-                <button onClick={() => setForm(f => ({ ...f, logoBase64: undefined }))} className="text-white/30 hover:text-red-400 text-xs transition-colors">
+                <button onClick={() => setForm(f => ({ ...f, logoBase64: undefined }))} className="text-gray-400 hover:text-red-400 text-xs transition-colors">
                   Quitar
                 </button>
               )}
@@ -373,8 +373,8 @@ export default function ConfigPage() {
           {/* Quick adjustments */}
           <div className="space-y-3">
             <div>
-              <label className="text-sm text-white/60">Ajustes rápidos</label>
-              <p className="text-xs text-white/30 mt-0.5">Aparecen como botones al afinar. Ej: "Fondo con textura industrial".</p>
+              <label className="text-sm text-gray-600">Ajustes rápidos</label>
+              <p className="text-xs text-gray-400 mt-0.5">Aparecen como botones al afinar. Ej: "Fondo con textura industrial".</p>
             </div>
             <div className="flex flex-wrap gap-2">
               {(form.quickAdjustments || []).map((adj, i) => (
@@ -399,7 +399,7 @@ export default function ConfigPage() {
                   }
                 }}
                 placeholder="Escribí un ajuste y presioná Enter..."
-                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-white/25 focus:outline-none focus:border-[#e42820] text-sm"
+                className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] text-sm"
               />
               <button
                 onClick={() => {
@@ -408,7 +408,7 @@ export default function ConfigPage() {
                   setNewAdjustment('');
                 }}
                 disabled={!newAdjustment.trim()}
-                className="bg-white/10 hover:bg-white/15 disabled:opacity-40 text-white px-4 py-2.5 rounded-xl text-sm transition-colors"
+                className="bg-gray-100 hover:bg-gray-100 disabled:opacity-40 text-gray-900 px-4 py-2.5 rounded-xl text-sm transition-colors"
               >
                 + Agregar
               </button>
@@ -420,7 +420,7 @@ export default function ConfigPage() {
             onClick={handleSave}
             disabled={!form.name.trim() || !form.styleDescription.trim() || saving}
             className={`w-full font-medium px-4 py-3 rounded-xl transition-all flex items-center justify-center gap-2 ${
-              saved ? 'bg-emerald-600 text-white' : 'bg-[#e42820] hover:bg-[#e42820] disabled:opacity-40 disabled:cursor-not-allowed text-white'
+              saved ? 'bg-emerald-600 text-gray-900' : 'bg-[#e42820] hover:bg-[#e42820] disabled:opacity-40 disabled:cursor-not-allowed text-gray-900'
             }`}
           >
             {saved ? (
@@ -431,7 +431,7 @@ export default function ConfigPage() {
 
         <Link
           href="/"
-          className="flex items-center justify-center gap-2 text-sm text-white/50 hover:text-white/80 transition-colors py-2 mt-2"
+          className="flex items-center justify-center gap-2 text-sm text-gray-500 hover:text-gray-900/80 transition-colors py-2 mt-2"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />

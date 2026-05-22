@@ -198,7 +198,7 @@ export async function POST(req: NextRequest) {
     ? `6. BRAND STYLE REPLICATION — seguí EXACTAMENTE el estilo visual, composición tipográfica y tratamiento gráfico de las piezas de referencia de la marca que se incluyen como imágenes. Máxima fidelidad al look aprobado.`
     : isProductEcommerce
       ? `6. DAILY USE / USE CASE — el producto integrado en su contexto cotidiano real (escritorio, gym, cocina, rutina, setup). El ambiente rodea al producto de forma natural. Hacerlo sentir usable y cercano.`
-      : `6. BRAND MOOD FOCUS — la estética y sensación de marca dominan. Color grading definido, dirección artística fuerte, composición que vende percepción e identidad. Vibe de campaña premium.`;
+      : `6. PRODUCT DETAIL FOCUS — destacar calidad y detalles del producto. Texturas, costuras, fit, closeups de materiales, acabados. Composición que eleva la percepción de calidad sin necesitar copy.`;
 
   const conceptDirections = isProductEcommerce
     ? `MODO PRODUCTO — el producto es el protagonista absoluto. Sin personas. CADA concepto usa una estrategia visual completamente distinta:
@@ -209,11 +209,11 @@ export async function POST(req: NextRequest) {
 5. PROBLEM / SOLUTION — mostrar el dolor y la solución. Composición split screen, before/after o comparativa visual. Hace obvio el problema que resuelve el producto. Contraste dramático entre el "sin" y el "con".
 ${slot6}`
     : `MODO FASHION / IN USE — el producto es experimentado por personas. El foco es la experiencia e identidad. CADA concepto usa una estrategia visual completamente distinta:
-1. LIFESTYLE FOCUS — uso natural del producto en situaciones reales. Movimiento, contexto humano auténtico, iluminación natural. Hacer sentir el producto vivo y parte de la vida cotidiana.
-2. ASPIRATIONAL FOCUS — se vende identidad y deseo. Editorial premium, estética fuerte, poses trabajadas, composición de agencia internacional. Hacer que la persona quiera verse así.
-3. TRANSFORMATION FOCUS — mostrar cambio visual o emocional. Before/after, glow up, cambio de look, mejora visible. La narrativa de transformación como eje central.
-4. DAILY USE FOCUS — el producto integrado a la rutina cotidiana. Outfit diario, momentos casuales, uso espontáneo. Hacerlo sentir natural, accesible y usable en el día a día.
-5. PRODUCT DETAIL FOCUS — destacar calidad y detalles del producto. Texturas, costuras, fit, closeups de materiales, acabados. Composición que eleva la percepción de calidad sin necesitar copy.
+1. OFFER FOCUS — la oferta/promoción/descuento como protagonista visual. Pricing grande en tipografía bold, descuento destacado, mecánicas de venta (cuotas, envío gratis, fechas). La persona muestra/usa el producto mientras el copy de la promo domina. Concepto diseñado para generar clic.
+2. LIFESTYLE FOCUS — uso natural del producto en situaciones reales. Movimiento, contexto humano auténtico, iluminación natural. Hacer sentir el producto vivo y parte de la vida cotidiana.
+3. ASPIRATIONAL FOCUS — se vende identidad y deseo. Editorial premium, estética fuerte, poses trabajadas, composición de agencia internacional. Hacer que la persona quiera verse así.
+4. TRANSFORMATION FOCUS — mostrar cambio visual o emocional. Before/after, glow up, cambio de look, mejora visible. La narrativa de transformación como eje central.
+5. DAILY USE FOCUS — el producto integrado a la rutina cotidiana. Outfit diario, momentos casuales, uso espontáneo. Hacerlo sentir natural, accesible y usable en el día a día.
 ${slot6}`;
 
   // Step 1: GPT-4o generates concept prompts tailored to mode (or variations in similar mode).

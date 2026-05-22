@@ -37,7 +37,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#25252a] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="w-12 h-12 rounded-2xl bg-[#e42820] flex items-center justify-center mx-auto mb-4">
@@ -45,27 +45,27 @@ export default function LoginPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-white">Condimento</h1>
-          <p className="text-white/40 text-sm mt-1">
+          <h1 className="text-2xl font-bold text-gray-900">Condimento</h1>
+          <p className="text-gray-500 text-sm mt-1">
             {isSignUp ? 'Creá tu cuenta' : 'Ingresá a tu cuenta'}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm text-white/60 mb-1.5">Email</label>
+            <label className="block text-sm text-gray-600 mb-1.5">Email</label>
             <input
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="tu@email.com"
               required
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 focus:outline-none focus:border-[#e42820] text-sm"
+              className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] text-sm"
             />
           </div>
 
           <div>
-            <label className="block text-sm text-white/60 mb-1.5">Contraseña</label>
+            <label className="block text-sm text-gray-600 mb-1.5">Contraseña</label>
             <input
               type="password"
               value={password}
@@ -73,18 +73,18 @@ export default function LoginPage() {
               placeholder="••••••••"
               required
               minLength={6}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 focus:outline-none focus:border-[#e42820] text-sm"
+              className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] text-sm"
             />
           </div>
 
           {error && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-400 text-sm">
+            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-600 text-sm">
               {error}
             </div>
           )}
 
           {success && (
-            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3 text-emerald-400 text-sm">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-emerald-700 text-sm">
               {success}
             </div>
           )}
@@ -92,17 +92,17 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[#e42820] hover:bg-[#e42820] disabled:opacity-50 text-white font-medium py-3 rounded-xl transition-colors text-sm"
+            className="w-full bg-[#e42820] hover:bg-[#c41f18] disabled:opacity-50 text-white font-medium py-3 rounded-xl transition-colors text-sm"
           >
             {loading ? 'Cargando...' : isSignUp ? 'Crear cuenta' : 'Ingresar'}
           </button>
         </form>
 
-        <p className="text-center text-sm text-white/40 mt-6">
+        <p className="text-center text-sm text-gray-500 mt-6">
           {isSignUp ? '¿Ya tenés cuenta?' : '¿No tenés cuenta?'}{' '}
           <button
             onClick={() => { setIsSignUp(!isSignUp); setError(''); setSuccess(''); }}
-            className="text-[#e42820] hover:text-[#e42820] transition-colors"
+            className="text-[#e42820] hover:text-[#c41f18] transition-colors"
           >
             {isSignUp ? 'Ingresá' : 'Registrate'}
           </button>
