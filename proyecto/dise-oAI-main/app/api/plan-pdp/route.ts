@@ -138,14 +138,36 @@ export async function POST(req: NextRequest) {
     ? '3. LIFESTYLE IMAGE — el producto en su contexto natural de uso, sin personas. Ambientación real y cercana (gym, baño, cocina, escritorio según el tipo de producto).'
     : pdpMode === 'fashion'
       ? '3. LIFESTYLE IMAGE — persona vistiendo la prenda en una situación cotidiana auténtica y aspiracional. La prenda debe verse con su color, corte y silueta exactos — es el estado natural del producto.'
-      : `3. LIFESTYLE IMAGE — persona en el contexto natural donde se usa este producto. REGLA DE MÍNIMO RIESGO: mostrá la interacción más segura posible según el tipo de producto:
-   - Reloj / accesorio: producto puesto en la muñeca o cuerpo (forma controlada y conocida)
-   - Ropa / calzado: producto siendo usado (forma controlada y conocida)
-   - Suplemento / proteína: persona sosteniendo el envase cerrado o abierto junto a equipamiento de gym — NO mezclar, NO tomar (no sabemos si es polvo, líquido, etc.)
-   - Cosmético / skincare: producto sobre mesada o en mano — NO aplicar en cara (no sabemos textura, color al contacto)
-   - Alimento / bebida: producto en su packaging en contexto de mesa o cocina — NO mostrarlo consumiéndose
-   - Electrónico / gadget: producto en mano o siendo usado pasivamente
-   PRINCIPIO: el producto debe aparecer en su forma original y reconocible, no en estado de consumo/aplicación.`;
+      : `3. LIFESTYLE IMAGE — persona en el contexto natural donde se usa este producto. REGLA DE MÍNIMO RIESGO: el producto siempre aparece en su forma original y reconocible — nunca en estado de consumo, mezcla o aplicación activa (no sabemos textura, consistencia ni aspecto al usarse).
+
+GUÍA POR TIPO DE PRODUCTO:
+SEGURO EN USO (el producto en uso ES su forma reconocible):
+- Indumentaria / calzado → siendo usado/puesto, es su estado natural
+- Reloj / smartwatch / wearable → en la muñeca
+- Joyería (anillo, collar, pulsera, aro) → puesto, producto como foco
+- Anteojos / gafas de sol → puestos en cara
+- Bolso / cartera / mochila / billetera → cargado o en mano
+- Auriculares / headphones / earbuds → puestos en orejas
+- Celular / tablet / laptop / cámara → en mano, pantalla o lente visible
+- Textiles hogar (sábanas, toallas, almohadón, cortina) → en su lugar (cama, baño)
+- Velas / difusores / aromaterapia → encendidos en ambiente hogar
+- Decoración / arte / cuadros → en el espacio, ambientado
+- Libros / cuadernos / papelería → en mano o sobre escritorio
+- Juguetes / juegos → en manos, en uso
+- Equipamiento deportivo (colchoneta, banda, mancuernas) → siendo usado
+
+SOLO CONTEXTO — NO mostrar acción de consumo/aplicación:
+- Suplemento / proteína / creatina / pre-entreno → envase en mano o sobre banco de gym — NO mezclando, NO tomando (no sabemos si es polvo, líquido, cápsula)
+- Vitaminas / suplemento de salud / medicamento → frasco o blíster en mano — NO tomando
+- Cosmético / maquillaje (labial, base, rubor, máscara, sombra) → producto en mano o sobre tocador — NO aplicado (no sabemos color exacto en piel)
+- Skincare / crema / sérum / aceite / contorno → en mano o sobre mesada de baño — NO en cara ni piel (no sabemos textura al contacto)
+- Perfume / colonia → botella en mano o sobre superficie — NO rociando
+- Shampoo / acondicionador / tratamiento capilar → botella en contexto de baño — NO en el pelo (no sabemos tipo ni color de cabello)
+- Alimento / snack / barra proteica / cereal → packaging cerrado en contexto (mesa, cocina) — NO comiendo, NO desempaquetado mostrando contenido interno
+- Bebida / jugo / energizante / agua saborizada → envase cerrado en contexto — NO sirviendo ni tomando
+- Producto de limpieza / desinfectante → envase en mano o contexto de hogar — NO aplicando sobre superficie
+- Comida / suplemento para mascotas → producto en contexto, mascota cerca pero NO comiendo
+- Pintura / barniz / adhesivo / sellador → envase solo o en mano cerrado`;
 
   const systemPrompt = `Sos un director creativo senior especializado en PDPs de e-commerce.
 Generá exactamente 6 planes de imagen para el carrusel de producto, formato cuadrado 1:1.

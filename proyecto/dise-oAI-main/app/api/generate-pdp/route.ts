@@ -83,14 +83,18 @@ function buildSlideVisualRules(hasPeople: boolean, pdpMode: string): Record<stri
     ...SLIDE_VISUAL_RULES_BASE,
     lifestyle: hasPeople
       ? pdpMode === 'fashion'
-        ? 'COMPOSITION: person wearing the garment with exact color and silhouette. Real-life aspirational setting. ONE short tagline in big bold text. Editorial feel.'
-        : 'COMPOSITION: person in the product\'s natural context. MINIMUM RISK — product must appear in its original recognizable form. Safe interactions: watch on wrist, supplement jar held or on gym surface (NOT being mixed or drunk), skincare product on counter or in hand (NOT applied to face), electronics in hand or passively used. ONE short tagline in big bold text. NO bullet lists.'
-      : 'COMPOSITION: product in its natural use environment (gym, bathroom counter, kitchen, desk, etc.) WITHOUT people. ONE short tagline in big bold text. No bullet lists, no numbered steps.',
+        ? 'COMPOSITION: person wearing the garment with its exact color, cut and silhouette — that IS the natural state of clothing. Real-life aspirational setting. ONE short tagline in big bold text. NO bullet lists.'
+        : `COMPOSITION: person in the product's natural context. MINIMUM RISK RULE — product always appears in its original recognizable form, never mid-consumption or mid-application.
+SAFE (product-in-use IS its natural form): watch/wearable on wrist | jewelry (ring, necklace, bracelet) worn | sunglasses/eyewear on face | bag/backpack/wallet carried | headphones/earbuds on ears | phone/tablet/laptop/camera in hand | sports equipment (mat, band, weights) in use | home textiles (sheets, towels) in place | candles/diffusers lit in home | books/notebooks in hand | toys in hands.
+CONTEXT ONLY — NO consumption/application (unknowable details): supplement/protein/vitamins → held or on gym surface, NOT mixing/drinking | cosmetics/makeup → on vanity or in hand, NOT applied to skin | skincare/serum/cream → on counter or in hand, NOT on face | perfume → bottle in hand, NOT spraying | haircare → bottle in bathroom, NOT in hair | food/snack/beverage → closed packaging in context, NOT being eaten or poured | cleaning products → bottle in context, NOT applied | pet food/supplement → product in context, pet nearby but NOT eating.
+ONE short tagline in big bold text. NO bullet lists.`
+      : 'COMPOSITION: product in its natural use environment (gym, bathroom counter, kitchen, desk, outdoor, etc.) WITHOUT people. ONE short tagline in big bold text. No bullet lists, no numbered steps.',
     howto: hasPeople
       ? pdpMode === 'fashion'
-        ? 'COMPOSITION: 3 numbered steps (1→2→3) showing how to wear/care for the garment. Hands or person shown. Infographic style. ACTION verbs only.'
-        : 'COMPOSITION: 3 numbered steps (1→2→3). MINIMUM RISK: show the product being opened, measured, placed, or handled — NOT consumed/applied/mixed. Product appears in its original form in each step. Infographic style with ACTION verbs.'
-      : 'COMPOSITION: 3 horizontal numbered steps (1→2→3) infographic style. Product shown in its original recognizable form per step. No benefit bullets — ACTION verbs only.',
+        ? 'COMPOSITION: 3 numbered steps (1→2→3) showing how to wear or care for the garment. Hands or person shown. Infographic style. ACTION verbs only — no benefit bullets.'
+        : `COMPOSITION: 3 numbered steps (1→2→3). MINIMUM RISK — product in original recognizable form in each step.
+Safe actions to show: opening the container, measuring/scooping (if applicable), placing/positioning, pairing with accessories. Avoid: applying to skin/face/hair, mixing into liquid, consuming/eating. Infographic style with ACTION verbs.`
+      : 'COMPOSITION: 3 horizontal numbered steps (1→2→3) infographic style. Product shown in its original form per step. No benefit bullets — ACTION verbs only.',
   };
 }
 
