@@ -894,23 +894,21 @@ export default function Home() {
                     className={`w-full transition-all duration-300 ${loading ? 'blur-sm scale-[1.02]' : ''}`}
                   />
                   {loading && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px] gap-2 px-6 text-center">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px] gap-3 px-6 text-center">
                       <div className="w-8 h-8 border-[3px] border-white/30 border-t-white rounded-full animate-spin" />
                       <p className="text-white text-sm font-semibold">{loadingMsg || 'Aplicando producto...'}</p>
-                      <p className="text-white/70 text-xs">
-                        {elapsedSec < 10 ? 'Esto tarda entre 25 y 40 segundos' :
-                         elapsedSec < 25 ? `${elapsedSec}s — ya casi...` :
-                         elapsedSec < 40 ? `${elapsedSec}s — renderizando detalles...` :
+                      <div className="w-full max-w-[180px] bg-white/20 rounded-full h-1.5">
+                        <div
+                          className="bg-white h-1.5 rounded-full transition-all duration-1000"
+                          style={{ width: `${Math.min(93, Math.max(4, (elapsedSec / 45) * 100))}%` }}
+                        />
+                      </div>
+                      <p className="text-white/70 text-xs tabular-nums">
+                        {elapsedSec < 8 ? 'Esto tarda entre 30 y 60 segundos...' :
+                         elapsedSec < 25 ? `${elapsedSec}s — procesando...` :
+                         elapsedSec < 45 ? `${elapsedSec}s — casi listo...` :
                          `${elapsedSec}s — tardando un poco más, aguantá`}
                       </p>
-                      {elapsedSec >= 10 && (
-                        <div className="w-full max-w-[160px] bg-white/20 rounded-full h-1">
-                          <div
-                            className="bg-white h-1 rounded-full transition-all duration-1000"
-                            style={{ width: `${Math.min(95, (elapsedSec / 40) * 100)}%` }}
-                          />
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
