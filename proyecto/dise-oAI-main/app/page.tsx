@@ -603,12 +603,12 @@ export default function Home() {
             {/* Concept count selector */}
             <div className="space-y-3">
               <label className="text-sm font-medium text-white/70">¿Cuántos conceptos querés generar?</label>
-              <div className="flex gap-3">
-                {[1, 2, 3, 4].map(n => (
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5, 6].map(n => (
                   <button
                     key={n}
                     onClick={() => setConceptCount(n)}
-                    className={`w-14 h-14 rounded-xl border text-lg font-semibold transition-all ${
+                    className={`w-12 h-12 rounded-xl border text-base font-semibold transition-all ${
                       conceptCount === n
                         ? 'border-[#e42820] bg-[#e42820]/10 text-[#e42820]'
                         : 'border-white/10 hover:border-white/20 bg-white/5 text-white/60'
@@ -618,7 +618,7 @@ export default function Home() {
                   </button>
                 ))}
               </div>
-              <p className="text-xs text-white/30">Más conceptos = más tiempo y más crédito de OpenAI.</p>
+              <p className="text-xs text-white/30">Cada número corresponde a un framework distinto. Más conceptos = más tiempo y crédito de OpenAI.</p>
             </div>
 
             {/* People mode */}

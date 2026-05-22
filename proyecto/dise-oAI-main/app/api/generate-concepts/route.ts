@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
   const brandKitContext = buildBrandKitContext(brandKit);
 
   const isSimilarMode = styleReferenceImages.length > 0;
-  const targetCount = Math.max(1, Math.min(count, 4));
+  const targetCount = Math.max(1, Math.min(count, 6));
   // Raw base64 → data URLs for Responses API / vision
   const styleReferenceDataUrls = styleReferenceImages.map(
     (b64: string) => b64.startsWith('data:') ? b64 : `data:image/png;base64,${b64}`
