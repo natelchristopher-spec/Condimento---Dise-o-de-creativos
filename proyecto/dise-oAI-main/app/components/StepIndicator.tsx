@@ -29,10 +29,10 @@ export default function StepIndicator({ currentStep }: Props) {
               <div
                 className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
                   done
-                    ? 'bg-[#FF912D] text-white'
+                    ? 'bg-[#e42820] text-white'
                     : active
-                    ? 'bg-[#FA5A1E]/20 border border-[#FF912D] text-[#FF912D]'
-                    : 'bg-white/5 border border-white/10 text-white/30'
+                    ? 'bg-[#e42820]/10 border border-[#e42820] text-[#e42820]'
+                    : 'bg-gray-100 border border-gray-200 text-gray-400'
                 }`}
               >
                 {done ? (
@@ -43,12 +43,12 @@ export default function StepIndicator({ currentStep }: Props) {
                   idx + 1
                 )}
               </div>
-              <span className={`text-xs font-medium hidden sm:block ${active ? 'text-white' : done ? 'text-white/60' : 'text-white/25'}`}>
+              <span className={`text-xs font-medium hidden sm:block ${active ? 'text-gray-900' : done ? 'text-gray-500' : 'text-gray-300'}`}>
                 {step.label}
               </span>
             </div>
             {idx < STEPS.length - 1 && (
-              <div className={`w-6 h-px ${idx < currentIdx ? 'bg-[#FF912D]' : 'bg-white/10'}`} />
+              <div className={`w-6 h-px ${idx < currentIdx ? 'bg-[#e42820]' : 'bg-gray-200'}`} />
             )}
           </div>
         );
