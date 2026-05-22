@@ -325,37 +325,33 @@ export default function Home() {
 
     if (productDetailImages.length > 0 && peopleMode === 'real') {
       const n = selectedConcepts.length;
-      startLoading(`Aplicando producto a ${n} concepto${n > 1 ? 's' : ''}...`);
       setError('');
-      try {
-        const applied = await Promise.all(
-          selectedConcepts.map(async (concept) => {
-            try {
-              const res = await fetch('/api/apply-product', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  conceptImageBase64: concept.base64,
-                  productDetailImages,
-                  productDescription,
-                  peopleMode,
-                  personDescription,
-                }),
-              });
-              const { base64 } = await res.json();
-              return base64 ? { ...concept, base64 } : concept;
-            } catch {
-              return concept;
-            }
-          })
-        );
-        setSelectedConcepts(applied);
-        setRefineImage(applied[0]);
-      } catch {
-        setRefineImage(selectedConcepts[0]);
-      } finally {
-        stopLoading();
+      const applied: typeof selectedConcepts = [];
+      for (let i = 0; i < selectedConcepts.length; i++) {
+        startLoading(`Aplicando producto ${i + 1} de ${n}...`);
+        const concept = selectedConcepts[i];
+        try {
+          const res = await fetch('/api/apply-product', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              conceptImageBase64: concept.base64,
+              productDetailImages,
+              productDescription,
+              peopleMode,
+              personDescription,
+            }),
+          });
+          const { base64, error: apiError } = await res.json();
+          if (apiError) setError(`Concepto ${i + 1}: ${apiError}`);
+          applied.push(base64 ? { ...concept, base64 } : concept);
+        } catch {
+          applied.push(concept);
+        }
       }
+      stopLoading();
+      setSelectedConcepts(applied);
+      setRefineImage(applied[0]);
     } else {
       setRefineImage(selectedConcepts[0]);
     }
