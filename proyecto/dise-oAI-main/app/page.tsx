@@ -1095,7 +1095,7 @@ export default function Home() {
                           <button
                             onClick={() => applyRefinement(i)}
                             disabled={!input.trim() || busy}
-                            className="bg-gray-900 hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium px-4 py-2.5 rounded-xl transition-colors text-sm whitespace-nowrap"
+                            className="bg-[#e42820] hover:bg-[#c41f18] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-4 py-2.5 rounded-xl transition-colors text-sm whitespace-nowrap"
                           >
                             {isRefining ? 'Aplicando...' : 'Aplicar'}
                           </button>
