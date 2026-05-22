@@ -54,6 +54,40 @@ export async function POST(req: NextRequest) {
   const brandKitContext = buildBrandKitContext(brandKit);
   const hasPeople = peopleMode === 'real';
 
+  const productDataUrls = productImages.map(img =>
+    img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`
+  );
+  const referenceDataUrls = referenceImages.map(img =>
+    img.startsWith('data:') ? img : `data:image/png;base64,${img}`
+  );
+
+  // Step 0: describe the product in text so every slide can anchor to it precisely
+  let productDescription = brief;
+  if (productDataUrls.length > 0) {
+    try {
+      const descResponse = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `Describí este producto con precisión quirúrgica en 3-5 oraciones: tipo de prenda/producto, color exacto (subtono, temperatura, cómo se ve bajo la luz), silueta, materiales visibles, detalles únicos. Esta descripción se va a usar para que un modelo de IA reproduzca el producto EXACTAMENTE en 6 imágenes distintas. Sé muy específico con el color — es lo más crítico. NO menciones ninguna marca, logo ni texto que aparezca en la foto.`,
+            },
+            ...productDataUrls.slice(0, 2).map(url => ({
+              type: 'image_url' as const,
+              image_url: { url, detail: 'high' as const },
+            })),
+          ],
+        }],
+        max_tokens: 400,
+      });
+      productDescription = descResponse.choices[0].message.content || brief;
+    } catch (err) {
+      console.error('PDP product description failed, using brief:', err);
+    }
+  }
+
   const lifestyleInstruction = hasPeople
     ? '3. LIFESTYLE IMAGE — una persona vistiendo / usando el producto en una situación cotidiana auténtica y aspiracional. La persona debe verse natural. Genera deseo y conexión emocional.'
     : '3. LIFESTYLE IMAGE — el producto integrado en su contexto natural de uso (escritorio, cocina, gym, etc.), sin personas. El ambiente rodea al producto de forma natural y cercana.';
@@ -62,32 +96,31 @@ export async function POST(req: NextRequest) {
 Dado un brief de producto y brand kit, generá exactamente 6 prompts de imagen — uno por cada tipo del sistema SPICY PDP.
 Formato: cuadrado 1:1 (1024x1024), optimizado para carrusel de producto.
 
-TIPOS DE IMAGEN (exactamente en este orden):
-1. PRODUCT HERO — el producto llena el 80% del encuadre. Fondo blanco puro o color sólido del brand kit. Iluminación de estudio premium, sombras suaves. Sin copy salvo logo pequeño discreto. El usuario entiende en 1 segundo qué compra.
-2. BENEFIT IMAGE — producto central + exactamente 3 beneficios clave con íconos simples y frases cortas en tipografía bold. Layout scannable. El usuario entiende el valor sin leer la PDP.
-${lifestyleInstruction}
-4. AUTHORITY IMAGE — closeup del producto destacando materiales, ingredientes o tecnología. Callouts visuales precisos sobre el producto. Justifica el precio y genera autoridad.
-5. HOW TO USE IMAGE — exactamente 3 pasos de uso numerados, visuales y claros. Elimina la fricción pre-compra. Amigable, no técnico.
-6. TESTIMONIAL IMAGE — producto + elemento de prueba social: cita breve de reseña, estrellas de rating, indicador de confianza. Si el brief no tiene testimonio, usá un estilo visual genérico pero creíble (ej: "★★★★★ · +2.000 clientes").
+PRODUCTO (el mismo en TODAS las imágenes — sin excepción):
+${productDescription}
 
-REGLAS:
+TIPOS DE IMAGEN (exactamente en este orden):
+1. PRODUCT HERO — el producto llena el 80% del encuadre. Fondo blanco puro o color sólido del brand kit. Iluminación de estudio premium, sombras suaves. Sin copy.
+2. BENEFIT IMAGE — el producto + exactamente 3 beneficios clave del brief con íconos simples y frases cortas en tipografía bold. Layout scannable.
+${lifestyleInstruction}
+4. AUTHORITY IMAGE — closeup del producto mostrando materiales, textura o construcción con callouts visuales precisos.
+5. HOW TO USE IMAGE — exactamente 3 pasos de uso numerados del producto. Visuales y claros.
+6. TESTIMONIAL IMAGE — el producto con prueba social: estrellas y frase de reseña. Sin inventar métricas numéricas específicas.
+
+REGLAS CRÍTICAS:
+- TODAS las imágenes deben mostrar EXACTAMENTE el mismo producto descrito arriba — mismo color, misma silueta, mismo material
+- PROHIBIDO mostrar un producto diferente al descrito, aunque el tipo de slide lo sugiera
+- PROHIBIDO incluir logos, marcas o textos de marca de terceros — las imágenes de referencia son solo para color/forma, NO reproducir sus logos
+- PROHIBIDO badges inventados ("Compra Segura", "Sitio Protegido", "Envío Gratis" si no está en el brief)
+- PROHIBIDO: botones CTA, precios inventados, descuentos no mencionados, métricas falsas
 - Colores: usá los hex exactos del brand kit
-- Estilo PREMIUM, limpio, e-commerce de alta gama
-- PROHIBIDO: botones CTA ("Compra ahora" etc.), precios inventados, descuentos no mencionados en el brief, métricas falsas
-- ${hasPeople ? 'Modo fashion: la imagen LIFESTYLE debe incluir personas' : 'Modo producto: sin personas en ninguna imagen'}
-- Cada image_prompt debe mencionar colores hex exactos, estilo de tipografía, y elementos concretos del producto
+- ${hasPeople ? 'Modo fashion: LIFESTYLE debe incluir personas' : 'Sin personas en ninguna imagen'}
+- Cada image_prompt debe describir el producto con su color exacto para que el generador no lo cambie
 
 Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|authority|howto|testimonial", "label": "...", "image_prompt": "..." }, ... ] }`;
 
-  const productDataUrls = productImages.map(img =>
-    img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`
-  );
-  const referenceDataUrls = referenceImages.map(img =>
-    img.startsWith('data:') ? img : `data:image/png;base64,${img}`
-  );
-
   const userContent: ChatCompletionContentPart[] = [
-    { type: 'text', text: `BRAND KIT:\n${brandKitContext}\n\nBRIEF DEL PRODUCTO:\n${brief}` },
+    { type: 'text', text: `BRAND KIT:\n${brandKitContext}\n\nBRIEF:\n${brief}` },
     ...productDataUrls.slice(0, 2).map(url => ({
       type: 'image_url' as const,
       image_url: { url, detail: 'low' as const },
@@ -142,10 +175,6 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
     ...(hasPeople ? referenceDataUrls.slice(0, 1) : []),
   ];
 
-  const productHint = productImages.length > 0
-    ? 'PRODUCT ACCURACY: The provided reference images show the exact product — replicate its color, texture, and shape faithfully.'
-    : '';
-
   const encoder = new TextEncoder();
   const send = (controller: ReadableStreamDefaultController, data: object) =>
     controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
@@ -157,12 +186,15 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
           orderedItems.map(async (item) => {
             const fullPrompt = [
               item.image_prompt,
+              `PRODUCTO EXACTO A MOSTRAR (no cambiar, no reemplazar por otro): ${productDescription}`,
               `Brand colors: ${brandKit.primary1}, ${brandKit.primary2}, ${brandKit.primary3}.`,
               `Typography: ${brandKit.typography || 'bold sans-serif'}.`,
-              productHint,
-              'Professional e-commerce product photography or high-end retail graphic design. Square 1:1 format for Shopify / Tienda Nube product carousel. Premium quality, clean, conversion-focused.',
-              'do NOT include button-style CTAs ("Compra ahora", "Buy Now", etc.) in the image.',
-              'do NOT include invented prices, discounts, or false metrics.',
+              'Professional e-commerce product photography or high-end retail graphic design. Square 1:1 format for Shopify / Tienda Nube. Premium quality, clean, conversion-focused.',
+              'CRITICAL: show ONLY the exact product described above — same color, same silhouette, same material. Do NOT invent a different product.',
+              'Do NOT reproduce any brand logos, labels, or marks from the reference photos — those images are for product shape/color reference only.',
+              'Do NOT include invented trust badges ("Compra Segura", "Sitio Protegido", "Envío Gratis") unless explicitly in the brief.',
+              'Do NOT include button-style CTAs ("Compra ahora", "Buy Now", etc.).',
+              'Do NOT include invented prices, discounts, or false metrics.',
             ].filter(Boolean).join(' ');
 
             let base64 = '';
