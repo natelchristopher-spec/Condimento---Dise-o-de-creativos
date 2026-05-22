@@ -9,10 +9,19 @@ export const maxDuration = 300;
 
 type PeopleMode = 'none' | 'real';
 
+interface SlideDisplayCopy {
+  items?: string[];
+  tagline?: string;
+  quote?: string;
+  author?: string;
+  rating?: string;
+}
+
 interface PdpImageItem {
   type: string;
   label: string;
   image_prompt: string;
+  display_copy?: SlideDisplayCopy | null;
 }
 
 const PDP_TYPES = [
@@ -35,7 +44,6 @@ function isRefusal(text: string): boolean {
   );
 }
 
-// Same detailed prompt as generate-concepts — critical for color/texture fidelity
 const PRODUCT_DESCRIPTION_PROMPT = `Sos un técnico de producto de moda de alta gama. Analizá este producto y describilo con precisión quirúrgica para que pueda ser reproducido EXACTAMENTE por un modelo de IA generativa. Imaginá que quien lee tu descripción no puede ver la foto — tu texto es el único recurso.
 
 Describí en este orden exacto:
@@ -48,6 +56,24 @@ Describí en este orden exacto:
 6. ELEMENTOS ÚNICOS: lo que diferencia este producto de uno genérico
 
 CRÍTICO: NO menciones ninguna marca, logo ni texto de terceros que aparezca en la foto — esas marcas no deben reproducirse. Solo describí el producto en sí.`;
+
+function buildCopyInjection(display_copy: SlideDisplayCopy | null | undefined, type: string): string {
+  if (!display_copy) return '';
+  const { items, tagline, quote, author, rating } = display_copy;
+  if (items?.length) {
+    return `EXACT TEXT TO DISPLAY IN THE IMAGE — use verbatim, do NOT modify or translate: ${items.map((it, i) => `${i + 1}. "${it}"`).join(' | ')}`;
+  }
+  if (type === 'testimonial' && quote) {
+    const parts = [`"${quote}"`];
+    if (author) parts.push(`— ${author}`);
+    if (rating) parts.push(rating);
+    return `EXACT TESTIMONIAL TO SHOW IN IMAGE — do NOT change or invent alternatives: ${parts.join(' ')}`;
+  }
+  if (tagline) {
+    return `TAGLINE TO DISPLAY IN IMAGE — use verbatim: "${tagline}"`;
+  }
+  return '';
+}
 
 export async function POST(req: NextRequest) {
   const ctx = await getUserContext();
@@ -65,6 +91,8 @@ export async function POST(req: NextRequest) {
     brief, brandKit, peopleMode = 'none',
     productImages = [], referenceImages = [],
     testimonialText = '', authorityText = '',
+    plans: confirmedPlans,
+    productDescription: confirmedProductDescription,
   }: {
     brief: string;
     brandKit: BrandKit;
@@ -73,6 +101,8 @@ export async function POST(req: NextRequest) {
     referenceImages: string[];
     testimonialText: string;
     authorityText: string;
+    plans?: PdpImageItem[];
+    productDescription?: string;
   } = await req.json();
 
   const openai = new OpenAI({ apiKey: ctx.openaiApiKey });
@@ -86,43 +116,59 @@ export async function POST(req: NextRequest) {
     img.startsWith('data:') ? img : `data:image/png;base64,${img}`
   );
 
-  // Step 0: describe the product with the same detailed prompt as generate-concepts
-  // (color subtone, temperature, warm neutral rules — critical for fidelity across 6 slides)
-  let productDescription = brief;
-  if (productDataUrls.length > 0) {
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        const descResponse = await openai.chat.completions.create({
-          model: 'gpt-4o',
-          messages: [{
-            role: 'user',
-            content: [
-              { type: 'text', text: PRODUCT_DESCRIPTION_PROMPT },
-              ...productDataUrls.slice(0, 2).map(url => ({
-                type: 'image_url' as const,
-                image_url: { url, detail: 'high' as const },
-              })),
-            ],
-          }],
-          max_tokens: 800,
-        });
-        const desc = descResponse.choices[0].message.content || '';
-        if (!isRefusal(desc)) {
-          productDescription = desc;
-          break;
+  let productDescription: string;
+  let orderedItems: PdpImageItem[];
+
+  if (confirmedPlans && confirmedPlans.length > 0) {
+    // Skip planning — use pre-confirmed plans from the review step
+    productDescription = confirmedProductDescription || brief;
+    orderedItems = PDP_TYPES.map(t => {
+      const found = confirmedPlans.find(p => p.type === t.type);
+      return {
+        type: t.type,
+        label: t.label,
+        image_prompt: found?.image_prompt || `${t.label} for: ${brief.slice(0, 120)}. Brand colors: ${brandKit.primary1}, ${brandKit.primary2}. Square 1:1 e-commerce format, premium quality.`,
+        display_copy: found?.display_copy ?? null,
+      };
+    });
+  } else {
+    // Original flow: step 0 (describe product) + step 1 (plan with GPT-4o)
+    productDescription = brief;
+
+    if (productDataUrls.length > 0) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const descResponse = await openai.chat.completions.create({
+            model: 'gpt-4o',
+            messages: [{
+              role: 'user',
+              content: [
+                { type: 'text', text: PRODUCT_DESCRIPTION_PROMPT },
+                ...productDataUrls.slice(0, 2).map(url => ({
+                  type: 'image_url' as const,
+                  image_url: { url, detail: 'high' as const },
+                })),
+              ],
+            }],
+            max_tokens: 800,
+          });
+          const desc = descResponse.choices[0].message.content || '';
+          if (!isRefusal(desc)) {
+            productDescription = desc;
+            break;
+          }
+          console.warn(`PDP describe-product attempt ${attempt + 1} returned refusal`);
+        } catch (err) {
+          console.error(`PDP describe-product attempt ${attempt + 1} failed:`, err);
         }
-        console.warn(`PDP describe-product attempt ${attempt + 1} returned refusal`);
-      } catch (err) {
-        console.error(`PDP describe-product attempt ${attempt + 1} failed:`, err);
       }
     }
-  }
 
-  const lifestyleInstruction = hasPeople
-    ? '3. LIFESTYLE IMAGE — una persona vistiendo / usando el producto en una situación cotidiana auténtica y aspiracional. La persona debe verse natural. Genera deseo y conexión emocional.'
-    : '3. LIFESTYLE IMAGE — el producto integrado en su contexto natural de uso (escritorio, cocina, gym, etc.), sin personas. El ambiente rodea al producto de forma natural y cercana.';
+    const lifestyleInstruction = hasPeople
+      ? '3. LIFESTYLE IMAGE — una persona vistiendo / usando el producto en una situación cotidiana auténtica y aspiracional. La persona debe verse natural. Genera deseo y conexión emocional.'
+      : '3. LIFESTYLE IMAGE — el producto integrado en su contexto natural de uso (escritorio, cocina, gym, etc.), sin personas. El ambiente rodea al producto de forma natural y cercana.';
 
-  const systemPrompt = `Sos un director creativo senior especializado en PDPs de e-commerce (Shopify / Tienda Nube).
+    const systemPrompt = `Sos un director creativo senior especializado en PDPs de e-commerce (Shopify / Tienda Nube).
 Dado un brief de producto y brand kit, generá exactamente 6 prompts de imagen — uno por cada tipo del sistema SPICY PDP.
 Formato: cuadrado 1:1 (1024x1024), optimizado para carrusel de producto.
 
@@ -150,55 +196,54 @@ REGLAS CRÍTICAS:
 
 Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|authority|howto|testimonial", "label": "...", "image_prompt": "..." }, ... ] }`;
 
-  const userContent: ChatCompletionContentPart[] = [
-    { type: 'text', text: `BRAND KIT:\n${brandKitContext}\n\nBRIEF:\n${brief}` },
-    ...productDataUrls.slice(0, 2).map(url => ({
-      type: 'image_url' as const,
-      image_url: { url, detail: 'high' as const },
-    })),
-    ...(hasPeople ? referenceDataUrls.slice(0, 1).map(url => ({
-      type: 'image_url' as const,
-      image_url: { url, detail: 'high' as const },
-    })) : []),
-  ];
+    const userContent: ChatCompletionContentPart[] = [
+      { type: 'text', text: `BRAND KIT:\n${brandKitContext}\n\nBRIEF:\n${brief}` },
+      ...productDataUrls.slice(0, 2).map(url => ({
+        type: 'image_url' as const,
+        image_url: { url, detail: 'high' as const },
+      })),
+      ...(hasPeople ? referenceDataUrls.slice(0, 1).map(url => ({
+        type: 'image_url' as const,
+        image_url: { url, detail: 'high' as const },
+      })) : []),
+    ];
 
-  // Step 1: GPT-4o plans the 6 prompts
-  const conceptsResponse = await openai.chat.completions.create({
-    model: 'gpt-4o',
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userContent },
-    ],
-    response_format: { type: 'json_object' },
-  });
+    const conceptsResponse = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userContent },
+      ],
+      response_format: { type: 'json_object' },
+    });
 
-  const parsed = JSON.parse(conceptsResponse.choices[0].message.content || '{}');
-  const pdpItems: PdpImageItem[] = parsed.pdp_images || [];
+    const parsed = JSON.parse(conceptsResponse.choices[0].message.content || '{}');
+    const pdpItems: PdpImageItem[] = parsed.pdp_images || [];
 
-  // Ensure all 6 types are present (fallback if GPT skipped any)
-  const orderedItems = PDP_TYPES.map(t => {
-    const found = pdpItems.find(item => item.type === t.type);
-    const base = {
-      type: t.type,
-      label: t.label, // always use our fixed label, never GPT's (which can include the brand name)
-      image_prompt: found?.image_prompt || `${t.label} for: ${brief.slice(0, 120)}. Brand colors: ${brandKit.primary1}, ${brandKit.primary2}. Square 1:1 e-commerce format, premium quality.`,
-    };
-
-    // Inject user-provided text verbatim so the AI can't invent it
-    if (t.type === 'testimonial' && testimonialText) {
-      return {
-        ...base,
-        image_prompt: `${base.image_prompt} IMPORTANT — use EXACTLY this testimonial text in the image, do not modify or invent alternative copy: "${testimonialText}"`,
+    orderedItems = PDP_TYPES.map(t => {
+      const found = pdpItems.find(item => item.type === t.type);
+      const base: PdpImageItem = {
+        type: t.type,
+        label: t.label,
+        image_prompt: found?.image_prompt || `${t.label} for: ${brief.slice(0, 120)}. Brand colors: ${brandKit.primary1}, ${brandKit.primary2}. Square 1:1 e-commerce format, premium quality.`,
+        display_copy: null,
       };
-    }
-    if (t.type === 'authority' && authorityText) {
-      return {
-        ...base,
-        image_prompt: `${base.image_prompt} IMPORTANT — use EXACTLY these authority claims/specs as the text in the image, do not invent alternatives: "${authorityText}"`,
-      };
-    }
-    return base;
-  });
+
+      if (t.type === 'testimonial' && testimonialText) {
+        return {
+          ...base,
+          image_prompt: `${base.image_prompt} IMPORTANT — use EXACTLY this testimonial text in the image, do not modify or invent alternative copy: "${testimonialText}"`,
+        };
+      }
+      if (t.type === 'authority' && authorityText) {
+        return {
+          ...base,
+          image_prompt: `${base.image_prompt} IMPORTANT — use EXACTLY these authority claims/specs as the text in the image, do not invent alternatives: "${authorityText}"`,
+        };
+      }
+      return base;
+    });
+  }
 
   // Step 2: generate all 6 images in parallel, stream as they complete
   const inputImages = [
@@ -215,8 +260,10 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
       try {
         await Promise.allSettled(
           orderedItems.map(async (item) => {
+            const copyInjection = buildCopyInjection(item.display_copy, item.type);
             const fullPrompt = [
               item.image_prompt,
+              copyInjection,
               `PRODUCTO EXACTO A MOSTRAR (no cambiar, no reemplazar por otro): ${productDescription}`,
               `Brand colors: ${brandKit.primary1}, ${brandKit.primary2}, ${brandKit.primary3}.`,
               `Typography: ${brandKit.typography || 'bold sans-serif'}.`,
@@ -234,8 +281,6 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
             let lastError = '';
 
             if (inputImages.length > 0) {
-              // Con fotos de producto: Responses API con gpt-4o viendo las imágenes
-              // (mismo enfoque que apply-product, que mantiene fidelidad visual del producto)
               try {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const response = await (openai.responses.create as any)({
@@ -266,7 +311,6 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
                 console.error(`PDP with-images "${item.label}" failed:`, err);
               }
 
-              // Fallback sin imágenes si la Responses API falla
               if (!base64) {
                 try {
                   const result = await openai.images.generate({
@@ -283,7 +327,6 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
                 }
               }
             } else {
-              // Sin fotos de producto: images.generate directo (probado y confiable)
               try {
                 const result = await openai.images.generate({
                   model: 'gpt-image-2',

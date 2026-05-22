@@ -6,8 +6,23 @@ import { useRequireAuth } from '@/app/lib/use-auth';
 import { BrandKit } from '@/app/types';
 import Sidebar from '@/app/components/Sidebar';
 
-type PdpStep = 'brief' | 'generating' | 'done';
+type PdpStep = 'brief' | 'review' | 'generating' | 'done';
 type PdpMode = 'product' | 'fashion';
+
+interface SlideDisplayCopy {
+  items?: string[];
+  tagline?: string;
+  quote?: string;
+  author?: string;
+  rating?: string;
+}
+
+interface PdpPlan {
+  type: string;
+  label: string;
+  display_copy: SlideDisplayCopy | null;
+  image_prompt: string;
+}
 
 interface PdpImage {
   id: string;
@@ -48,9 +63,9 @@ export default function PdpPage() {
   const [generatedCount, setGeneratedCount] = useState(0);
   const [error, setError] = useState('');
   const [msgIdx, setMsgIdx] = useState(0);
-  const [testimonialText, setTestimonialText] = useState('');
-  const [authorityText, setAuthorityText] = useState('');
-  const [showCustomText, setShowCustomText] = useState(false);
+  const [planLoading, setPlanLoading] = useState(false);
+  const [plans, setPlans] = useState<PdpPlan[]>([]);
+  const [productDescription, setProductDescription] = useState('');
 
   useEffect(() => {
     fetch('/api/brand-kits').then(r => r.json()).then(kit => {
@@ -135,8 +150,59 @@ export default function PdpPage() {
     e.target.value = '';
   };
 
-  const generate = async () => {
+  const planPdp = async () => {
     if (!brandKit || !brief.trim()) return;
+    setPlanLoading(true);
+    setError('');
+
+    try {
+      const compressedProducts = await Promise.all(
+        productImages.map(img => compressToJpeg(img.includes(',') ? img.split(',')[1] : img))
+      );
+      const compressedRefs = await Promise.all(
+        referenceImages.map(img => compressToJpeg(img.includes(',') ? img.split(',')[1] : img))
+      );
+
+      const res = await fetch('/api/plan-pdp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          brief,
+          brandKit,
+          peopleMode: mode === 'fashion' ? 'real' : 'none',
+          productImages: compressedProducts,
+          referenceImages: compressedRefs,
+        }),
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setProductDescription(data.productDescription || brief);
+      setPlans(data.plans || []);
+      setStep('review');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error planificando imágenes PDP');
+    } finally {
+      setPlanLoading(false);
+    }
+  };
+
+  const updatePlanItem = (planIdx: number, itemIdx: number, value: string) => {
+    setPlans(prev => prev.map((p, i) => {
+      if (i !== planIdx) return p;
+      const items = [...(p.display_copy?.items || [])];
+      items[itemIdx] = value;
+      return { ...p, display_copy: { ...p.display_copy, items } };
+    }));
+  };
+
+  const updatePlanCopy = (planIdx: number, updates: Partial<SlideDisplayCopy>) => {
+    setPlans(prev => prev.map((p, i) =>
+      i === planIdx ? { ...p, display_copy: { ...p.display_copy, ...updates } } : p
+    ));
+  };
+
+  const generateFromPlans = async () => {
     setPdpImages(Array(6).fill(null));
     setGeneratedCount(0);
     setError('');
@@ -160,8 +226,8 @@ export default function PdpPage() {
           peopleMode: mode === 'fashion' ? 'real' : 'none',
           productImages: compressedProducts,
           referenceImages: compressedRefs,
-          testimonialText: testimonialText.trim(),
-          authorityText: authorityText.trim(),
+          plans,
+          productDescription,
         }),
       });
 
@@ -202,7 +268,7 @@ export default function PdpPage() {
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error generando imágenes PDP');
-      setStep('brief');
+      setStep('review');
     }
   };
 
@@ -214,9 +280,8 @@ export default function PdpPage() {
     setPdpImages(Array(6).fill(null));
     setGeneratedCount(0);
     setError('');
-    setTestimonialText('');
-    setAuthorityText('');
-    setShowCustomText(false);
+    setPlans([]);
+    setProductDescription('');
   };
 
   const downloadImage = (img: PdpImage) => {
@@ -230,7 +295,7 @@ export default function PdpPage() {
     pdpImages.filter(Boolean).forEach(img => img && downloadImage(img));
   };
 
-  const canGenerate = !!brandKit && !!brief.trim() && hasApiKey;
+  const canPlan = !!brandKit && !!brief.trim() && hasApiKey && !planLoading;
 
   return (
     <div className="min-h-screen flex bg-gray-50">
@@ -244,7 +309,7 @@ export default function PdpPage() {
               <h1 className="text-xl font-bold text-gray-900">Imágenes PDP</h1>
               <p className="text-sm text-gray-500">6 imágenes para el carrusel de tu página de producto · Shopify / Tienda Nube</p>
             </div>
-            {step !== 'brief' && (
+            {step !== 'brief' && step !== 'review' && (
               <div className="flex items-center gap-2 text-sm text-gray-400">
                 {step === 'generating' && (
                   <div className="w-3.5 h-3.5 border-2 border-gray-200 border-t-[#e42820] rounded-full animate-spin" />
@@ -408,59 +473,7 @@ export default function PdpPage() {
                 />
               </div>
 
-              {/* Custom text for Testimonial & Authority */}
-              <div className="border border-gray-200 rounded-xl overflow-hidden">
-                <button
-                  onClick={() => setShowCustomText(v => !v)}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-gray-50 transition-colors text-left"
-                >
-                  <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    <span className="text-sm font-medium text-gray-700">Texto personalizado para Testimonial y Authority</span>
-                    <span className="text-[11px] bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded font-medium">Opcional</span>
-                  </div>
-                  <svg className={`w-4 h-4 text-gray-400 transition-transform ${showCustomText ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                {showCustomText && (
-                  <div className="px-4 pb-4 pt-1 space-y-4 bg-white border-t border-gray-100">
-                    <p className="text-xs text-gray-400">
-                      Si dejás estos campos vacíos, la IA genera texto genérico. Para evitar reseñas o claims inventados, escribí el texto exacto que querés mostrar.
-                    </p>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-gray-600 flex items-center gap-1.5">
-                        Testimonial
-                        <span className="text-gray-400 font-normal">— texto de la reseña / prueba social</span>
-                      </label>
-                      <textarea
-                        value={testimonialText}
-                        onChange={e => setTestimonialText(e.target.value)}
-                        placeholder={`Ej: "★★★★★ 'La mejor remera que tuve en mi vida' — María G. · +2.000 clientes satisfechos"`}
-                        rows={2}
-                        className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] resize-none"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-gray-600 flex items-center gap-1.5">
-                        Authority / Científico
-                        <span className="text-gray-400 font-normal">— ingredientes, materiales o claims técnicos</span>
-                      </label>
-                      <textarea
-                        value={authorityText}
-                        onChange={e => setAuthorityText(e.target.value)}
-                        placeholder={`Ej: "Algodón pima 100% · Certificado GOTS · Tratamiento enzimático · Sin tinturas dañinas"`}
-                        rows={2}
-                        className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] resize-none"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* What will be generated preview */}
+              {/* What will be generated */}
               <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Se van a generar 6 imágenes</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -476,17 +489,160 @@ export default function PdpPage() {
                 </div>
               </div>
 
-              {/* Generate button */}
+              {/* Plan button */}
               <button
-                onClick={generate}
-                disabled={!canGenerate}
+                onClick={planPdp}
+                disabled={!canPlan}
                 className="w-full bg-[#e42820] hover:bg-[#c41f18] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-6 py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2"
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                Generar 6 imágenes PDP
+                {planLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Planificando...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    Planificar imágenes PDP
+                  </>
+                )}
               </button>
+            </div>
+          )}
+
+          {/* ── REVIEW STEP ── */}
+          {step === 'review' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Revisá el copy antes de generar</h2>
+                <p className="text-sm text-gray-500">
+                  Estos son los textos que aparecerán en cada imagen. Editá lo que necesites — especialmente Authority y Testimonial.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {plans.map((plan, planIdx) => {
+                  const dc = plan.display_copy;
+                  const isHero = plan.type === 'hero';
+                  const isTestimonial = plan.type === 'testimonial';
+                  const isLifestyle = plan.type === 'lifestyle';
+                  const hasItems = ['benefit', 'authority', 'howto'].includes(plan.type);
+
+                  const typeLabels: Record<string, string> = {
+                    hero: '1 · Product Hero',
+                    benefit: '2 · Benefit Image',
+                    lifestyle: '3 · Lifestyle Image',
+                    authority: '4 · Authority Image',
+                    howto: '5 · How to Use',
+                    testimonial: '6 · Testimonial',
+                  };
+                  const itemLabels: Record<string, string[]> = {
+                    benefit: ['Beneficio 1', 'Beneficio 2', 'Beneficio 3'],
+                    authority: ['Spec / material 1', 'Spec / material 2', 'Spec / material 3'],
+                    howto: ['Paso 1', 'Paso 2', 'Paso 3'],
+                  };
+
+                  return (
+                    <div key={plan.type} className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        {typeLabels[plan.type] || plan.label}
+                      </p>
+
+                      {isHero && (
+                        <div className="flex items-center gap-2 text-xs text-gray-400 py-1">
+                          <svg className="w-3.5 h-3.5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Solo producto, sin texto en la imagen.
+                        </div>
+                      )}
+
+                      {hasItems && dc?.items && (
+                        <div className="space-y-2">
+                          {dc.items.map((item, itemIdx) => (
+                            <div key={itemIdx} className="flex items-center gap-2">
+                              <span className="text-xs text-gray-400 w-4 shrink-0">{itemIdx + 1}.</span>
+                              <input
+                                value={item}
+                                onChange={e => updatePlanItem(planIdx, itemIdx, e.target.value)}
+                                placeholder={itemLabels[plan.type]?.[itemIdx] || `Item ${itemIdx + 1}`}
+                                className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820]"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {isLifestyle && (
+                        <div className="space-y-1.5">
+                          <p className="text-xs text-gray-400">Tagline aspiracional <span className="text-gray-300">(opcional)</span></p>
+                          <input
+                            value={dc?.tagline || ''}
+                            onChange={e => updatePlanCopy(planIdx, { tagline: e.target.value })}
+                            placeholder="Ej: Cada detalle, pensado para vos."
+                            className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820]"
+                          />
+                        </div>
+                      )}
+
+                      {isTestimonial && (
+                        <div className="space-y-2">
+                          <div className="space-y-1.5">
+                            <p className="text-xs font-medium text-gray-500">Reseña</p>
+                            <textarea
+                              value={dc?.quote || ''}
+                              onChange={e => updatePlanCopy(planIdx, { quote: e.target.value })}
+                              placeholder="Ej: La mejor compra que hice. Se nota la calidad desde el primer uso."
+                              rows={2}
+                              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] resize-none"
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-1">
+                              <p className="text-xs text-gray-400">Autor</p>
+                              <input
+                                value={dc?.author || ''}
+                                onChange={e => updatePlanCopy(planIdx, { author: e.target.value })}
+                                placeholder="María G."
+                                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820]"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-xs text-gray-400">Rating</p>
+                              <input
+                                value={dc?.rating || ''}
+                                onChange={e => updatePlanCopy(planIdx, { rating: e.target.value })}
+                                placeholder="★★★★★"
+                                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820]"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setStep('brief')}
+                  className="text-sm text-gray-500 hover:text-gray-700 border border-gray-200 hover:border-gray-300 px-5 py-3 rounded-xl transition-colors"
+                >
+                  Volver
+                </button>
+                <button
+                  onClick={generateFromPlans}
+                  className="flex-1 bg-[#e42820] hover:bg-[#c41f18] text-white font-semibold px-6 py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  Confirmar y generar 6 imágenes
+                </button>
+              </div>
             </div>
           )}
 
@@ -532,7 +688,6 @@ export default function PdpPage() {
                   const img = pdpImages[i];
                   return (
                     <div key={slot.type} className="space-y-2">
-                      {/* Square image card */}
                       <div className="aspect-square rounded-xl overflow-hidden border border-gray-200 bg-gray-100 relative">
                         {img ? (
                           <img
@@ -548,13 +703,11 @@ export default function PdpPage() {
                         )}
                       </div>
 
-                      {/* Label */}
                       <div>
                         <p className="text-xs font-semibold text-gray-700">{slot.label}</p>
                         <p className="text-[11px] text-gray-400">{slot.desc}</p>
                       </div>
 
-                      {/* Download button (only when done) */}
                       {img && step === 'done' && (
                         <button
                           onClick={() => downloadImage(img)}
