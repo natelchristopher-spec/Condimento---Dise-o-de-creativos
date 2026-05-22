@@ -5,6 +5,10 @@ export function buildBrandKitContext(brandKit: BrandKit): string {
     ? `\nESTILO DE PIEZAS ANTERIORES APROBADAS (seguir este estilo):\n${brandKit.referencePiecesStyle}`
     : '';
 
+  const logoSection = (brandKit.logoColorBase64 || brandKit.logoWhiteBase64 || brandKit.logoDarkBase64)
+    ? `\nLOGO — REGLA DE USO POR FONDO:\n- Fondo claro o blanco → usar logo color o logo oscuro\n- Fondo oscuro o imagen con producto → usar logo blanco (negativo)\n- NUNCA colocar el logo color sobre fondo oscuro — siempre la versión que garantice legibilidad`
+    : '';
+
   return `
 MARCA: ${brandKit.name}
 
@@ -23,5 +27,6 @@ TIPOGRAFÍA: ${brandKit.typography || 'No especificada'}
 ESTILO Y REGLAS DE MARCA:
 ${brandKit.styleDescription}
 ${referencesSection}
+${logoSection}
 `.trim();
 }

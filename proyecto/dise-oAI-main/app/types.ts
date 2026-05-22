@@ -16,6 +16,9 @@ export interface BrandKit {
   referencePiecesStyle?: string;
   referencePiecesThumbnails?: string[];
   logoBase64?: string;
+  logoColorBase64?: string;
+  logoWhiteBase64?: string;
+  logoDarkBase64?: string;
   quickAdjustments?: string[];
 }
 
