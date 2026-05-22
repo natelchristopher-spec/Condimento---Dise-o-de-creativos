@@ -8,7 +8,7 @@ interface SidebarProps {
   userEmail?: string;
 }
 
-const LOGO_PATH = 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z';
+const SPARK_PATH = 'M13 10V3L4 14h7v7l9-11h-7z';
 
 function NavItem({ href, icon, active, badge, children }: {
   href: string;
@@ -47,18 +47,33 @@ export default function Sidebar({ active, onLogout, userEmail }: SidebarProps) {
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-[#e42820] flex items-center justify-center shrink-0">
               <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={LOGO_PATH} />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={SPARK_PATH} />
               </svg>
             </div>
-            <span className="font-bold text-gray-900 text-sm tracking-tight">Condimento</span>
+            <div>
+              <span className="font-bold text-gray-900 text-sm tracking-tight block leading-tight">Spicy Studio</span>
+              <span className="text-[10px] text-gray-400 leading-tight">by Condimento</span>
+            </div>
           </div>
         </div>
 
         {/* Primary nav */}
         <nav className="flex-1 px-2.5 py-4 space-y-0.5 overflow-y-auto">
-          <p className="px-3 pb-2 text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Crear</p>
-          <NavItem href="/" icon={LOGO_PATH} active={active === '/'}>
-            Creativos
+          <p className="px-3 pb-2 text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Módulos</p>
+          <NavItem
+            href="/"
+            icon="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+            active={active === '/'}
+          >
+            Anuncios
+          </NavItem>
+          <NavItem
+            href="/redes"
+            icon="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+            active={active === '/redes'}
+            badge="Pronto"
+          >
+            Redes
           </NavItem>
           <NavItem
             href="/pdp"
@@ -66,7 +81,15 @@ export default function Sidebar({ active, onLogout, userEmail }: SidebarProps) {
             active={active === '/pdp'}
             badge="Pronto"
           >
-            Imágenes PDP
+            PDP
+          </NavItem>
+          <NavItem
+            href="/email"
+            icon="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+            active={active === '/email'}
+            badge="Pronto"
+          >
+            Email
           </NavItem>
         </nav>
 
@@ -107,15 +130,17 @@ export default function Sidebar({ active, onLogout, userEmail }: SidebarProps) {
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-md bg-[#e42820] flex items-center justify-center shrink-0">
             <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={LOGO_PATH} />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={SPARK_PATH} />
             </svg>
           </div>
-          <span className="font-bold text-gray-900 text-xs">Condimento</span>
+          <span className="font-bold text-gray-900 text-xs">Spicy Studio</span>
         </div>
         <div className="flex items-center gap-0.5">
           {([
-            { href: '/', label: 'Creativos' },
+            { href: '/', label: 'Anuncios' },
+            { href: '/redes', label: 'Redes' },
             { href: '/pdp', label: 'PDP' },
+            { href: '/email', label: 'Email' },
             { href: '/config', label: 'Marca' },
             { href: '/perfil', label: 'Perfil' },
           ] as const).map(({ href, label }) => (

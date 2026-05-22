@@ -522,8 +522,8 @@ export default function Home() {
         {step === 'brief' && (
           <div className="space-y-8">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-1">Nueva campaña</h1>
-              <p className="text-gray-500 text-sm">Describí lo que necesitás y la IA generará tus creativos.</p>
+              <h1 className="text-3xl font-bold text-gray-900 mb-1">Anuncios</h1>
+              <p className="text-gray-500 text-sm">Describí lo que necesitás y la IA generará tus creativos y adaptaciones.</p>
             </div>
 
             {/* URL scraper */}
