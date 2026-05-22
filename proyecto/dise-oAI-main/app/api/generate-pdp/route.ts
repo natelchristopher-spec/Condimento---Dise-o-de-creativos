@@ -143,6 +143,7 @@ REGLAS CRÍTICAS:
 - PROHIBIDO incluir logos, marcas o textos de marca de terceros — las imágenes de referencia son solo para color/forma, NO reproducir sus logos
 - PROHIBIDO badges inventados ("Compra Segura", "Sitio Protegido", "Envío Gratis" si no está en el brief)
 - PROHIBIDO: botones CTA, precios inventados, descuentos no mencionados, métricas falsas
+- TODO EL COPY EN ESPAÑOL — títulos, beneficios, pasos, testimonios, callouts: todo en español, sin excepción
 - Colores: usá los hex exactos del brand kit
 - ${hasPeople ? 'Modo fashion: LIFESTYLE debe incluir personas' : 'Sin personas en ninguna imagen'}
 - Cada image_prompt debe describir el producto con su color exacto para que el generador no lo cambie
@@ -226,6 +227,7 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
               'Do NOT include invented trust badges ("Compra Segura", "Sitio Protegido", "Envío Gratis") unless explicitly in the brief.',
               'Do NOT include button-style CTAs ("Compra ahora", "Buy Now", etc.).',
               'Do NOT include invented prices, discounts, or false metrics.',
+              'ALL TEXT IN THE IMAGE MUST BE IN SPANISH — titles, benefits, steps, callouts, testimonials: everything in Spanish, no English.',
             ].filter(Boolean).join(' ');
 
             let base64 = '';
