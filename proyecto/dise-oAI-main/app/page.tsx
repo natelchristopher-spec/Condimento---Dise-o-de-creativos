@@ -318,77 +318,57 @@ export default function Home() {
 
   const enterRefine = async () => {
     if (selectedConcepts.length === 0 || !brandKit) return;
-    const first = selectedConcepts[0];
     setRefineIndex(0);
     setRefineHistory([]);
     setRefineImageHistory([]);
     setRefineInput('');
 
     if (productDetailImages.length > 0 && peopleMode === 'real') {
-      startLoading('Aplicando producto...');
+      const n = selectedConcepts.length;
+      startLoading(`Aplicando producto a ${n} concepto${n > 1 ? 's' : ''}...`);
       setError('');
       try {
-        const res = await fetch('/api/apply-product', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            conceptImageBase64: first.base64,
-            productDetailImages,
-            productDescription,
-            peopleMode,
-            personDescription,
-          }),
-        });
-        const { base64 } = await res.json();
-        const updated = base64 ? { ...first, base64 } : first;
-        setRefineImage(updated);
-        setSelectedConcepts(prev => prev.map(c => c.id === first.id ? updated : c));
+        const applied = await Promise.all(
+          selectedConcepts.map(async (concept) => {
+            try {
+              const res = await fetch('/api/apply-product', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  conceptImageBase64: concept.base64,
+                  productDetailImages,
+                  productDescription,
+                  peopleMode,
+                  personDescription,
+                }),
+              });
+              const { base64 } = await res.json();
+              return base64 ? { ...concept, base64 } : concept;
+            } catch {
+              return concept;
+            }
+          })
+        );
+        setSelectedConcepts(applied);
+        setRefineImage(applied[0]);
       } catch {
-        setRefineImage(first);
+        setRefineImage(selectedConcepts[0]);
       } finally {
         stopLoading();
       }
     } else {
-      setRefineImage(first);
+      setRefineImage(selectedConcepts[0]);
     }
     setStep('refine');
   };
 
-  const saveRefinedAndNext = async () => {
+  const saveRefinedAndNext = () => {
     const nextIndex = refineIndex + 1;
-    const next = selectedConcepts[nextIndex];
     setRefineIndex(nextIndex);
     setRefineHistory([]);
     setRefineImageHistory([]);
     setRefineInput('');
-
-    if (productDetailImages.length > 0 && peopleMode === 'real') {
-      startLoading('Aplicando producto...');
-      try {
-        const res = await fetch('/api/apply-product', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            conceptImageBase64: next.base64,
-            productDetailImages,
-            productDescription,
-            peopleMode,
-            personDescription,
-          }),
-        });
-        const { base64 } = await res.json();
-        const updated = base64 ? { ...next, base64 } : next;
-        setRefineImage(updated);
-        setSelectedConcepts(prev => prev.map(c => c.id === next.id ? updated : c));
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Error aplicando producto al concepto');
-        setRefineImage(next);
-      } finally {
-        stopLoading();
-      }
-    } else {
-      setRefineImage(next);
-    }
+    setRefineImage(selectedConcepts[nextIndex]);
   };
 
   const finishRefine = () => setStep('done');
