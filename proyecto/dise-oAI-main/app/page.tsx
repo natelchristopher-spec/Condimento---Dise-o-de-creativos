@@ -17,6 +17,8 @@ export default function Home() {
   const [brief, setBrief] = useState('');
   const [clientRequest, setClientRequest] = useState('');
   const [generatingBrief, setGeneratingBrief] = useState(false);
+  const [productUrl, setProductUrl] = useState('');
+  const [scrapingUrl, setScrapingUrl] = useState(false);
 
   const [adaptFormats, setAdaptFormats] = useState<string[]>([]);
   const [adaptedImages, setAdaptedImages] = useState<{ format: string; label: string; conceptId: string; base64: string }[]>([]);
@@ -142,6 +144,26 @@ export default function Home() {
       setError(e instanceof Error ? e.message : 'Error generando brief');
     } finally {
       setGeneratingBrief(false);
+    }
+  };
+
+  const scrapeProduct = async () => {
+    if (!productUrl.trim()) return;
+    setScrapingUrl(true);
+    setError('');
+    try {
+      const res = await fetch('/api/scrape-product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: productUrl.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al scrapear');
+      setClientRequest(data.clientRequest);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo leer la URL');
+    } finally {
+      setScrapingUrl(false);
     }
   };
 
@@ -386,6 +408,7 @@ export default function Home() {
     setStep('brief');
     setBrief('');
     setClientRequest('');
+    setProductUrl('');
     setConcepts([]);
     setSelectedConcepts([]);
     setRefineIndex(0);
@@ -498,6 +521,38 @@ export default function Home() {
             <div>
               <h1 className="text-3xl font-bold text-white mb-1">Nueva campaña</h1>
               <p className="text-white/40 text-sm">Describí lo que necesitás y la IA generará tus creativos.</p>
+            </div>
+
+            {/* URL scraper */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-white/50 uppercase tracking-wider">Importar desde URL de producto</label>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={productUrl}
+                  onChange={e => setProductUrl(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && !scrapingUrl && scrapeProduct()}
+                  placeholder="https://tienda.com/producto/..."
+                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-white/20 focus:outline-none focus:border-[#e42820] text-sm"
+                />
+                <button
+                  onClick={scrapeProduct}
+                  disabled={!productUrl.trim() || scrapingUrl}
+                  className="shrink-0 bg-white/8 hover:bg-white/12 disabled:opacity-40 disabled:cursor-not-allowed border border-white/10 hover:border-white/20 text-white/70 hover:text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-all flex items-center gap-2"
+                >
+                  {scrapingUrl ? (
+                    <><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />Leyendo...</>
+                  ) : (
+                    <>
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                      </svg>
+                      Leer producto
+                    </>
+                  )}
+                </button>
+              </div>
+              <p className="text-[11px] text-white/25">Pegá la URL del producto y la IA extrae precio, descuentos, cuotas y arma la solicitud automáticamente.</p>
             </div>
 
             {/* Brief generator */}
