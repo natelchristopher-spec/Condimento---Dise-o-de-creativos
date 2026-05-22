@@ -354,14 +354,40 @@ export default function Home() {
     setStep('refine');
   };
 
-  const saveRefinedAndNext = () => {
+  const saveRefinedAndNext = async () => {
     const nextIndex = refineIndex + 1;
     const next = selectedConcepts[nextIndex];
     setRefineIndex(nextIndex);
     setRefineHistory([]);
     setRefineImageHistory([]);
     setRefineInput('');
-    setRefineImage(next);
+
+    if (productDetailImages.length > 0 && peopleMode === 'real') {
+      startLoading('Aplicando producto...');
+      try {
+        const res = await fetch('/api/apply-product', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            conceptImageBase64: next.base64,
+            productDetailImages,
+            productDescription,
+            peopleMode,
+            personDescription,
+          }),
+        });
+        const { base64 } = await res.json();
+        const updated = base64 ? { ...next, base64 } : next;
+        setRefineImage(updated);
+        setSelectedConcepts(prev => prev.map(c => c.id === next.id ? updated : c));
+      } catch {
+        setRefineImage(next);
+      } finally {
+        stopLoading();
+      }
+    } else {
+      setRefineImage(next);
+    }
   };
 
   const finishRefine = () => setStep('done');
