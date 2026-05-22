@@ -404,8 +404,10 @@ export default function Home() {
           });
           const { base64, error: apiError } = await res.json();
           if (apiError) setError(`Concepto ${i + 1}: ${apiError}`);
-          if (base64) applied[i] = { ...applied[i], base64 };
-          setSelectedConcepts([...applied]);
+          if (base64) {
+            applied[i] = { ...applied[i], base64 };
+            setSelectedConcepts(prev => prev.map((c, idx) => idx === i ? applied[i] : c));
+          }
         } catch { /* keep original */ }
         statuses[i] = 'done';
         setApplyStatuses([...statuses]);
