@@ -415,10 +415,14 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
                   prompt: fullPrompt,
                   size: '1024x1024',
                   quality: 'medium',
+                  response_format: 'b64_json',
                   n: 1,
                 });
                 base64 = editResult.data?.[0]?.b64_json || '';
-                if (!base64) console.warn(`PDP images.edit fallback "${item.label}": no b64_json`);
+                if (!base64) {
+                  lastError = 'images.edit returned no image data';
+                  console.warn(`PDP images.edit fallback "${item.label}": no b64_json`);
+                }
               } catch (err) {
                 lastError = err instanceof Error ? err.message : String(err);
                 console.error(`PDP images.edit fallback "${item.label}" failed:`, err);
