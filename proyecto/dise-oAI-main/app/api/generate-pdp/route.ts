@@ -8,6 +8,7 @@ import { getUserContext } from '@/app/lib/get-user-context';
 export const maxDuration = 300;
 
 type PeopleMode = 'none' | 'real';
+type PdpMode = 'product' | 'fashion';
 
 interface SlideDisplayCopy {
   items?: string[];
@@ -44,7 +45,7 @@ function isRefusal(text: string): boolean {
   );
 }
 
-const PRODUCT_DESCRIPTION_PROMPT = `Sos un técnico de producto de moda de alta gama. Analizá este producto y describilo con precisión quirúrgica para que pueda ser reproducido EXACTAMENTE por un modelo de IA generativa. Imaginá que quien lee tu descripción no puede ver la foto — tu texto es el único recurso.
+const PRODUCT_DESCRIPTION_PROMPT_FASHION = `Sos un técnico de producto de moda de alta gama. Analizá este producto y describilo con precisión quirúrgica para que pueda ser reproducido EXACTAMENTE por un modelo de IA generativa. Imaginá que quien lee tu descripción no puede ver la foto — tu texto es el único recurso.
 
 Describí en este orden exacto:
 
@@ -56,6 +57,28 @@ Describí en este orden exacto:
 6. ELEMENTOS ÚNICOS: lo que diferencia este producto de uno genérico
 
 CRÍTICO: NO menciones ninguna marca, logo ni texto de terceros que aparezca en la foto — esas marcas no deben reproducirse. Solo describí el producto en sí.`;
+
+const PRODUCT_DESCRIPTION_PROMPT_PRODUCT = `Sos un especialista en descripción de productos para e-commerce. Analizá este producto y describilo con precisión para que pueda ser reproducido EXACTAMENTE por un modelo de IA generativa. Tu descripción es el único recurso — quien la lea no puede ver la foto.
+
+Describí en este orden:
+
+1. TIPO DE PRODUCTO: nombre exacto, categoría (suplemento, cosmético, alimento, electrónico, etc.), variante o sabor visible
+2. FORMATO / PRESENTACIÓN: tipo de envase (pote, bolsa, botella, caja, tubo), tamaño relativo, cantidad visible en la etiqueta
+3. COLORES DEL ENVASE — CRÍTICO: color exacto del cuerpo del envase (ej: "pote negro mate sin brillo") y color del diseño/etiqueta (ej: "franja roja vibrante en el centro"). Para colores oscuros, aclará que NO debe renderizarse más claro.
+4. DISEÑO GRÁFICO DEL PACKAGING: estilo tipográfico del nombre (bold, condensado, script, etc.), elementos visuales principales (franjas, íconos, geometría, degradados)
+5. TEXTO CLAVE VISIBLE: nombre del producto tal como aparece, sabor/variante si aplica, claims principales visibles en la etiqueta
+6. ELEMENTOS ÚNICOS: forma de la tapa, textura del envase, detalles que distinguen este packaging específico
+
+CRÍTICO: NO menciones ninguna marca ni logo de terceros. Solo describí el producto y su packaging.`;
+
+const SLIDE_VISUAL_RULES: Record<string, string> = {
+  hero: 'COMPOSITION: product centered, filling 80% of frame, pure white or solid brand-color background, studio lighting, NO text overlays, NO bullets — pure product focus.',
+  benefit: 'COMPOSITION: product on LEFT side of frame, 3 benefit callouts on RIGHT side with icons and short bold Spanish text. Clean scannable layout. NO numbered list — use icon + text pairs.',
+  lifestyle: 'COMPOSITION: product in real-life context. ONE short tagline in big bold text (NO bullet lists, NO numbered steps, NO specs grid). Aspirational editorial feel.',
+  authority: 'COMPOSITION: product in center with 3-4 technical callout lines/arrows pointing to specific product zones. Clinical technical feel. NO benefit bullets — specs and technical data only.',
+  howto: 'COMPOSITION: 3 horizontal numbered steps (1→2→3) infographic style. Small visual per step. NO benefit bullets — ACTION verbs only (Mezclar, Aplicar, Consumir, Lavar).',
+  testimonial: 'COMPOSITION: large customer quote in quotation marks filling 60% of space, product image smaller on one side, author name and 5-star rating below. Warm social-proof feel.',
+};
 
 function buildCopyInjection(display_copy: SlideDisplayCopy | null | undefined, type: string): string {
   if (!display_copy) return '';
@@ -88,7 +111,7 @@ export async function POST(req: NextRequest) {
   }
 
   const {
-    brief, brandKit, peopleMode = 'none',
+    brief, brandKit, peopleMode = 'none', pdpMode = 'product',
     productImages = [], referenceImages = [],
     testimonialText = '', authorityText = '',
     plans: confirmedPlans,
@@ -97,6 +120,7 @@ export async function POST(req: NextRequest) {
     brief: string;
     brandKit: BrandKit;
     peopleMode: PeopleMode;
+    pdpMode: PdpMode;
     productImages: string[];
     referenceImages: string[];
     testimonialText: string;
@@ -135,6 +159,10 @@ export async function POST(req: NextRequest) {
     // Original flow: step 0 (describe product) + step 1 (plan with GPT-4o)
     productDescription = brief;
 
+    const descriptionPrompt = pdpMode === 'fashion'
+      ? PRODUCT_DESCRIPTION_PROMPT_FASHION
+      : PRODUCT_DESCRIPTION_PROMPT_PRODUCT;
+
     if (productDataUrls.length > 0) {
       for (let attempt = 0; attempt < 2; attempt++) {
         try {
@@ -143,7 +171,7 @@ export async function POST(req: NextRequest) {
             messages: [{
               role: 'user',
               content: [
-                { type: 'text', text: PRODUCT_DESCRIPTION_PROMPT },
+                { type: 'text', text: descriptionPrompt },
                 ...productDataUrls.slice(0, 2).map(url => ({
                   type: 'image_url' as const,
                   image_url: { url, detail: 'high' as const },
@@ -261,8 +289,10 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
         await Promise.allSettled(
           orderedItems.map(async (item) => {
             const copyInjection = buildCopyInjection(item.display_copy, item.type);
+            const visualRule = SLIDE_VISUAL_RULES[item.type] || '';
             const fullPrompt = [
               item.image_prompt,
+              visualRule,
               copyInjection,
               `PRODUCTO EXACTO A MOSTRAR (no cambiar, no reemplazar por otro): ${productDescription}`,
               `Brand colors: ${brandKit.primary1}, ${brandKit.primary2}, ${brandKit.primary3}.`,

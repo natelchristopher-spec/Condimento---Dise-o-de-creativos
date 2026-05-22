@@ -191,6 +191,7 @@ export default function PdpPage() {
         body: JSON.stringify({
           brief,
           brandKit,
+          pdpMode: mode,
           peopleMode: mode === 'fashion' ? 'real' : 'none',
           productImages: compressedProducts,
           referenceImages: compressedRefs,
@@ -245,6 +246,7 @@ export default function PdpPage() {
         body: JSON.stringify({
           brief,
           brandKit,
+          pdpMode: mode,
           peopleMode: mode === 'fashion' ? 'real' : 'none',
           productImages: compressedProducts,
           referenceImages: compressedRefs,
@@ -612,13 +614,13 @@ export default function PdpPage() {
                         </div>
                       )}
 
-                      {hasItems && dc?.items && (
+                      {hasItems && (
                         <div className="space-y-2">
-                          {dc.items.map((item, itemIdx) => (
+                          {[0, 1, 2].map((itemIdx) => (
                             <div key={itemIdx} className="flex items-center gap-2">
                               <span className="text-xs text-gray-400 w-4 shrink-0">{itemIdx + 1}.</span>
                               <input
-                                value={item}
+                                value={dc?.items?.[itemIdx] || ''}
                                 onChange={e => updatePlanItem(planIdx, itemIdx, e.target.value)}
                                 placeholder={itemLabels[plan.type]?.[itemIdx] || `Item ${itemIdx + 1}`}
                                 className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820]"
@@ -630,11 +632,11 @@ export default function PdpPage() {
 
                       {isLifestyle && (
                         <div className="space-y-1.5">
-                          <p className="text-xs text-gray-400">Tagline aspiracional <span className="text-gray-300">(opcional)</span></p>
+                          <p className="text-xs text-gray-400">Tagline aspiracional</p>
                           <input
                             value={dc?.tagline || ''}
                             onChange={e => updatePlanCopy(planIdx, { tagline: e.target.value })}
-                            placeholder="Ej: Cada detalle, pensado para vos."
+                            placeholder="Ej: Entrená sin límites."
                             className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820]"
                           />
                         </div>
