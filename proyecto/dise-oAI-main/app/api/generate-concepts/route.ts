@@ -25,7 +25,7 @@ interface ConceptItem {
   image_prompt: string;
 }
 
-const PRODUCT_DESCRIPTION_PROMPT = `Sos un técnico de producto de moda de alta gama. Analizá esta prenda y describila con precisión quirúrgica para que pueda ser reproducida EXACTAMENTE por un modelo de IA generativa. Imaginá que quien lee tu descripción no puede ver la foto — tu texto es el único recurso.
+const PRODUCT_DESCRIPTION_PROMPT_FASHION = `Sos un técnico de producto de moda de alta gama. Analizá esta prenda y describila con precisión quirúrgica para que pueda ser reproducida EXACTAMENTE por un modelo de IA generativa. Imaginá que quien lee tu descripción no puede ver la foto — tu texto es el único recurso.
 
 Describí en este orden exacto:
 
@@ -38,13 +38,26 @@ Describí en este orden exacto:
 
 CRÍTICO para pantalones y prendas de color sólido: el color debe quedar completamente fiel. Si es beige, describí exactamente qué tipo de beige. Si es negro, indicá si tiene subtono. La IA tiende a desaturar o cambiar la temperatura del color — tu descripción debe ser lo suficientemente específica para evitarlo.`;
 
-async function describeProductWithVision(openai: OpenAI, imageDataUrl: string): Promise<string> {
+const PRODUCT_DESCRIPTION_PROMPT_GENERIC = `Sos un experto en descripción de productos para e-commerce. Analizá este producto y describilo con precisión máxima para que pueda ser reproducido EXACTAMENTE por un generador de imágenes IA. La persona que lea tu descripción no puede ver la foto — tu texto es el único recurso. El producto puede ser de CUALQUIER categoría: suplemento, cosmético, reloj, accesorio, electrónico, alimento, herramienta, etc.
+
+Describí en este orden:
+
+1. TIPO DE PRODUCTO: categoría exacta (suplemento deportivo, reloj de pulsera, crema facial, auriculares, etc.), nombre específico, variante o modelo visible
+2. FORMA Y ESTRUCTURA: forma general (cilíndrico, rectangular, esférico, irregular), dimensiones relativas (grande/mediano/pequeño), presentación (envase, caja, suelto, con correa, etc.)
+3. COLOR — ES LO MÁS CRÍTICO: describí el color principal con máxima precisión. NO uses solo el nombre. Usá referencias concretas con subtono, saturación y temperatura (ej: "negro mate profundo sin brillo, sin subtono", "blanco perla con leve subtono cálido — NO es blanco puro"). Para neutros cálidos (beige, arena, khaki, dorado mate): aclará explícitamente que NO debe renderizarse como blanco ni gris. Para colores oscuros: aclará que NO debe aclararse.
+4. MATERIALES Y ACABADO: superficie (mate, satinado, brillante, texturado), material visible (plástico, metal, vidrio, tela, cuero, etc.), peso visual
+5. ELEMENTOS GRÁFICOS Y DISEÑO: para productos con packaging → diseño de etiqueta, tipografía del nombre, elementos visuales principales (franjas, íconos, degradados); para accesorios/electrónicos → grabados, pantallas, botones, detalles decorativos; para prendas → estampado, costuras visibles
+6. DETALLES ÚNICOS: lo que diferencia este producto específico de uno genérico de la misma categoría (forma de tapa, acabado especial, detalle de diseño característico)
+
+CRÍTICO: NO menciones ninguna marca, logo ni texto de terceros. Solo describí el producto en sí.`;
+
+async function describeProductWithVision(openai: OpenAI, imageDataUrl: string, prompt: string): Promise<string> {
   const response = await openai.chat.completions.create({
     model: 'gpt-4o',
     messages: [{
       role: 'user',
       content: [
-        { type: 'text', text: PRODUCT_DESCRIPTION_PROMPT },
+        { type: 'text', text: prompt },
         { type: 'image_url', image_url: { url: imageDataUrl, detail: 'high' } },
       ],
     }],
@@ -156,10 +169,14 @@ export async function POST(req: NextRequest) {
   let productDescription = '';
   let personDescription = '';
 
+  const descriptionPrompt = peopleMode !== 'none'
+    ? PRODUCT_DESCRIPTION_PROMPT_FASHION
+    : PRODUCT_DESCRIPTION_PROMPT_GENERIC;
+
   if (productRef) {
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        const desc = await describeProductWithVision(openai, productRef);
+        const desc = await describeProductWithVision(openai, productRef, descriptionPrompt);
         productDescription = isRefusal(desc) ? '' : desc;
         if (productDescription) break;
         console.warn(`describe-product: attempt ${attempt + 1} returned refusal/empty`);
