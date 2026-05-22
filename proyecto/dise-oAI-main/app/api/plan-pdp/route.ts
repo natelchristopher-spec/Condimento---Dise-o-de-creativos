@@ -100,12 +100,19 @@ export async function POST(req: NextRequest) {
   const brandKitContext = buildBrandKitContext(brandKit);
   const hasPeople = peopleMode === 'real';
 
-  const productDataUrls = productImages.map(img =>
-    img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`
-  );
-  const referenceDataUrls = referenceImages.map(img =>
-    img.startsWith('data:') ? img : `data:image/png;base64,${img}`
-  );
+  const productDataUrls = productImages
+    .map(img => img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`)
+    .filter(url => url.length > 100);
+  const referenceDataUrls = referenceImages
+    .map(img => img.startsWith('data:') ? img : `data:image/png;base64,${img}`)
+    .filter(url => url.length > 100);
+
+  if (productDataUrls.length === 0) {
+    return NextResponse.json(
+      { error: 'Se requiere al menos una foto del producto para generar imágenes PDP. Subí una foto en formato JPG o PNG.' },
+      { status: 400 }
+    );
+  }
 
   // Step 0: describe the product in detail
   let productDescription = brief;

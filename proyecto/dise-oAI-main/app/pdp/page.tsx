@@ -322,7 +322,7 @@ export default function PdpPage() {
     pdpImages.filter(Boolean).forEach(img => img && downloadImage(img));
   };
 
-  const canPlan = !!brandKit && !!brief.trim() && hasApiKey && !planLoading;
+  const canPlan = !!brandKit && !!brief.trim() && hasApiKey && !planLoading && productImages.length > 0;
 
   return (
     <div className="min-h-screen flex bg-gray-50">
@@ -465,9 +465,10 @@ export default function PdpPage() {
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-gray-700">
                   Fotos del producto
-                  <span className="font-normal text-gray-400 ml-1">(hasta 3)</span>
+                  <span className="text-[#e42820] ml-1">*</span>
+                  <span className="font-normal text-gray-400 ml-1">(hasta 3, JPG o PNG)</span>
                 </label>
-                <p className="text-xs text-gray-400">Usá fotos claras del producto — fondo blanco o neutro funciona mejor.</p>
+                <p className="text-xs text-gray-400">Requerido. Usá fotos claras del producto — fondo blanco o neutro funciona mejor.</p>
                 <div className="flex flex-wrap gap-3">
                   {productImages.map((img, i) => (
                     <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-gray-200 bg-gray-100">

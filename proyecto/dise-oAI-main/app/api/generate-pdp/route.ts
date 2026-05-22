@@ -151,12 +151,25 @@ export async function POST(req: NextRequest) {
   const brandKitContext = buildBrandKitContext(brandKit);
   const hasPeople = peopleMode === 'real';
 
-  const productDataUrls = productImages.map(img =>
-    img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`
-  );
-  const referenceDataUrls = referenceImages.map(img =>
-    img.startsWith('data:') ? img : `data:image/png;base64,${img}`
-  );
+  // Filter out empty/invalid entries (e.g. unsupported format that failed canvas conversion)
+  const productDataUrls = productImages
+    .map(img => img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`)
+    .filter(url => url.length > 100);
+  const referenceDataUrls = referenceImages
+    .map(img => img.startsWith('data:') ? img : `data:image/png;base64,${img}`)
+    .filter(url => url.length > 100);
+
+  // Product photo is mandatory — never generate PDP without it
+  if (productDataUrls.length === 0) {
+    const errStream = new ReadableStream({
+      start(c) {
+        c.enqueue(new TextEncoder().encode('data: {"error":"Se requiere al menos una foto del producto para generar imágenes PDP. Subí una foto en formato JPG o PNG."}\n\n'));
+        c.enqueue(new TextEncoder().encode('data: {"done":true}\n\n'));
+        c.close();
+      },
+    });
+    return new Response(errStream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' } });
+  }
 
   let productDescription: string;
   let orderedItems: PdpImageItem[];
@@ -340,7 +353,8 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
             let base64 = '';
             let lastError = '';
 
-            if (inputImages.length > 0) {
+            // Always use product photos — generation without photos is not allowed
+            for (let attempt = 1; attempt <= 2; attempt++) {
               try {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const response = await (openai.responses.create as any)({
@@ -366,39 +380,12 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
                     break;
                   }
                 }
+                if (base64) break;
+                console.warn(`PDP "${item.label}" attempt ${attempt}: no image block`);
               } catch (err) {
                 lastError = err instanceof Error ? err.message : String(err);
-                console.error(`PDP with-images "${item.label}" failed:`, err);
-              }
-
-              if (!base64) {
-                try {
-                  const result = await openai.images.generate({
-                    model: 'gpt-image-2',
-                    prompt: fullPrompt,
-                    size: '1024x1024',
-                    quality: 'medium',
-                    n: 1,
-                  });
-                  base64 = result.data?.[0]?.b64_json || '';
-                } catch (err) {
-                  lastError = err instanceof Error ? err.message : String(err);
-                  console.error(`PDP fallback "${item.label}" failed:`, err);
-                }
-              }
-            } else {
-              try {
-                const result = await openai.images.generate({
-                  model: 'gpt-image-2',
-                  prompt: fullPrompt,
-                  size: '1024x1024',
-                  quality: 'medium',
-                  n: 1,
-                });
-                base64 = result.data?.[0]?.b64_json || '';
-              } catch (err) {
-                lastError = err instanceof Error ? err.message : String(err);
-                console.error(`PDP no-images "${item.label}" failed:`, err);
+                console.error(`PDP "${item.label}" attempt ${attempt} failed:`, err);
+                if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
               }
             }
 
