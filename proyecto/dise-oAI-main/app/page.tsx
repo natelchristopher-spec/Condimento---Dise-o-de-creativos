@@ -91,6 +91,24 @@ export default function Home() {
     window.location.href = '/login';
   };
 
+  const compressToJpeg = (base64: string, maxDim = 1024, quality = 0.82): Promise<string> =>
+    new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        let { naturalWidth: w, naturalHeight: h } = img;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+          else { w = Math.round(w * maxDim / h); h = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality).split(',')[1]);
+      };
+      img.onerror = () => resolve(base64);
+      img.src = base64.startsWith('data:') ? base64 : `data:image/png;base64,${base64}`;
+    });
+
   const readAsPng = (file: File): Promise<string> =>
     new Promise(resolve => {
       const reader = new FileReader();
@@ -295,7 +313,6 @@ export default function Home() {
         body: JSON.stringify({
           imageBase64: concept.base64,
           instruction: input,
-          productDetailImages,
         }),
       });
       if (!res.ok) throw new Error(await res.text());
@@ -355,12 +372,14 @@ export default function Home() {
         statuses[i] = 'applying';
         setApplyStatuses([...statuses]);
         try {
+          const compressedConcept = await compressToJpeg(applied[i].base64);
+          const compressedProducts = await Promise.all(productDetailImages.map(img => compressToJpeg(img)));
           const res = await fetch('/api/apply-product', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              conceptImageBase64: applied[i].base64,
-              productDetailImages,
+              conceptImageBase64: compressedConcept,
+              productDetailImages: compressedProducts,
               productDescription,
               peopleMode,
               personDescription,
