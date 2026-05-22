@@ -772,6 +772,30 @@ export default function Home() {
               </div>
             </div>
 
+            {loading && (
+              <div className="bg-white border border-gray-200 rounded-xl px-4 py-3 space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600 font-medium">
+                    {concepts.length === 0
+                      ? 'Preparando conceptos...'
+                      : `${concepts.length} de ${generatingCount} concepto${generatingCount > 1 ? 's' : ''} listo${concepts.length > 1 ? 's' : ''}`}
+                  </span>
+                  <span className="text-gray-400 text-xs tabular-nums">{elapsedSec}s</span>
+                </div>
+                <div className="w-full bg-gray-100 rounded-full h-1.5">
+                  <div
+                    className="bg-[#e42820] h-1.5 rounded-full transition-all duration-500"
+                    style={{ width: `${generatingCount > 0 ? Math.max(5, (concepts.length / generatingCount) * 100) : 5}%` }}
+                  />
+                </div>
+                <p className="text-xs text-gray-400">
+                  {elapsedSec < 15 ? 'Cada imagen tarda entre 20 y 40 segundos — se van mostrando a medida que llegan.' :
+                   elapsedSec < 45 ? 'Ya casi... la IA está renderizando los detalles.' :
+                   'Tardando un poco más de lo usual, pero vienen bien.'}
+                </p>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {concepts.map(img => {
                 const selIdx = selectedConcepts.findIndex(c => c.id === img.id);
@@ -869,10 +893,23 @@ export default function Home() {
                     className={`w-full transition-all duration-300 ${loading ? 'blur-sm scale-[1.02]' : ''}`}
                   />
                   {loading && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30 backdrop-blur-[2px]">
-                      <div className="w-8 h-8 border-3 border-white/30 border-t-white rounded-full animate-spin mb-2" style={{ borderWidth: '3px' }} />
-                      <p className="text-white text-sm font-medium">{loadingMsg || 'Aplicando...'}</p>
-                      {elapsedSec > 3 && <p className="text-gray-500 text-xs mt-1">{elapsedSec}s</p>}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px] gap-2 px-6 text-center">
+                      <div className="w-8 h-8 border-[3px] border-white/30 border-t-white rounded-full animate-spin" />
+                      <p className="text-white text-sm font-semibold">{loadingMsg || 'Aplicando producto...'}</p>
+                      <p className="text-white/70 text-xs">
+                        {elapsedSec < 10 ? 'Esto tarda entre 25 y 40 segundos' :
+                         elapsedSec < 25 ? `${elapsedSec}s — ya casi...` :
+                         elapsedSec < 40 ? `${elapsedSec}s — renderizando detalles...` :
+                         `${elapsedSec}s — tardando un poco más, aguantá`}
+                      </p>
+                      {elapsedSec >= 10 && (
+                        <div className="w-full max-w-[160px] bg-white/20 rounded-full h-1">
+                          <div
+                            className="bg-white h-1 rounded-full transition-all duration-1000"
+                            style={{ width: `${Math.min(95, (elapsedSec / 40) * 100)}%` }}
+                          />
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
