@@ -305,8 +305,10 @@ El image_prompt debe mencionar colores hex exactos, disposición, estilo y eleme
     : isProductEcommerce
       ? 'Professional product photography or high-end retail graphic design, agency quality, photorealistic where applicable.'
       : 'Premium graphic design, agency quality, NOT generic AI art, portrait 4:5.';
-  const productHint = isProductEcommerce && productDetailImages.length > 0
-    ? 'IMPORTANT: The provided reference images show the exact products — feature those specific products in the composition, replicating their appearance faithfully.'
+  const productHint = productDetailImages.length > 0
+    ? isProductEcommerce
+      ? 'IMPORTANT: The provided reference images show the exact products — feature those specific products in the composition, replicating their appearance faithfully.'
+      : 'PRODUCT COLOR ACCURACY — CRITICAL: The reference images show the exact garment/product. Replicate its color with pixel-level accuracy — do NOT shift, lighten, darken, or desaturate. For warm neutrals (beige, sand, stone, khaki): preserve the warm undertone exactly, never render as white or gray. For solid-color garments, the color must match the reference photo precisely.'
     : '';
   const styleHint = visualRefs.length > 0
     ? 'Match the visual style, typography treatment and composition quality of the provided brand reference pieces.'
