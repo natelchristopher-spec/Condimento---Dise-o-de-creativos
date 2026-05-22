@@ -184,7 +184,24 @@ ${productDescription}
 
 TIPOS (en este orden exacto):
 
-1. PRODUCT HERO
+${pdpMode === 'fashion' ? `1. PRODUCT HERO
+   - La prenda siendo usada/puesta. Fondo limpio o color sólido de marca. Actitud aspiracional y editorial. Sin copy.
+   - display_copy: null
+
+2. BENEFIT IMAGE
+   - Persona vistiendo la prenda + exactamente 3 beneficios como callouts (fit, material, comodidad, versatilidad, etc.).
+   - display_copy.items: array de exactamente 3 strings en español, atributos clave de la prenda. Ej: "100% algodón pima", "Corte que favorece cualquier talle", "Colores que no destiñen"
+
+${lifestyleInstruction}
+   - display_copy.tagline: UNA frase aspiracional corta en español (OBLIGATORIO — máx 6 palabras). Ej: "Vestite como querés vivir.", "Tu estilo, tu regla."
+
+4. AUTHORITY IMAGE
+   - Detalle de la prenda: closeup de tela, costura, terminación o textura del tejido. SIN personas. Credibilidad a través del detalle constructivo.
+   - display_copy.items: array de 3-4 specs técnicas en español BASADAS EN LO VISIBLE EN LA FOTO. Ej: "100% algodón orgánico", "Costuras reforzadas triple", "Corte slim fit", "Tela pre-lavada anti-encogimiento"
+
+5. HOW TO USE
+   - Instrucciones de cuidado y lavado de la prenda. SIN personas. Flat lay o producto solo.
+   - display_copy.items: array de exactamente 3 strings en español, instrucciones de cuidado. Ej: "Lavar a 30°C con colores similares", "No usar secadora", "Planchar a temperatura baja"` : `1. PRODUCT HERO
    - Solo el producto, fondo limpio blanco o color sólido de marca. Sin copy.
    - display_copy: null
 
@@ -197,11 +214,11 @@ ${lifestyleInstruction}
 
 4. AUTHORITY IMAGE
    - Callouts técnicos apuntando a zonas específicas del producto. Credibilidad y construcción.
-   - display_copy.items: array de 3-4 specs técnicas en español, BASADAS EN LO VISIBLE EN LA FOTO O EL BRIEF — NO inventar. Ej para suplemento: "40g proteína", "19 vitaminas y minerales", "840 kcal/porción". Ej para ropa: "100% algodón orgánico", "Costuras reforzadas", "Corte slim fit"
+   - display_copy.items: array de 3-4 specs técnicas en español, BASADAS EN LO VISIBLE EN LA FOTO O EL BRIEF — NO inventar. Ej: "40g proteína", "19 vitaminas y minerales", "840 kcal/porción"
 
 5. HOW TO USE
    - 3 pasos de uso numerados. Cada paso es una INSTRUCCIÓN DE ACCIÓN — NO un beneficio.
-   - display_copy.items: array de exactamente 3 strings en español, formato "Verbo + qué/cómo/cuándo". Ej para suplemento: "Mezclar 1 medida con 300ml de leche", "Consumir antes o después del entrenamiento", "Tomar 1-2 veces por día". Ej para ropa: "Lavar a 30°C con colores similares", "No usar secadora", "Planchar a temperatura baja"
+   - display_copy.items: array de exactamente 3 strings en español, formato "Verbo + qué/cómo/cuándo". Ej: "Mezclar 1 medida con 300ml de leche", "Consumir antes o después del entrenamiento", "Tomar 1-2 veces por día"`}
 
 6. TESTIMONIAL
    - Producto con prueba social: reseña de cliente.

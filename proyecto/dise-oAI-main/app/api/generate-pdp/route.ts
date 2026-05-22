@@ -79,22 +79,31 @@ const SLIDE_VISUAL_RULES_BASE: Record<string, string> = {
 };
 
 function buildSlideVisualRules(hasPeople: boolean, pdpMode: string): Record<string, string> {
+  const isFashion = pdpMode === 'fashion';
   return {
-    ...SLIDE_VISUAL_RULES_BASE,
+    hero: isFashion
+      ? 'COMPOSITION: garment worn on person or editorial flat lay. Clean background or solid brand color. Full garment visible with exact color, cut and silhouette. Aspirational fashion feel. NO text overlays.'
+      : 'COMPOSITION: product centered, filling 80% of frame, pure white or solid brand-color background, studio lighting, NO text overlays, NO bullets — pure product focus.',
+    benefit: isFashion
+      ? 'COMPOSITION: person wearing the garment showing fit, drape and movement. 3 benefit callouts as text labels on the side or overlaid. Clean, editorial. NO numbered list.'
+      : 'COMPOSITION: product on LEFT side of frame, 3 benefit callouts on RIGHT side with icons and short bold Spanish text. Clean scannable layout. NO numbered list — use icon + text pairs.',
     lifestyle: hasPeople
-      ? pdpMode === 'fashion'
-        ? 'COMPOSITION: person wearing the garment with its exact color, cut and silhouette — that IS the natural state of clothing. Real-life aspirational setting. ONE short tagline in big bold text. NO bullet lists.'
-        : `COMPOSITION: person in the product's natural context. MINIMUM RISK RULE — product always appears in its original recognizable form, never mid-consumption or mid-application.
-SAFE (product-in-use IS its natural form): watch/wearable on wrist | jewelry (ring, necklace, bracelet) worn | sunglasses/eyewear on face | bag/backpack/wallet carried | headphones/earbuds on ears | phone/tablet/laptop/camera in hand | sports equipment (mat, band, weights) in use | home textiles (sheets, towels) in place | candles/diffusers lit in home | books/notebooks in hand | toys in hands.
-CONTEXT ONLY — NO consumption/application (unknowable details): supplement/protein/vitamins → held or on gym surface, NOT mixing/drinking | cosmetics/makeup → on vanity or in hand, NOT applied to skin | skincare/serum/cream → on counter or in hand, NOT on face | perfume → bottle in hand, NOT spraying | haircare → bottle in bathroom, NOT in hair | food/snack/beverage → closed packaging in context, NOT being eaten or poured | cleaning products → bottle in context, NOT applied | pet food/supplement → product in context, pet nearby but NOT eating.
+      ? isFashion
+        ? 'COMPOSITION: person wearing the garment in a real-life aspirational context. Exact color, cut and silhouette. ONE short tagline in big bold text. NO bullet lists.'
+        : `COMPOSITION: person in the product's natural context. MINIMUM RISK — product in original recognizable form only.
+SAFE: watch/wearable on wrist | jewelry worn | eyewear on face | bag/backpack carried | headphones on ears | phone/tablet in hand | sports equipment in use | home textiles in place | candles lit | books in hand.
+CONTEXT ONLY (no consumption/application): supplement → held or on gym surface | cosmetics/skincare → on counter or in hand, NOT on face | perfume → bottle in hand | haircare → bottle in bathroom | food/beverage → closed packaging in context.
 ONE short tagline in big bold text. NO bullet lists.`
-      : 'COMPOSITION: product in its natural use environment (gym, bathroom counter, kitchen, desk, outdoor, etc.) WITHOUT people. ONE short tagline in big bold text. No bullet lists, no numbered steps.',
-    howto: hasPeople
-      ? pdpMode === 'fashion'
-        ? 'COMPOSITION: 3 numbered steps (1→2→3) showing how to wear or care for the garment. Hands or person shown. Infographic style. ACTION verbs only — no benefit bullets.'
-        : `COMPOSITION: 3 numbered steps (1→2→3). MINIMUM RISK — product in original recognizable form in each step.
-Safe actions to show: opening the container, measuring/scooping (if applicable), placing/positioning, pairing with accessories. Avoid: applying to skin/face/hair, mixing into liquid, consuming/eating. Infographic style with ACTION verbs.`
-      : 'COMPOSITION: 3 horizontal numbered steps (1→2→3) infographic style. Product shown in its original form per step. No benefit bullets — ACTION verbs only.',
+      : 'COMPOSITION: product in its natural use environment WITHOUT people. ONE short tagline in big bold text. No bullet lists.',
+    authority: isFashion
+      ? 'COMPOSITION: extreme closeup of fabric texture, stitching, construction detail or label. NO person. Clinical detail photography feel. Text callouts pointing to specific zones of the garment.'
+      : 'COMPOSITION: product in center with 3-4 technical callout lines/arrows pointing to specific product zones. Clinical technical feel. NO benefit bullets — specs and technical data only.',
+    howto: isFashion
+      ? 'COMPOSITION: 3 numbered care/washing instructions (1→2→3). Flat lay or product only — NO person. Infographic style with icons (washing machine, iron, etc.). Care symbols if appropriate.'
+      : hasPeople
+        ? `COMPOSITION: 3 numbered steps (1→2→3). MINIMUM RISK — product in original form in each step. Safe: opening container, measuring, placing, pairing. Avoid: applying to skin, mixing, consuming. Infographic style.`
+        : 'COMPOSITION: 3 horizontal numbered steps (1→2→3) infographic style. Product in original form per step. ACTION verbs only.',
+    testimonial: 'COMPOSITION: large customer quote in quotation marks filling 60% of space, product image smaller on one side, author name and 5-star rating below. Warm social-proof feel.',
   };
 }
 
