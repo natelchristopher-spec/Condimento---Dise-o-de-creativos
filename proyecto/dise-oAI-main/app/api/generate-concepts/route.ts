@@ -198,7 +198,7 @@ export async function POST(req: NextRequest) {
     ? `6. BRAND STYLE REPLICATION — seguí EXACTAMENTE el estilo visual, composición tipográfica y tratamiento gráfico de las piezas de referencia de la marca que se incluyen como imágenes. Máxima fidelidad al look aprobado.`
     : isProductEcommerce
       ? `6. DAILY USE / USE CASE — el producto integrado en su contexto cotidiano real (escritorio, gym, cocina, rutina, setup). El ambiente rodea al producto de forma natural. Hacerlo sentir usable y cercano.`
-      : `6. PRODUCT DETAIL FOCUS — destacar calidad y detalles del producto. Texturas, costuras, fit, closeups de materiales, acabados. Composición que eleva la percepción de calidad sin necesitar copy.`;
+      : `6. PRODUCT DETAIL FOCUS — destacar calidad y detalles del producto. Texturas, costuras, fit, closeups de materiales, acabados. Incluir copy que resalte la calidad: un claim técnico corto o descripción de material superpuesto en tipografía refinada (ej: "100% algodón pima" / "Corte entallado premium" / "Hecho para durar").`;
 
   const conceptDirections = isProductEcommerce
     ? `MODO PRODUCTO — el producto es el protagonista absoluto. Sin personas. CADA concepto usa una estrategia visual completamente distinta:
@@ -208,12 +208,12 @@ export async function POST(req: NextRequest) {
 4. FEATURE FOCUS — se venden características técnicas para elevar percepción de calidad. Closeup/macro del producto, ingredientes o materiales visibles, specs técnicos como copy. Composición de catálogo de alta gama.
 5. PROBLEM / SOLUTION — mostrar el dolor y la solución. Composición split screen, before/after o comparativa visual. Hace obvio el problema que resuelve el producto. Contraste dramático entre el "sin" y el "con".
 ${slot6}`
-    : `MODO FASHION / IN USE — el producto es experimentado por personas. El foco es la experiencia e identidad. CADA concepto usa una estrategia visual completamente distinta:
+    : `MODO FASHION / IN USE — el producto es experimentado por personas. El foco es la experiencia e identidad. CADA concepto usa una estrategia visual completamente distinta Y TODOS deben incluir texto/copy visible en la imagen:
 1. OFFER FOCUS — la oferta/promoción/descuento como protagonista visual. Pricing grande en tipografía bold, descuento destacado, mecánicas de venta (cuotas, envío gratis, fechas). La persona muestra/usa el producto mientras el copy de la promo domina. Concepto diseñado para generar clic.
-2. LIFESTYLE FOCUS — uso natural del producto en situaciones reales. Movimiento, contexto humano auténtico, iluminación natural. Hacer sentir el producto vivo y parte de la vida cotidiana.
-3. ASPIRATIONAL FOCUS — se vende identidad y deseo. Editorial premium, estética fuerte, poses trabajadas, composición de agencia internacional. Hacer que la persona quiera verse así.
-4. TRANSFORMATION FOCUS — mostrar cambio visual o emocional. Before/after, glow up, cambio de look, mejora visible. La narrativa de transformación como eje central.
-5. DAILY USE FOCUS — el producto integrado a la rutina cotidiana. Outfit diario, momentos casuales, uso espontáneo. Hacerlo sentir natural, accesible y usable en el día a día.
+2. LIFESTYLE FOCUS — uso natural del producto en situaciones reales. Iluminación natural, movimiento auténtico. Incluir un headline corto o tagline de marca superpuesto en tipografía limpia (ej: "Vestite como querés vivir" o similar al tono del brief). El copy es secundario pero está presente.
+3. ASPIRATIONAL FOCUS — se vende identidad y deseo. Editorial premium, estética fuerte. Incluir nombre de marca prominente + claim aspiracional corto en tipografía elegante (ej: "Nueva colección" / "SS25" / tagline de campaña). El texto refuerza el deseo.
+4. TRANSFORMATION FOCUS — mostrar cambio visual o emocional con composición before/after o split screen. Incluir etiquetas de texto que marquen el contraste (ej: "Antes / Después", "Sin estilo / Con estilo") más un beneficio o claim corto que cierre la narrativa de cambio.
+5. DAILY USE FOCUS — el producto integrado a la rutina cotidiana, momentos casuales y espontáneos. Incluir copy accesible y cercano superpuesto, tono conversacional (ej: "Para cada día" / "Tu look de siempre, mejor"). Tipografía casual, no corporativa.
 ${slot6}`;
 
   // Step 1: GPT-4o generates concept prompts tailored to mode (or variations in similar mode).
