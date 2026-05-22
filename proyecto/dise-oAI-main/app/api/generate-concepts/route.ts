@@ -332,6 +332,7 @@ El image_prompt debe mencionar colores hex exactos, disposición, estilo y eleme
               productHint,
               styleHint,
               'do NOT include any invented text, prices, discounts, coupons, promo codes, or promotional copy that is not explicitly in the brief.',
+              'do NOT include button-style CTA elements in the image (e.g. "Compra ahora", "Ver más", "Buy Now", "Shop Now" rendered as a visual button, pill, or badge) — those CTAs are configured in the ad platform (Meta, Google), not inside the creative image itself.',
             ].filter(Boolean).join(' ');
 
             try {

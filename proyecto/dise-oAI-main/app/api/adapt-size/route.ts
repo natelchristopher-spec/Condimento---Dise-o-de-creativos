@@ -14,7 +14,7 @@ const FORMAT_CONFIG: Record<Format, { size: string; prompt: string }> = {
   // ── RRSS ──────────────────────────────────────────────────────────────
   story: {
     size: '1024x1792',
-    prompt: 'Adapt this image to a 9:16 vertical story format (Instagram/TikTok/Reels). Extend the background naturally at top and bottom. Keep all text, logos, product, and composition elements exactly as they are.',
+    prompt: 'Adapt this image to a 9:16 vertical story format (Instagram/TikTok/Reels). Extend the background naturally at top and bottom. Keep all text, logos, product, and composition elements exactly as they are. Do NOT add button-style CTAs ("Compra ahora", "Buy Now", etc.) — those are set in the ad platform.',
   },
   feed45: {
     size: '1024x1536',
