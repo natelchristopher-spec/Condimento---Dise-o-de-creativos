@@ -84,6 +84,8 @@ export default function CrearMarcaPage() {
   const [msgIdx, setMsgIdx] = useState(0);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [logosLoading, setLogosLoading] = useState(false);
+  const [logosFailed, setLogosFailed] = useState(false);
 
   // Edit fields
   const [eName, setEName] = useState('');
@@ -94,7 +96,7 @@ export default function CrearMarcaPage() {
   const [eStyle, setEStyle] = useState('');
 
   useEffect(() => {
-    if (step !== 'generating' && step !== 'finalizing') return;
+    if (step !== 'generating') return;
     const id = setInterval(() => setMsgIdx(i => (i + 1) % GENERATING_MSGS.length), 2500);
     return () => clearInterval(id);
   }, [step]);
@@ -147,28 +149,33 @@ export default function CrearMarcaPage() {
     }
   };
 
-  const pickConcept = async (concept: BrandConcept) => {
+  const fetchVariantLogos = async (logoPrompt: string) => {
+    setLogosLoading(true);
+    setLogosFailed(false);
+    try {
+      const res = await fetch('/api/create-brand-logos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logoPrompt }),
+      });
+      if (!res.ok) throw new Error('error');
+      const data = await res.json();
+      setSelected(prev => prev ? { ...prev, logoWhiteBase64: data.logoWhiteBase64, logoDarkBase64: data.logoDarkBase64 } : prev);
+    } catch {
+      setLogosFailed(true);
+    } finally {
+      setLogosLoading(false);
+    }
+  };
+
+  const pickConcept = (concept: BrandConcept) => {
     setSelected(concept);
     setEName(concept.name); setETagline(concept.tagline);
     setEP1(concept.primary1); setEP2(concept.primary2); setEP3(concept.primary3);
     setES1(concept.secondary1); setES2(concept.secondary2); setES3(concept.secondary3);
     setETypo(concept.typography); setEStyle(concept.styleDescription);
-    setStep('finalizing');
-    setMsgIdx(0);
-
-    try {
-      const res = await fetch('/api/create-brand-logos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ logoPrompt: concept.logoPrompt }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setSelected(prev => prev ? { ...prev, logoWhiteBase64: data.logoWhiteBase64, logoDarkBase64: data.logoDarkBase64 } : prev);
-      }
-    } catch { /* non-critical */ }
-
     setStep('edit');
+    fetchVariantLogos(concept.logoPrompt);
   };
 
   const save = async () => {
@@ -430,17 +437,31 @@ export default function CrearMarcaPage() {
 
               {/* Logos */}
               <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-4">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Versiones de logo</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Versiones de logo</p>
+                  {logosFailed && (
+                    <button
+                      onClick={() => selected && fetchVariantLogos(selected.logoPrompt)}
+                      className="text-xs text-[#e42820] hover:underline font-medium"
+                    >
+                      ↺ Reintentar
+                    </button>
+                  )}
+                </div>
                 <div className="grid grid-cols-3 gap-3">
                   {[
-                    { label: 'Color', bg: 'bg-white border border-gray-200', b64: selected.logoColorBase64 },
-                    { label: 'Blanco', bg: 'bg-black', b64: selected.logoWhiteBase64 },
-                    { label: 'Oscuro', bg: 'bg-white border border-gray-200', b64: selected.logoDarkBase64 },
+                    { label: 'Color', bg: 'bg-white border border-gray-200', b64: selected.logoColorBase64, alwaysReady: true },
+                    { label: 'Blanco', bg: 'bg-black', b64: selected.logoWhiteBase64, alwaysReady: false },
+                    { label: 'Oscuro', bg: 'bg-white border border-gray-200', b64: selected.logoDarkBase64, alwaysReady: false },
                   ].map(v => (
                     <div key={v.label} className="space-y-2">
                       <div className={`aspect-square rounded-xl overflow-hidden flex items-center justify-center ${v.bg}`}>
                         {v.b64 ? (
                           <img src={`data:image/png;base64,${v.b64}`} alt={v.label} className="w-full h-full object-contain p-3" />
+                        ) : v.alwaysReady ? (
+                          <LogoPlaceholder name={selected.name} />
+                        ) : logosFailed ? (
+                          <p className="text-[10px] text-gray-400 text-center px-2">No generado</p>
                         ) : (
                           <div className="flex flex-col items-center gap-1">
                             <div className="w-4 h-4 border-2 border-gray-200 border-t-[#e42820] rounded-full animate-spin" />
