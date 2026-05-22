@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { BrandKit } from '@/app/types';
-import { buildBrandKitContext } from '@/app/api/brandKitContext';
+import { buildBrandKitContext } from '@/app/lib/brandKitContext';
 import { getUserContext } from '@/app/lib/get-user-context';
 
 export const maxDuration = 60;
