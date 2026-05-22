@@ -66,6 +66,8 @@ export default function PdpPage() {
   const [planLoading, setPlanLoading] = useState(false);
   const [plans, setPlans] = useState<PdpPlan[]>([]);
   const [productDescription, setProductDescription] = useState('');
+  const [productUrl, setProductUrl] = useState('');
+  const [scrapingUrl, setScrapingUrl] = useState(false);
 
   useEffect(() => {
     fetch('/api/brand-kits').then(r => r.json()).then(kit => {
@@ -148,6 +150,26 @@ export default function PdpPage() {
     const imgs = await Promise.all(files.slice(0, slots).map(readAsDataUrl));
     setReferenceImages(prev => [...prev, ...imgs].slice(0, 2));
     e.target.value = '';
+  };
+
+  const scrapeProduct = async () => {
+    if (!productUrl.trim()) return;
+    setScrapingUrl(true);
+    setError('');
+    try {
+      const res = await fetch('/api/scrape-product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: productUrl.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al leer la URL');
+      if (data.clientRequest) setBrief(data.clientRequest);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo leer la URL del producto');
+    } finally {
+      setScrapingUrl(false);
+    }
   };
 
   const planPdp = async () => {
@@ -457,6 +479,37 @@ export default function PdpPage() {
                   </div>
                 </div>
               )}
+
+              {/* URL import */}
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">
+                  Importar desde URL
+                  <span className="font-normal text-gray-400 ml-1">(opcional)</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    value={productUrl}
+                    onChange={e => setProductUrl(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && scrapeProduct()}
+                    placeholder="https://tienda.com/producto/remera-pima"
+                    className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820]"
+                  />
+                  <button
+                    onClick={scrapeProduct}
+                    disabled={!productUrl.trim() || scrapingUrl}
+                    className="bg-gray-900 hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors flex items-center gap-2 shrink-0"
+                  >
+                    {scrapingUrl ? (
+                      <>
+                        <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Leyendo...
+                      </>
+                    ) : 'Leer producto'}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-400">Pegá la URL y la IA extrae la descripción, beneficios y specs automáticamente.</p>
+              </div>
 
               {/* Brief textarea */}
               <div className="space-y-2">

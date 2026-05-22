@@ -48,6 +48,7 @@ QUÉ NO TOCAR (debe quedar pixel-perfect igual):
 - TODOS los textos, tipografías, títulos, subtítulos, slogans y copy que aparecen en la imagen
 - El fondo, colores del fondo, degradados y texturas
 - La composición y layout general (si es split-screen o before/after, respetá esa estructura)
+- SPLIT-SCREEN / BEFORE-AFTER — CRÍTICO: si la imagen tiene dos personas o dos mitades (Antes/Después), el producto se aplica ÚNICAMENTE a la persona del lado "Después" (right side / after). La persona del lado "Antes" (left side / before) debe quedar SIN el producto, con su ropa original intacta. NUNCA aplicar el mismo producto a las dos mitades.
 - La iluminación y mood
 - Logos, íconos o elementos gráficos de marca
 - La pose y posición de la persona
