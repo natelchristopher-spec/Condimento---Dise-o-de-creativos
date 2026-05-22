@@ -880,8 +880,22 @@ export default function Home() {
                 </h2>
                 <p className="text-gray-500 text-sm">{refineImage.conceptName}</p>
               </div>
-              <button onClick={() => setStep('concepts')} className="text-gray-500 hover:text-gray-600 text-sm transition-colors">
-                ← Volver
+              <button
+                onClick={() => {
+                  if (refineIndex > 0) {
+                    const prev = selectedConcepts[refineIndex - 1];
+                    setRefineIndex(refineIndex - 1);
+                    setRefineImage(prev);
+                    setRefineHistory([]);
+                    setRefineImageHistory([]);
+                    setRefineInput('');
+                  } else {
+                    setStep('concepts');
+                  }
+                }}
+                className="text-gray-500 hover:text-gray-600 text-sm transition-colors"
+              >
+                ← {refineIndex > 0 ? 'Concepto anterior' : 'Volver'}
               </button>
             </div>
 
