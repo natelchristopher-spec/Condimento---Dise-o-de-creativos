@@ -4,19 +4,6 @@ import { getUserContext } from '@/app/lib/get-user-context';
 
 export const maxDuration = 60;
 
-function extractImageUrl(html: string, baseUrl: string): string {
-  const patterns = [
-    /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i,
-    /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i,
-    /<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i,
-    /<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i,
-  ];
-  for (const pattern of patterns) {
-    const m = html.match(pattern);
-    if (m?.[1]) return m[1].startsWith('http') ? m[1] : new URL(m[1], baseUrl).toString();
-  }
-  return '';
-}
 
 function extractText(html: string): string {
   return html
@@ -40,7 +27,6 @@ export async function POST(req: NextRequest) {
   if (!url?.startsWith('http')) return NextResponse.json({ error: 'URL inválida.' }, { status: 400 });
 
   let pageText = '';
-  let productImageBase64 = '';
   try {
     const res = await fetch(url, {
       headers: {
@@ -53,21 +39,6 @@ export async function POST(req: NextRequest) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const html = await res.text();
     pageText = extractText(html);
-
-    const imageUrl = extractImageUrl(html, url);
-    if (imageUrl) {
-      try {
-        const imgRes = await fetch(imageUrl, {
-          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-          signal: AbortSignal.timeout(10000),
-        });
-        if (imgRes.ok) {
-          const imgBuffer = await imgRes.arrayBuffer();
-          const ct = imgRes.headers.get('content-type') || 'image/jpeg';
-          productImageBase64 = `data:${ct};base64,${Buffer.from(imgBuffer).toString('base64')}`;
-        }
-      } catch { /* image fetch is best-effort */ }
-    }
   } catch (e) {
     return NextResponse.json({ error: `No se pudo acceder a la URL: ${e instanceof Error ? e.message : 'error de red'}` }, { status: 422 });
   }
@@ -91,5 +62,5 @@ export async function POST(req: NextRequest) {
   });
 
   const clientRequest = choices[0].message.content?.trim() || '';
-  return NextResponse.json({ clientRequest, productImageBase64 });
+  return NextResponse.json({ clientRequest });
 }
