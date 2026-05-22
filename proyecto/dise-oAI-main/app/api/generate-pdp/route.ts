@@ -316,23 +316,25 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
           orderedItems.map(async (item) => {
             const copyInjection = buildCopyInjection(item.display_copy, item.type);
             const visualRule = slideVisualRules[item.type] || '';
+            // When photos are present they are the single source of truth for product appearance.
+            // Text description is supplementary only — never overrides what the photos show.
+            const productConstraint = inputImages.length > 0
+              ? `THE REFERENCE PHOTOS ABOVE ARE THE SINGLE SOURCE OF TRUTH FOR THE PRODUCT. Reproduce the product EXACTLY as it appears in the photos — same shape, same color, same label, same packaging, same proportions. DO NOT invent or modify any visual aspect of the product. IMPORTANT: the layout instructions below describe composition only — if they mention any product color or shape that contradicts the photos, IGNORE that and use the photos instead.${productDescription ? ` Supplementary context (never overrides photos): ${productDescription}` : ''}`
+              : `PRODUCT TO REPRODUCE EXACTLY: ${productDescription}. Same color, shape, packaging design — do not modify.`;
+
             const fullPrompt = [
-              // Product appearance is the highest-priority constraint — stated first
-              `PRODUCT APPEARANCE — ABSOLUTE RULE: ${productDescription} THIS PRODUCT MUST APPEAR EXACTLY AS DESCRIBED. DO NOT change its color, shape, packaging, or design for any reason — not to match brand colors, not to improve aesthetics.`,
+              productConstraint,
               item.image_prompt,
               visualRule,
               copyInjection,
-              // Brand colors explicitly scoped to design elements only, never the product
               `BRAND DESIGN ELEMENTS (use ONLY for: background, text overlays, graphic shapes, icons, borders — NEVER on the product itself): primary ${brandKit.primary1}, secondary ${brandKit.primary2}, accent ${brandKit.primary3}.`,
               `Typography: ${brandKit.typography || 'bold sans-serif'}.`,
               'Professional e-commerce product photography or high-end retail graphic design. Square 1:1 format for Shopify / Tienda Nube. Premium quality, clean, conversion-focused.',
-              'PRODUCT COLOR IS FIXED: The product color comes from the product description above, not from the brand kit. Brand kit colors are for the surrounding design only. If the product is black, it stays black. If it is beige, it stays beige. Never recolor the product.',
-              'COLOR ACCURACY — CRITICAL: replicate the product color with pixel-level accuracy. Do NOT shift, lighten, darken, or desaturate the product. For warm neutrals (beige, sand, stone, khaki): preserve the warm undertone exactly, never render as white or gray.',
-              'Do NOT reproduce any brand logos, labels, or marks from the reference photos — those images are for product shape/color reference only.',
-              'Do NOT include invented trust badges ("Compra Segura", "Sitio Protegido", "Envío Gratis") unless explicitly in the brief.',
-              'Do NOT include button-style CTAs ("Compra ahora", "Buy Now", etc.).',
-              'Do NOT include invented prices, discounts, or false metrics.',
-              'ALL TEXT IN THE IMAGE MUST BE IN SPANISH — titles, benefits, steps, callouts, testimonials: everything in Spanish, no English.',
+              'BRAND COLORS ARE FOR DESIGN ELEMENTS ONLY — never apply brand colors to the product. The product color is fixed by the reference photos.',
+              'COLOR ACCURACY — CRITICAL: replicate the product color with pixel-level accuracy from the reference photos. Do NOT shift, lighten, darken, or desaturate.',
+              'Do NOT reproduce any brand logos or marks from the reference photos.',
+              'Do NOT include invented trust badges, button-style CTAs, prices, discounts, or false metrics.',
+              'ALL TEXT IN THE IMAGE MUST BE IN SPANISH.',
             ].filter(Boolean).join(' ');
 
             let base64 = '';
