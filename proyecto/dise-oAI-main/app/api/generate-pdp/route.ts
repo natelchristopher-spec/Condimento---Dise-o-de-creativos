@@ -168,31 +168,17 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
             let base64 = '';
             let lastError = '';
 
-            // Primary: images.generate (same as generate-concepts fallback, proven reliable)
-            try {
-              const result = await openai.images.generate({
-                model: 'gpt-image-2',
-                prompt: fullPrompt,
-                size: '1024x1024',
-                quality: 'medium',
-                n: 1,
-              });
-              base64 = result.data?.[0]?.b64_json || '';
-            } catch (err) {
-              lastError = err instanceof Error ? err.message : String(err);
-              console.error(`PDP primary "${item.label}" failed:`, err);
-            }
-
-            // Fallback: Responses API with product images as reference
-            if (!base64 && inputImages.length > 0) {
+            if (inputImages.length > 0) {
+              // Con fotos de producto: Responses API con gpt-4o viendo las imágenes
+              // (mismo enfoque que apply-product, que mantiene fidelidad visual del producto)
               try {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const response = await (openai.responses.create as any)({
-                  model: 'gpt-image-2',
+                  model: 'gpt-4o',
                   input: [{
                     role: 'user',
                     content: [
-                      ...inputImages.map(img => ({ type: 'input_image', image_url: img, detail: 'low' })),
+                      ...inputImages.map(img => ({ type: 'input_image', image_url: img, detail: 'high' })),
                       { type: 'input_text', text: fullPrompt },
                     ],
                   }],
@@ -212,7 +198,39 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
                 }
               } catch (err) {
                 lastError = err instanceof Error ? err.message : String(err);
-                console.error(`PDP fallback "${item.label}" failed:`, err);
+                console.error(`PDP with-images "${item.label}" failed:`, err);
+              }
+
+              // Fallback sin imágenes si la Responses API falla
+              if (!base64) {
+                try {
+                  const result = await openai.images.generate({
+                    model: 'gpt-image-2',
+                    prompt: fullPrompt,
+                    size: '1024x1024',
+                    quality: 'medium',
+                    n: 1,
+                  });
+                  base64 = result.data?.[0]?.b64_json || '';
+                } catch (err) {
+                  lastError = err instanceof Error ? err.message : String(err);
+                  console.error(`PDP fallback "${item.label}" failed:`, err);
+                }
+              }
+            } else {
+              // Sin fotos de producto: images.generate directo (probado y confiable)
+              try {
+                const result = await openai.images.generate({
+                  model: 'gpt-image-2',
+                  prompt: fullPrompt,
+                  size: '1024x1024',
+                  quality: 'medium',
+                  n: 1,
+                });
+                base64 = result.data?.[0]?.b64_json || '';
+              } catch (err) {
+                lastError = err instanceof Error ? err.message : String(err);
+                console.error(`PDP no-images "${item.label}" failed:`, err);
               }
             }
 
