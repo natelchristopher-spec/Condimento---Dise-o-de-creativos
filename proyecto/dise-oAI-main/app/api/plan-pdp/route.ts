@@ -175,7 +175,7 @@ REGLAS:
 - TODO el copy en español
 - display_copy contiene el texto EXACTO que aparecerá en la imagen — no dejarlo vacío
 - PROHIBIDO logos de terceros, precios inventados, badges ("Compra Segura" etc.)
-- image_prompt: descripción visual detallada en inglés para el generador, incluyendo color exacto del producto y composición visual diferenciada por tipo
+- image_prompt: describí en inglés la COMPOSICIÓN Y LAYOUT del slide (posición del producto, distribución del copy, estilo de fondo, tratamiento gráfico). NO describas el color, forma ni detalles del producto — eso viene de la descripción del producto que se inyecta por separado. El generador ya tiene la foto y la descripción del producto; tu trabajo es describir cómo está organizada la imagen, no cómo es el producto.
 
 Respondé SOLO con JSON:
 {
