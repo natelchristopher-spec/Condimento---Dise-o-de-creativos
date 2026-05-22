@@ -40,6 +40,7 @@ export default function Home() {
   const [generatingCount, setGeneratingCount] = useState(0);
   const [selectedConcepts, setSelectedConcepts] = useState<GeneratedImage[]>([]);
   const [refineIndex, setRefineIndex] = useState(0);
+  const [applyProgress, setApplyProgress] = useState<{ current: number; total: number } | null>(null);
   const [productDescription, setProductDescription] = useState('');
   const [personDescription, setPersonDescription] = useState('');
 
@@ -326,8 +327,10 @@ export default function Home() {
     if (productDetailImages.length > 0 && peopleMode === 'real') {
       const n = selectedConcepts.length;
       setError('');
+      setApplyProgress({ current: 0, total: n });
       const applied: typeof selectedConcepts = [];
       for (let i = 0; i < selectedConcepts.length; i++) {
+        setApplyProgress({ current: i + 1, total: n });
         startLoading(`Aplicando producto ${i + 1} de ${n}...`);
         const concept = selectedConcepts[i];
         try {
@@ -350,6 +353,7 @@ export default function Home() {
         }
       }
       stopLoading();
+      setApplyProgress(null);
       setSelectedConcepts(applied);
       setRefineImage(applied[0]);
     } else {
@@ -751,25 +755,50 @@ export default function Home() {
 
             {loading && (
               <div className="bg-white border border-gray-200 rounded-xl px-4 py-3 space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600 font-medium">
-                    {concepts.length === 0
-                      ? 'Preparando conceptos...'
-                      : `${concepts.length} de ${generatingCount} concepto${generatingCount > 1 ? 's' : ''} listo${concepts.length > 1 ? 's' : ''}`}
-                  </span>
-                  <span className="text-gray-400 text-xs tabular-nums">{elapsedSec}s</span>
-                </div>
-                <div className="w-full bg-gray-100 rounded-full h-1.5">
-                  <div
-                    className="bg-[#e42820] h-1.5 rounded-full transition-all duration-500"
-                    style={{ width: `${generatingCount > 0 ? Math.max(5, (concepts.length / generatingCount) * 100) : 5}%` }}
-                  />
-                </div>
-                <p className="text-xs text-gray-400">
-                  {elapsedSec < 15 ? 'Cada imagen tarda entre 20 y 40 segundos — se van mostrando a medida que llegan.' :
-                   elapsedSec < 45 ? 'Ya casi... la IA está renderizando los detalles.' :
-                   'Tardando un poco más de lo usual, pero vienen bien.'}
-                </p>
+                {applyProgress ? (
+                  <>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-700 font-medium">
+                        Aplicando producto — concepto {applyProgress.current} de {applyProgress.total}
+                      </span>
+                      <span className="text-gray-400 text-xs tabular-nums">{elapsedSec}s</span>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-1.5">
+                      <div
+                        className="bg-[#e42820] h-1.5 rounded-full transition-all duration-700"
+                        style={{ width: `${Math.min(95, Math.max(8, ((applyProgress.current - 1) / applyProgress.total) * 100 + (elapsedSec / 90) * (100 / applyProgress.total)))  }%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-400">
+                      {elapsedSec < 20 ? 'Cada concepto tarda entre 30 y 90 segundos — esto es normal.' :
+                       elapsedSec < 60 ? `${elapsedSec}s — procesando...` :
+                       elapsedSec < 100 ? `${elapsedSec}s — casi listo...` :
+                       `${elapsedSec}s — tardando más de lo usual, aguantá`}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600 font-medium">
+                        {concepts.length === 0
+                          ? 'Preparando conceptos...'
+                          : `${concepts.length} de ${generatingCount} concepto${generatingCount > 1 ? 's' : ''} listo${concepts.length > 1 ? 's' : ''}`}
+                      </span>
+                      <span className="text-gray-400 text-xs tabular-nums">{elapsedSec}s</span>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-1.5">
+                      <div
+                        className="bg-[#e42820] h-1.5 rounded-full transition-all duration-500"
+                        style={{ width: `${generatingCount > 0 ? Math.max(5, (concepts.length / generatingCount) * 100) : 5}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-400">
+                      {elapsedSec < 15 ? 'Cada imagen tarda entre 20 y 40 segundos — se van mostrando a medida que llegan.' :
+                       elapsedSec < 45 ? 'Ya casi... la IA está renderizando los detalles.' :
+                       'Tardando un poco más de lo usual, pero vienen bien.'}
+                    </p>
+                  </>
+                )}
               </div>
             )}
 
