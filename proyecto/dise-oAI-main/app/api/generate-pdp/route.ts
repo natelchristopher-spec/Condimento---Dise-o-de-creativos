@@ -165,63 +165,68 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
               'do NOT include invented prices, discounts, or false metrics.',
             ].filter(Boolean).join(' ');
 
+            let base64 = '';
+            let lastError = '';
+
+            // Primary: images.generate (same as generate-concepts fallback, proven reliable)
             try {
-              // Responses API: gpt-image-2 generates from text prompt + optional product reference images
-              // (GPT-4o already planned the prompts in step 1 — no need for gpt-4o here)
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const response = await (openai.responses.create as any)({
+              const result = await openai.images.generate({
                 model: 'gpt-image-2',
-                input: [{
-                  role: 'user',
-                  content: [
-                    ...inputImages.map(img => ({ type: 'input_image', image_url: img, detail: 'low' })),
-                    { type: 'input_text', text: fullPrompt },
-                  ],
-                }],
-                tools: [{
-                  type: 'image_generation',
-                  model: 'gpt-image-2',
-                  quality: 'medium',
-                  size: '1024x1024',
-                }],
+                prompt: fullPrompt,
+                size: '1024x1024',
+                quality: 'medium',
+                n: 1,
               });
-
-              let base64 = '';
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              for (const block of (response.output || [])) {
-                if (block.type === 'image_generation_call' && block.result) {
-                  base64 = block.result;
-                  break;
-                }
-              }
-
-              // Fallback: images.generate
-              if (!base64) {
-                const fallback = await openai.images.generate({
-                  model: 'gpt-image-2',
-                  prompt: fullPrompt,
-                  size: '1024x1024',
-                  quality: 'low',
-                  n: 1,
-                });
-                base64 = fallback.data?.[0]?.b64_json || '';
-              }
-
-              if (base64) {
-                send(controller, {
-                  image: {
-                    id: Math.random().toString(36).slice(2),
-                    type: item.type,
-                    label: item.label,
-                    base64,
-                  },
-                });
-              } else {
-                send(controller, { error: item.label });
-              }
+              base64 = result.data?.[0]?.b64_json || '';
             } catch (err) {
-              console.error(`PDP "${item.label}" failed:`, err);
-              send(controller, { error: item.label });
+              lastError = err instanceof Error ? err.message : String(err);
+              console.error(`PDP primary "${item.label}" failed:`, err);
+            }
+
+            // Fallback: Responses API with product images as reference
+            if (!base64 && inputImages.length > 0) {
+              try {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const response = await (openai.responses.create as any)({
+                  model: 'gpt-image-2',
+                  input: [{
+                    role: 'user',
+                    content: [
+                      ...inputImages.map(img => ({ type: 'input_image', image_url: img, detail: 'low' })),
+                      { type: 'input_text', text: fullPrompt },
+                    ],
+                  }],
+                  tools: [{
+                    type: 'image_generation',
+                    model: 'gpt-image-2',
+                    quality: 'medium',
+                    size: '1024x1024',
+                  }],
+                });
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                for (const block of (response.output || [])) {
+                  if (block.type === 'image_generation_call' && block.result) {
+                    base64 = block.result;
+                    break;
+                  }
+                }
+              } catch (err) {
+                lastError = err instanceof Error ? err.message : String(err);
+                console.error(`PDP fallback "${item.label}" failed:`, err);
+              }
+            }
+
+            if (base64) {
+              send(controller, {
+                image: {
+                  id: Math.random().toString(36).slice(2),
+                  type: item.type,
+                  label: item.label,
+                  base64,
+                },
+              });
+            } else {
+              send(controller, { error: `${item.label}: ${lastError || 'sin imagen'}` });
             }
           })
         );
