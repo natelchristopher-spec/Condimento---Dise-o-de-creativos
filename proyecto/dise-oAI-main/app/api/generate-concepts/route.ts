@@ -192,25 +192,29 @@ export async function POST(req: NextRequest) {
     : 'Incluir una persona usando una prenda de moda acorde al brief y brand kit. Actitud aspiracional, editorial.';
 
   const hasVisualRefs = visualRefs.length > 0;
-  const refStyleDirection = hasVisualRefs
-    ? `6. Réplica de estilo de marca — seguí EXACTAMENTE el estilo visual, composición tipográfica y tratamiento gráfico de las piezas de referencia de la marca que se incluyen como imágenes`
-    : `6. ${isProductEcommerce ? 'Lifestyle del segmento — ambiente y elementos visuales que representan el segmento objetivo con el producto prominente' : 'Editorial de moda — fotografía aspiracional de agencia internacional'}`;
+
+  // Slot 6 override when brand has approved reference pieces
+  const slot6 = hasVisualRefs
+    ? `6. BRAND STYLE REPLICATION — seguí EXACTAMENTE el estilo visual, composición tipográfica y tratamiento gráfico de las piezas de referencia de la marca que se incluyen como imágenes. Máxima fidelidad al look aprobado.`
+    : isProductEcommerce
+      ? `6. DAILY USE / USE CASE — el producto integrado en su contexto cotidiano real (escritorio, gym, cocina, rutina, setup). El ambiente rodea al producto de forma natural. Hacerlo sentir usable y cercano.`
+      : `6. BRAND MOOD FOCUS — la estética y sensación de marca dominan. Color grading definido, dirección artística fuerte, composición que vende percepción e identidad. Vibe de campaña premium.`;
 
   const conceptDirections = isProductEcommerce
-    ? `Direcciones (e-commerce de producto) — CADA UNA debe ser visualmente DISTINTA a las demás:
-1. Producto hero absoluto — el producto LLENA el encuadre (85% del frame), fondo color sólido del brand kit, sin texto excepto logo pequeño en esquina. Composición minimalista y apretada.
-2. Pieza full promocional — headline del evento grande arriba, producto(s) en el centro, TODAS las mecánicas del brief (fechas, descuento, cuotas, despacho, retiro) como iconos o bullets abajo. Composición completa lista para publicar.
-3. Producto en contexto ambiental — el producto aparece PEQUEÑO (máx 30% del frame) integrado en su entorno real (motor, camión, taller industrial). El ambiente es el protagonista, el producto está en uso natural. Muy diferente al héroe — acá el escenario manda.
-4. Diseño gráfico tipográfico puro — bloques de color del brand kit, tipografía bold XL ocupa 60% del frame como elemento gráfico dominante. Producto flotando pequeño en un corner. SIN fotografía realista — composición abstracta de formas y texto.
-5. Showcase técnico dramático — macro/closeup extremo del producto con iluminación de estudio, fondo oscuro con gradiente de luz lateral. Detalle de materiales y construcción. Sin texto.
-${refStyleDirection}`
-    : `Direcciones (fashion/editorial):
-1. Minimalista limpio — fondo sólido del brand kit, producto o persona centrados
-2. Tipográfico editorial — tipografía grande como elemento visual, imagen secundaria
-3. Producto hero — producto o prenda protagonista sin personas
-4. Lifestyle aspiracional — ambiente y mood que refuerzan la identidad de marca
-5. Composición geométrica — bloques de color, formas y tipografía del brand kit
-${refStyleDirection}`;
+    ? `MODO PRODUCTO — el producto es el protagonista absoluto. Sin personas. CADA concepto usa una estrategia visual completamente distinta:
+1. PRODUCT HERO — el producto LLENA el encuadre (80-90% del frame). Fondo color sólido del brand kit. Iluminación de estudio fuerte, limpio, premium. Sin copy excepto logo pequeño. El producto debe verse irresistible.
+2. OFFER FOCUS — la oferta es el protagonista. Pricing grande en tipografía bold, descuento destacado (ej: "30% OFF"), TODAS las mecánicas del brief (cuotas, fechas, envío gratis, retiro). Contraste fuerte. Composición lista para publicar y generar clic.
+3. BENEFIT FOCUS — se vende el resultado, no el producto. Claims claros en tipografía grande, iconos o checkmarks, highlights de beneficios. ¿Qué gana la persona? (ej: más energía, piel más limpia, frío 24h, mayor rendimiento). El producto aparece secundario.
+4. FEATURE FOCUS — se venden características técnicas para elevar percepción de calidad. Closeup/macro del producto, ingredientes o materiales visibles, specs técnicos como copy. Composición de catálogo de alta gama.
+5. PROBLEM / SOLUTION — mostrar el dolor y la solución. Composición split screen, before/after o comparativa visual. Hace obvio el problema que resuelve el producto. Contraste dramático entre el "sin" y el "con".
+${slot6}`
+    : `MODO FASHION / IN USE — el producto es experimentado por personas. El foco es la experiencia e identidad. CADA concepto usa una estrategia visual completamente distinta:
+1. LIFESTYLE FOCUS — uso natural del producto en situaciones reales. Movimiento, contexto humano auténtico, iluminación natural. Hacer sentir el producto vivo y parte de la vida cotidiana.
+2. ASPIRATIONAL FOCUS — se vende identidad y deseo. Editorial premium, estética fuerte, poses trabajadas, composición de agencia internacional. Hacer que la persona quiera verse así.
+3. TRANSFORMATION FOCUS — mostrar cambio visual o emocional. Before/after, glow up, cambio de look, mejora visible. La narrativa de transformación como eje central.
+4. DAILY USE FOCUS — el producto integrado a la rutina cotidiana. Outfit diario, momentos casuales, uso espontáneo. Hacerlo sentir natural, accesible y usable en el día a día.
+5. PRODUCT DETAIL FOCUS — destacar calidad y detalles del producto. Texturas, costuras, fit, closeups de materiales, acabados. Composición que eleva la percepción de calidad sin necesitar copy.
+${slot6}`;
 
   // Step 1: GPT-4o generates concept prompts tailored to mode (or variations in similar mode).
   const systemInstructions = isSimilarMode
@@ -317,7 +321,7 @@ El image_prompt debe mencionar colores hex exactos, disposición, estilo y eleme
     async start(controller) {
       try {
         await Promise.allSettled(
-          concepts.map(async (concept: ConceptItem) => {
+          concepts.slice(0, targetCount).map(async (concept: ConceptItem) => {
             const fullPrompt = [
               concept.image_prompt,
               `Brand colors: ${brandKit.primary1}, ${brandKit.primary2}, ${brandKit.primary3}.`,
