@@ -48,6 +48,9 @@ export default function PdpPage() {
   const [generatedCount, setGeneratedCount] = useState(0);
   const [error, setError] = useState('');
   const [msgIdx, setMsgIdx] = useState(0);
+  const [testimonialText, setTestimonialText] = useState('');
+  const [authorityText, setAuthorityText] = useState('');
+  const [showCustomText, setShowCustomText] = useState(false);
 
   useEffect(() => {
     fetch('/api/brand-kits').then(r => r.json()).then(kit => {
@@ -157,6 +160,8 @@ export default function PdpPage() {
           peopleMode: mode === 'fashion' ? 'real' : 'none',
           productImages: compressedProducts,
           referenceImages: compressedRefs,
+          testimonialText: testimonialText.trim(),
+          authorityText: authorityText.trim(),
         }),
       });
 
@@ -209,6 +214,9 @@ export default function PdpPage() {
     setPdpImages(Array(6).fill(null));
     setGeneratedCount(0);
     setError('');
+    setTestimonialText('');
+    setAuthorityText('');
+    setShowCustomText(false);
   };
 
   const downloadImage = (img: PdpImage) => {
@@ -398,6 +406,58 @@ export default function PdpPage() {
                   rows={6}
                   className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] resize-none text-sm leading-relaxed"
                 />
+              </div>
+
+              {/* Custom text for Testimonial & Authority */}
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
+                <button
+                  onClick={() => setShowCustomText(v => !v)}
+                  className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-gray-50 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    <span className="text-sm font-medium text-gray-700">Texto personalizado para Testimonial y Authority</span>
+                    <span className="text-[11px] bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded font-medium">Opcional</span>
+                  </div>
+                  <svg className={`w-4 h-4 text-gray-400 transition-transform ${showCustomText ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {showCustomText && (
+                  <div className="px-4 pb-4 pt-1 space-y-4 bg-white border-t border-gray-100">
+                    <p className="text-xs text-gray-400">
+                      Si dejás estos campos vacíos, la IA genera texto genérico. Para evitar reseñas o claims inventados, escribí el texto exacto que querés mostrar.
+                    </p>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-gray-600 flex items-center gap-1.5">
+                        Testimonial
+                        <span className="text-gray-400 font-normal">— texto de la reseña / prueba social</span>
+                      </label>
+                      <textarea
+                        value={testimonialText}
+                        onChange={e => setTestimonialText(e.target.value)}
+                        placeholder={`Ej: "★★★★★ 'La mejor remera que tuve en mi vida' — María G. · +2.000 clientes satisfechos"`}
+                        rows={2}
+                        className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] resize-none"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-gray-600 flex items-center gap-1.5">
+                        Authority / Científico
+                        <span className="text-gray-400 font-normal">— ingredientes, materiales o claims técnicos</span>
+                      </label>
+                      <textarea
+                        value={authorityText}
+                        onChange={e => setAuthorityText(e.target.value)}
+                        placeholder={`Ej: "Algodón pima 100% · Certificado GOTS · Tratamiento enzimático · Sin tinturas dañinas"`}
+                        rows={2}
+                        className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] resize-none"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* What will be generated preview */}

@@ -39,12 +39,15 @@ export async function POST(req: NextRequest) {
   const {
     brief, brandKit, peopleMode = 'none',
     productImages = [], referenceImages = [],
+    testimonialText = '', authorityText = '',
   }: {
     brief: string;
     brandKit: BrandKit;
     peopleMode: PeopleMode;
     productImages: string[];
     referenceImages: string[];
+    testimonialText: string;
+    authorityText: string;
   } = await req.json();
 
   const openai = new OpenAI({ apiKey: ctx.openaiApiKey });
@@ -111,11 +114,26 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
   // Ensure all 6 types are present (fallback if GPT skipped any)
   const orderedItems = PDP_TYPES.map(t => {
     const found = pdpItems.find(item => item.type === t.type);
-    return found || {
+    const base = found || {
       type: t.type,
       label: t.label,
       image_prompt: `${t.label} for: ${brief.slice(0, 120)}. Brand colors: ${brandKit.primary1}, ${brandKit.primary2}. Square 1:1 e-commerce format, premium quality.`,
     };
+
+    // Inject user-provided text verbatim so the AI can't invent it
+    if (t.type === 'testimonial' && testimonialText) {
+      return {
+        ...base,
+        image_prompt: `${base.image_prompt} IMPORTANT — use EXACTLY this testimonial text in the image, do not modify or invent alternative copy: "${testimonialText}"`,
+      };
+    }
+    if (t.type === 'authority' && authorityText) {
+      return {
+        ...base,
+        image_prompt: `${base.image_prompt} IMPORTANT — use EXACTLY these authority claims/specs as the text in the image, do not invent alternatives: "${authorityText}"`,
+      };
+    }
+    return base;
   });
 
   // Step 2: generate all 6 images in parallel, stream as they complete
