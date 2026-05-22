@@ -282,7 +282,10 @@ export default function PdpPage() {
               }
             }
             if (data.error) {
-              setError(prev => prev ? `${prev} · ${data.error}` : data.error);
+              const isInternalError = data.error.includes('403') || data.error.includes('organization') || data.error.includes('API key') || data.error.includes('model `');
+              const label = data.error.split(':')[0] || 'Imagen';
+              const userMsg = isInternalError ? `${label}: no se pudo generar. Intentá de nuevo.` : data.error;
+              setError(prev => prev ? `${prev} · ${userMsg}` : userMsg);
             }
             if (data.done) {
               setStep('done');

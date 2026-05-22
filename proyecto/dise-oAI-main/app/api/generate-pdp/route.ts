@@ -333,14 +333,17 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
   const stream = new ReadableStream({
     async start(controller) {
       try {
+        const isFashion = pdpMode === 'fashion';
         const slideVisualRules = buildSlideVisualRules(hasPeople, pdpMode);
         await Promise.allSettled(
           orderedItems.map(async (item) => {
+            const noPersonInSlide = isFashion && (item.type === 'authority' || item.type === 'howto');
+            const slideInputImages = noPersonInSlide ? productDataUrls.slice(0, 2) : inputImages;
             const copyInjection = buildCopyInjection(item.display_copy, item.type);
             const visualRule = slideVisualRules[item.type] || '';
             // When photos are present they are the single source of truth for product appearance.
             // Text description is supplementary only — never overrides what the photos show.
-            const productConstraint = inputImages.length > 0
+            const productConstraint = slideInputImages.length > 0
               ? `THE REFERENCE PHOTOS ABOVE ARE THE SINGLE SOURCE OF TRUTH FOR THE PRODUCT. Reproduce the product EXACTLY as it appears in the photos — same shape, same color, same label, same packaging, same proportions. DO NOT invent or modify any visual aspect of the product. IMPORTANT: the layout instructions below describe composition only — if they mention any product color or shape that contradicts the photos, IGNORE that and use the photos instead.${productDescription ? ` Supplementary context (never overrides photos): ${productDescription}` : ''}`
               : `PRODUCT TO REPRODUCE EXACTLY: ${productDescription}. Same color, shape, packaging design — do not modify.`;
 
@@ -349,7 +352,7 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
               item.image_prompt,
               visualRule,
               copyInjection,
-              `BRAND DESIGN ELEMENTS (use ONLY for: background, text overlays, graphic shapes, icons, borders — NEVER on the product itself): primary ${brandKit.primary1}, secondary ${brandKit.primary2}, accent ${brandKit.primary3}.`,
+              `BRAND DESIGN ELEMENTS (use ONLY for: background, text overlays, graphic shapes, icons, borders — NEVER on the product itself): primary ${brandKit.primary1 || '#000000'}, secondary ${brandKit.primary2 || '#ffffff'}, accent ${brandKit.primary3 || '#888888'}.`,
               `Typography: ${brandKit.typography || 'bold sans-serif'}.`,
               'Professional e-commerce product photography or high-end retail graphic design. Square 1:1 format for Shopify / Tienda Nube. Premium quality, clean, conversion-focused.',
               'BRAND COLORS ARE FOR DESIGN ELEMENTS ONLY — never apply brand colors to the product. The product color is fixed by the reference photos.',
@@ -371,7 +374,7 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
                   input: [{
                     role: 'user',
                     content: [
-                      ...inputImages.map(img => ({ type: 'input_image', image_url: img, detail: 'high' })),
+                      ...slideInputImages.map(img => ({ type: 'input_image', image_url: img, detail: 'high' })),
                       { type: 'input_text', text: fullPrompt },
                     ],
                   }],
