@@ -362,7 +362,7 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
             let base64 = '';
             let lastError = '';
 
-            // Always use product photos — generation without photos is not allowed
+            // Primary: Responses API (supports multi-image input + image generation tool)
             for (let attempt = 1; attempt <= 2; attempt++) {
               try {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -395,6 +395,33 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
                 lastError = err instanceof Error ? err.message : String(err);
                 console.error(`PDP "${item.label}" attempt ${attempt} failed:`, err);
                 if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
+              }
+            }
+
+            // Fallback: images.edit — accepts input photos, no org verification required
+            if (!base64) {
+              try {
+                const imageFiles = await Promise.all(
+                  inputImages.slice(0, 4).map(async (dataUrl, i) => {
+                    const b64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+                    const mimeType = dataUrl.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
+                    return toFile(Buffer.from(b64, 'base64'), `input_${i}.${mimeType === 'image/png' ? 'png' : 'jpg'}`, { type: mimeType });
+                  })
+                );
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const editResult = await (openai.images.edit as any)({
+                  model: 'gpt-image-2',
+                  image: imageFiles.length === 1 ? imageFiles[0] : imageFiles,
+                  prompt: fullPrompt,
+                  size: '1024x1024',
+                  quality: 'medium',
+                  n: 1,
+                });
+                base64 = editResult.data?.[0]?.b64_json || '';
+                if (!base64) console.warn(`PDP images.edit fallback "${item.label}": no b64_json`);
+              } catch (err) {
+                lastError = err instanceof Error ? err.message : String(err);
+                console.error(`PDP images.edit fallback "${item.label}" failed:`, err);
               }
             }
 
