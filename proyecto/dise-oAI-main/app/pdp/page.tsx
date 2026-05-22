@@ -8,6 +8,7 @@ import Sidebar from '@/app/components/Sidebar';
 
 type PdpStep = 'brief' | 'review' | 'generating' | 'done';
 type PdpMode = 'product' | 'fashion';
+type PeopleMode = 'none' | 'real';
 
 interface SlideDisplayCopy {
   items?: string[];
@@ -56,6 +57,7 @@ export default function PdpPage() {
   const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
   const [step, setStep] = useState<PdpStep>('brief');
   const [mode, setMode] = useState<PdpMode>('product');
+  const [peopleMode, setPeopleMode] = useState<PeopleMode>('none');
   const [brief, setBrief] = useState('');
   const [productImages, setProductImages] = useState<string[]>([]);
   const [referenceImages, setReferenceImages] = useState<string[]>([]);
@@ -192,7 +194,7 @@ export default function PdpPage() {
           brief,
           brandKit,
           pdpMode: mode,
-          peopleMode: mode === 'fashion' ? 'real' : 'none',
+          peopleMode,
           productImages: compressedProducts,
           referenceImages: compressedRefs,
         }),
@@ -247,7 +249,7 @@ export default function PdpPage() {
           brief,
           brandKit,
           pdpMode: mode,
-          peopleMode: mode === 'fashion' ? 'real' : 'none',
+          peopleMode,
           productImages: compressedProducts,
           referenceImages: compressedRefs,
           plans,
@@ -306,6 +308,7 @@ export default function PdpPage() {
     setError('');
     setPlans([]);
     setProductDescription('');
+    setPeopleMode('none');
   };
 
   const downloadImage = (img: PdpImage) => {
@@ -371,22 +374,22 @@ export default function PdpPage() {
           {step === 'brief' && (
             <div className="space-y-6">
 
-              {/* Mode selector */}
+              {/* Tipo de producto */}
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700">Tipo de contenido</label>
+                <label className="text-sm font-semibold text-gray-700">Tipo de producto</label>
                 <div className="grid grid-cols-2 gap-3">
                   {([
                     {
                       key: 'product' as PdpMode,
-                      label: 'Solo producto',
-                      desc: 'Sin personas. Foco total en el producto.',
+                      label: 'Producto',
+                      desc: 'Suplemento, cosmético, reloj, electrónico, alimento, etc.',
                       icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',
                     },
                     {
                       key: 'fashion' as PdpMode,
-                      label: 'Fashion / persona',
-                      desc: 'Incluye personas usando el producto.',
-                      icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
+                      label: 'Indumentaria',
+                      desc: 'Ropa, calzado, accesorios de moda.',
+                      icon: 'M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z',
                     },
                   ] as const).map(opt => (
                     <button
@@ -407,6 +410,50 @@ export default function PdpPage() {
                       </div>
                       <div>
                         <p className={`text-sm font-semibold ${mode === opt.key ? 'text-gray-900' : 'text-gray-600'}`}>{opt.label}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{opt.desc}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Incluir personas */}
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">¿Incluir personas?</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {([
+                    {
+                      key: 'none' as PeopleMode,
+                      label: 'Sin personas',
+                      desc: 'Solo el producto. Foco en packaging, composición y copy.',
+                    },
+                    {
+                      key: 'real' as PeopleMode,
+                      label: 'Con personas',
+                      desc: 'Lifestyle y how-to muestran el producto en uso.',
+                    },
+                  ] as const).map(opt => (
+                    <button
+                      key={opt.key}
+                      onClick={() => setPeopleMode(opt.key)}
+                      className={`flex items-start gap-3 p-4 rounded-xl border text-left transition-all ${
+                        peopleMode === opt.key
+                          ? 'border-[#e42820] bg-[#e42820]/5'
+                          : 'border-gray-200 bg-white hover:border-gray-300'
+                      }`}
+                    >
+                      <div className={`mt-0.5 w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                        peopleMode === opt.key ? 'bg-[#e42820]/10' : 'bg-gray-100'
+                      }`}>
+                        <svg className={`w-3.5 h-3.5 ${peopleMode === opt.key ? 'text-[#e42820]' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          {opt.key === 'none'
+                            ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                            : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          }
+                        </svg>
+                      </div>
+                      <div>
+                        <p className={`text-sm font-semibold ${peopleMode === opt.key ? 'text-gray-900' : 'text-gray-600'}`}>{opt.label}</p>
                         <p className="text-xs text-gray-400 mt-0.5">{opt.desc}</p>
                       </div>
                     </button>
@@ -447,14 +494,14 @@ export default function PdpPage() {
                 </div>
               </div>
 
-              {/* Person reference images (fashion mode) */}
-              {mode === 'fashion' && (
+              {/* Person reference images (only when people enabled) */}
+              {peopleMode === 'real' && (
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-gray-700">
                     Fotos de referencia de persona
                     <span className="font-normal text-gray-400 ml-1">(hasta 2, opcional)</span>
                   </label>
-                  <p className="text-xs text-gray-400">Si tenés modelos o personas que querés usar de referencia de estilo.</p>
+                  <p className="text-xs text-gray-400">Si tenés modelos o personas de referencia para las fotos de lifestyle y how-to.</p>
                   <div className="flex flex-wrap gap-3">
                     {referenceImages.map((img, i) => (
                       <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-gray-200 bg-gray-100">

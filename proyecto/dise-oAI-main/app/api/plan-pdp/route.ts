@@ -134,9 +134,11 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const lifestyleInstruction = hasPeople
-    ? '3. LIFESTYLE IMAGE — persona vistiendo el producto en situación cotidiana auténtica.'
-    : '3. LIFESTYLE IMAGE — producto en su contexto natural de uso, sin personas.';
+  const lifestyleInstruction = !hasPeople
+    ? '3. LIFESTYLE IMAGE — el producto en su contexto natural de uso, sin personas. Ambientación real y cercana.'
+    : pdpMode === 'fashion'
+      ? '3. LIFESTYLE IMAGE — persona vistiendo la prenda en una situación cotidiana auténtica y aspiracional.'
+      : '3. LIFESTYLE IMAGE — persona usando, sosteniendo, consumiendo o aplicando el producto en una situación cotidiana auténtica.';
 
   const systemPrompt = `Sos un director creativo senior especializado en PDPs de e-commerce.
 Generá exactamente 6 planes de imagen para el carrusel de producto, formato cuadrado 1:1.

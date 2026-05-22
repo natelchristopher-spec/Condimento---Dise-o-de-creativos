@@ -71,14 +71,26 @@ Describí en este orden:
 
 CRÍTICO: NO menciones ninguna marca ni logo de terceros. Solo describí el producto y su packaging.`;
 
-const SLIDE_VISUAL_RULES: Record<string, string> = {
+const SLIDE_VISUAL_RULES_BASE: Record<string, string> = {
   hero: 'COMPOSITION: product centered, filling 80% of frame, pure white or solid brand-color background, studio lighting, NO text overlays, NO bullets — pure product focus.',
   benefit: 'COMPOSITION: product on LEFT side of frame, 3 benefit callouts on RIGHT side with icons and short bold Spanish text. Clean scannable layout. NO numbered list — use icon + text pairs.',
-  lifestyle: 'COMPOSITION: product in real-life context. ONE short tagline in big bold text (NO bullet lists, NO numbered steps, NO specs grid). Aspirational editorial feel.',
   authority: 'COMPOSITION: product in center with 3-4 technical callout lines/arrows pointing to specific product zones. Clinical technical feel. NO benefit bullets — specs and technical data only.',
-  howto: 'COMPOSITION: 3 horizontal numbered steps (1→2→3) infographic style. Small visual per step. NO benefit bullets — ACTION verbs only (Mezclar, Aplicar, Consumir, Lavar).',
   testimonial: 'COMPOSITION: large customer quote in quotation marks filling 60% of space, product image smaller on one side, author name and 5-star rating below. Warm social-proof feel.',
 };
+
+function buildSlideVisualRules(hasPeople: boolean, pdpMode: string): Record<string, string> {
+  return {
+    ...SLIDE_VISUAL_RULES_BASE,
+    lifestyle: hasPeople
+      ? pdpMode === 'fashion'
+        ? 'COMPOSITION: person wearing/using the product in a real-life aspirational context. ONE short tagline in big bold text. No bullet lists, no specs grid. Editorial photography feel.'
+        : 'COMPOSITION: person naturally using, holding, or applying the product in a real-life context (drinking a shake, applying cream, wearing a watch, etc.). ONE short tagline in big bold text. Authentic, aspirational.'
+      : 'COMPOSITION: product in its natural use environment (gym, desk, kitchen, bathroom, etc.) WITHOUT people. ONE short tagline in big bold text. No bullet lists, no numbered steps.',
+    howto: hasPeople
+      ? 'COMPOSITION: 3 numbered steps (1→2→3) shown with hands or person interacting with the product. Infographic style. ACTION verbs only — no benefit bullets.'
+      : 'COMPOSITION: 3 horizontal numbered steps (1→2→3) infographic style. Small visual of the product per step. No benefit bullets — ACTION verbs only (Mezclar, Aplicar, Consumir, Lavar).',
+  };
+}
 
 function buildCopyInjection(display_copy: SlideDisplayCopy | null | undefined, type: string): string {
   if (!display_copy) return '';
@@ -192,9 +204,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const lifestyleInstruction = hasPeople
-      ? '3. LIFESTYLE IMAGE — una persona vistiendo / usando el producto en una situación cotidiana auténtica y aspiracional. La persona debe verse natural. Genera deseo y conexión emocional.'
-      : '3. LIFESTYLE IMAGE — el producto integrado en su contexto natural de uso (escritorio, cocina, gym, etc.), sin personas. El ambiente rodea al producto de forma natural y cercana.';
+    const lifestyleInstruction = !hasPeople
+      ? '3. LIFESTYLE IMAGE — el producto integrado en su contexto natural de uso (escritorio, cocina, gym, suplemento junto a pesas, crema junto al espejo, reloj sobre madera, etc.), sin personas. El ambiente rodea al producto de forma natural y cercana.'
+      : pdpMode === 'fashion'
+        ? '3. LIFESTYLE IMAGE — una persona vistiendo la prenda en una situación cotidiana auténtica y aspiracional. La persona debe verse natural. Genera deseo y conexión emocional.'
+        : '3. LIFESTYLE IMAGE — una persona usando, sosteniendo, consumiendo o aplicando el producto en una situación cotidiana auténtica (tomando el suplemento, aplicando la crema, usando el dispositivo, etc.). Natural y aspiracional.';
 
     const systemPrompt = `Sos un director creativo senior especializado en PDPs de e-commerce (Shopify / Tienda Nube).
 Dado un brief de producto y brand kit, generá exactamente 6 prompts de imagen — uno por cada tipo del sistema SPICY PDP.
@@ -286,10 +300,11 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
   const stream = new ReadableStream({
     async start(controller) {
       try {
+        const slideVisualRules = buildSlideVisualRules(hasPeople, pdpMode);
         await Promise.allSettled(
           orderedItems.map(async (item) => {
             const copyInjection = buildCopyInjection(item.display_copy, item.type);
-            const visualRule = SLIDE_VISUAL_RULES[item.type] || '';
+            const visualRule = slideVisualRules[item.type] || '';
             const fullPrompt = [
               // Product appearance is the highest-priority constraint — stated first
               `PRODUCT APPEARANCE — ABSOLUTE RULE: ${productDescription} THIS PRODUCT MUST APPEAR EXACTLY AS DESCRIBED. DO NOT change its color, shape, packaging, or design for any reason — not to match brand colors, not to improve aesthetics.`,
