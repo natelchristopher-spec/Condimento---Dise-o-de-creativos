@@ -291,16 +291,18 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
             const copyInjection = buildCopyInjection(item.display_copy, item.type);
             const visualRule = SLIDE_VISUAL_RULES[item.type] || '';
             const fullPrompt = [
+              // Product appearance is the highest-priority constraint — stated first
+              `PRODUCT APPEARANCE — ABSOLUTE RULE: ${productDescription} THIS PRODUCT MUST APPEAR EXACTLY AS DESCRIBED. DO NOT change its color, shape, packaging, or design for any reason — not to match brand colors, not to improve aesthetics.`,
               item.image_prompt,
               visualRule,
               copyInjection,
-              `PRODUCTO EXACTO A MOSTRAR (no cambiar, no reemplazar por otro): ${productDescription}`,
-              `Brand colors: ${brandKit.primary1}, ${brandKit.primary2}, ${brandKit.primary3}.`,
+              // Brand colors explicitly scoped to design elements only, never the product
+              `BRAND DESIGN ELEMENTS (use ONLY for: background, text overlays, graphic shapes, icons, borders — NEVER on the product itself): primary ${brandKit.primary1}, secondary ${brandKit.primary2}, accent ${brandKit.primary3}.`,
               `Typography: ${brandKit.typography || 'bold sans-serif'}.`,
               'Professional e-commerce product photography or high-end retail graphic design. Square 1:1 format for Shopify / Tienda Nube. Premium quality, clean, conversion-focused.',
-              'CRITICAL: show ONLY the exact product described above — same color, same silhouette, same material. Do NOT invent a different product.',
-              'COLOR ACCURACY — CRITICAL: replicate the product color with pixel-level accuracy. Do NOT shift, lighten, darken, or desaturate. For warm neutrals (beige, sand, stone, khaki): preserve the warm undertone exactly, never render as white or gray.',
-              'Do NOT reproduce any brand logos, labels, or marks from the reference photos — those images are for product shape/color reference only. The only brand mark allowed is from the brand kit.',
+              'PRODUCT COLOR IS FIXED: The product color comes from the product description above, not from the brand kit. Brand kit colors are for the surrounding design only. If the product is black, it stays black. If it is beige, it stays beige. Never recolor the product.',
+              'COLOR ACCURACY — CRITICAL: replicate the product color with pixel-level accuracy. Do NOT shift, lighten, darken, or desaturate the product. For warm neutrals (beige, sand, stone, khaki): preserve the warm undertone exactly, never render as white or gray.',
+              'Do NOT reproduce any brand logos, labels, or marks from the reference photos — those images are for product shape/color reference only.',
               'Do NOT include invented trust badges ("Compra Segura", "Sitio Protegido", "Envío Gratis") unless explicitly in the brief.',
               'Do NOT include button-style CTAs ("Compra ahora", "Buy Now", etc.).',
               'Do NOT include invented prices, discounts, or false metrics.',
