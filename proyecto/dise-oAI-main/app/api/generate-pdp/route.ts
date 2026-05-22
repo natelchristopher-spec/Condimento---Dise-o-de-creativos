@@ -114,10 +114,10 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
   // Ensure all 6 types are present (fallback if GPT skipped any)
   const orderedItems = PDP_TYPES.map(t => {
     const found = pdpItems.find(item => item.type === t.type);
-    const base = found || {
+    const base = {
       type: t.type,
-      label: t.label,
-      image_prompt: `${t.label} for: ${brief.slice(0, 120)}. Brand colors: ${brandKit.primary1}, ${brandKit.primary2}. Square 1:1 e-commerce format, premium quality.`,
+      label: t.label, // always use our fixed label, never GPT's (which can include the brand name)
+      image_prompt: found?.image_prompt || `${t.label} for: ${brief.slice(0, 120)}. Brand colors: ${brandKit.primary1}, ${brandKit.primary2}. Square 1:1 e-commerce format, premium quality.`,
     };
 
     // Inject user-provided text verbatim so the AI can't invent it
@@ -166,10 +166,11 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
             ].filter(Boolean).join(' ');
 
             try {
-              // Primary: Responses API (gpt-4o sees product images → drives gpt-image-2)
+              // Responses API: gpt-image-2 generates from text prompt + optional product reference images
+              // (GPT-4o already planned the prompts in step 1 — no need for gpt-4o here)
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const response = await (openai.responses.create as any)({
-                model: 'gpt-4o',
+                model: 'gpt-image-2',
                 input: [{
                   role: 'user',
                   content: [
