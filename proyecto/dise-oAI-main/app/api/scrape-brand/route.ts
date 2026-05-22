@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { getUserContext } from '@/app/lib/get-user-context';
 
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 const CATEGORIES = ['moda', 'skincare', 'suplementos', 'hogar', 'accesorios', 'electronica', 'mascotas', 'food', 'otros'];
 
@@ -45,11 +45,12 @@ export async function POST(req: NextRequest) {
 
   const openai = new OpenAI({ apiKey: ctx.openaiApiKey });
 
-  const { choices } = await openai.chat.completions.create({
-    model: 'gpt-4o',
-    messages: [{
-      role: 'user',
-      content: `Analizá el contenido de esta tienda/negocio online y extraé información de la marca.
+  try {
+    const { choices } = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [{
+        role: 'user',
+        content: `Analizá el contenido de esta tienda/negocio online y extraé información de la marca.
 
 CONTENIDO:
 ${pageText}
@@ -60,16 +61,15 @@ Extraé:
 - brief: qué vende y a quién, en 2-3 oraciones directas (ej: "Ropa de gym para mujeres jóvenes urbanas. Prendas funcionales con diseño editorial.")
 
 Respondé SOLO con JSON: { "businessName": "...", "category": "...", "brief": "..." }`,
-    }],
-    response_format: { type: 'json_object' },
-    max_tokens: 300,
-    temperature: 0.2,
-  });
+      }],
+      response_format: { type: 'json_object' },
+      max_tokens: 300,
+      temperature: 0.2,
+    });
 
-  try {
     const data = JSON.parse(choices[0].message.content || '{}');
     return NextResponse.json(data);
-  } catch {
-    return NextResponse.json({ error: 'No se pudo extraer información de la página' }, { status: 422 });
+  } catch (e) {
+    return NextResponse.json({ error: `Error al analizar la página: ${e instanceof Error ? e.message : 'error desconocido'}` }, { status: 500 });
   }
 }
