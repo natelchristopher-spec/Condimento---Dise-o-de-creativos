@@ -16,25 +16,22 @@ export async function POST(req: NextRequest) {
     personDescription: string;
   } = await req.json();
 
-  const openai = new OpenAI({ apiKey: ctx.openaiApiKey });
-
-  const hasProductImage = productDetailImages.length > 0;
-  const hasPerson = peopleMode === 'real' && personDescription;
-
-  if (!hasProductImage) {
+  if (!productDetailImages.length) {
     return NextResponse.json({ base64: conceptImageBase64, applied: false });
   }
 
-  const personPart = hasPerson
+  const openai = new OpenAI({ apiKey: ctx.openaiApiKey });
+
+  const personPart = (peopleMode === 'real' && personDescription)
     ? `\nPERSONA: ${personDescription}. La persona lleva puesto exactamente este producto.`
     : '';
 
   const productPart = productDescription
     ? `\nPRODUCTO A APLICAR (reproducir exactamente, sin simplificar):\n${productDescription}`
-    : '\nPRODUCTO A APLICAR: el producto exacto que aparece en la segunda imagen de referencia.';
+    : '\nPRODUCTO A APLICAR: el producto exacto que aparece en las imágenes de referencia — usá las imágenes como fuente principal de verdad visual.';
 
   const multiProductNote = productDetailImages.length > 1
-    ? `\nHay ${productDetailImages.length} imágenes de referencia de productos — aplicá TODOS los productos visibles en cada imagen (ej: remera + pantalón, campera + falda).`
+    ? `\nHay ${productDetailImages.length} imágenes de referencia de productos — aplicá TODOS los productos visibles (ej: remera + pantalón, campera + falda).`
     : '';
 
   const prompt = `Tomá este concepto visual de moda y ÚNICAMENTE reemplazá las prendas/productos de la persona por los productos exactos que aparecen en las imágenes de referencia. TODO lo demás debe quedar IDÉNTICO.
@@ -42,26 +39,36 @@ ${productPart}
 ${personPart}
 ${multiProductNote}
 
+PASO 1 — ANÁLISIS DE COLOR ANTES DE GENERAR:
+Mirá la imagen de referencia del producto y extraé el color dominante con precisión. Identificá: ¿es cálido o frío? ¿saturado o apagado? ¿de qué tono exacto? Usá ese análisis como ancla para la generación.
+
+IMPORTANTE — las imágenes de referencia del producto son la fuente principal. El texto es solo soporte. Reproducí el producto tal cual se ve en la foto de referencia.
+
 QUÉ CAMBIAR:
 - Las prendas/ropa de la persona → reemplazarlas por los productos de referencia exactos
 
 QUÉ NO TOCAR (debe quedar pixel-perfect igual):
 - TODOS los textos, tipografías, títulos, subtítulos, slogans y copy que aparecen en la imagen
 - El fondo, colores del fondo, degradados y texturas
-- La composición y layout general
+- La composición y layout general (si es split-screen o before/after, respetá esa estructura — aplicá el producto en AMBOS paneles de forma coherente con la narrativa)
 - La iluminación y mood
 - Logos, íconos o elementos gráficos de marca
 - La pose y posición de la persona
 
 REGLAS DE COLOR — CRÍTICO:
-- El color de cada prenda debe ser IDÉNTICO al de la imagen de referencia. NO aclarar, NO oscurecer, NO desaturar, NO cambiar la temperatura de color.
-- Si el pantalón es beige, debe quedar beige exacto — no blanco, no crema, no gris.
-- Si es negro, que sea negro — no gris oscuro.
-- Analizá el color de la imagen de referencia y replicalo con máxima fidelidad aunque la iluminación de la escena sea diferente.
-- El color de la prenda debe dominar y mantenerse fiel incluso bajo las luces de la escena.
+- El color de cada prenda debe ser IDÉNTICO al de la imagen de referencia. NO aclarar, NO oscurecer, NO desaturar, NO cambiar temperatura de color.
+- Tomá el valor de color directamente de los píxeles de la referencia — no lo interpetes ni lo idealices.
+- Para colores neutros cálidos (beige, arena, tostado, camel, crudo, khaki): NUNCA renderices como blanco ni gris claro. Mantené la temperatura cálida y la saturación exacta del original.
+- Para colores oscuros (negro, azul marino, marrón oscuro): NUNCA los ilumines ni aclarés por exceso de luz ambiental.
+
+ATENCIÓN ESPECIAL — PANTALONES Y PRENDAS INFERIORES:
+- Los pantalones son la prenda donde el modelo falla más en color. Prestá DOBLE atención.
+- Si el pantalón de referencia es beige arena: la prenda generada debe verse exactamente de ese mismo beige arena — con la misma temperatura cálida, misma saturación baja-media, mismo comportamiento a la luz.
+- Telas lisas (twill, gabardina, algodón peachskin, cotton chino): la superficie debe verse uniforme y suave, SIN texturas artificiales, arrugas exageradas ni variaciones de tono que no existen en la referencia.
+- Replicá la caída y silueta del pantalón tal cual se ve: largo, ancho de pierna, tiro.
 
 REGLAS de producto:
-- Cada prenda debe verse EXACTAMENTE igual a su imagen de referencia: mismo color, mismo estampado, misma silueta, mismo tejido
+- Mismo color, mismo estampado, misma silueta, mismo tejido que la referencia visual
 - Si hay múltiples prendas de referencia, aplicá TODAS
 - Estilo fashion editorial premium, fotorrealista`;
 
@@ -70,60 +77,71 @@ REGLAS de producto:
     type: 'input_image' as const, image_url: img, detail: 'high' as const,
   }));
 
-  // Primary: Responses API con gpt-4o como orquestador (entiende imágenes de entrada)
-  // y gpt-image-2 como herramienta de generación
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const response = await (openai.responses.create as any)({
-      model: 'gpt-4o',
-      input: [{
-        role: 'user',
-        content: [
-          { type: 'input_image', image_url: conceptDataUrl, detail: 'high' },
-          ...productImageContent,
-          { type: 'input_text', text: prompt },
-        ],
-      }],
-      tools: [{
-        type: 'image_generation',
-        model: 'gpt-image-2',
-        quality: 'high',
-        size: '1024x1536',
-      }],
-    });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    for (const block of (response.output || [])) {
-      if (block.type === 'image_generation_call' && block.result) {
-        return NextResponse.json({ base64: block.result, applied: true });
+  // Primary: Responses API (gpt-4o + gpt-image-2) — 3 intentos
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const response = await (openai.responses.create as any)({
+        model: 'gpt-4o',
+        input: [{
+          role: 'user',
+          content: [
+            { type: 'input_image', image_url: conceptDataUrl, detail: 'high' },
+            ...productImageContent,
+            { type: 'input_text', text: prompt },
+          ],
+        }],
+        tools: [{
+          type: 'image_generation',
+          model: 'gpt-image-2',
+          quality: 'high',
+          size: '1024x1536',
+        }],
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      for (const block of (response.output || [])) {
+        if (block.type === 'image_generation_call' && block.result) {
+          return NextResponse.json({ base64: block.result, applied: true });
+        }
       }
+      console.warn(`apply-product: intento ${attempt} sin bloque de imagen`);
+    } catch (err) {
+      console.error(`apply-product: intento ${attempt} falló:`, err);
+      if (attempt === 3) break;
+      await new Promise(r => setTimeout(r, attempt * 1000));
     }
-    console.error('apply-product: Responses API returned no image block');
-  } catch (err) {
-    console.error('apply-product Responses API (gpt-4o) failed:', err);
   }
 
-  // Fallback: images.edit con prompt descriptivo fuerte
+  // Fallback: images.edit con imagen de producto como referencia visual
   try {
     const buffer = Buffer.from(conceptImageBase64, 'base64');
-    const imageFile = await toFile(buffer, 'image.png', { type: 'image/png' });
-    const editPrompt = productDescription
-      ? `Replace the main clothing/garment in this fashion image with the following product, preserving all composition, background, lighting and style. Product to apply: ${productDescription}.${personPart}`
-      : `Replace the main clothing/garment in this fashion editorial image with the product from the reference. Keep the composition, background, lighting, and overall mood exactly the same.${personPart}`;
+    const conceptFile = await toFile(buffer, 'concept.png', { type: 'image/png' });
+
+    const fallbackPrompt = [
+      'Replace the clothing/garments worn by the person in this fashion image with the exact product shown in the reference photo.',
+      productDescription ? `Product details: ${productDescription}` : '',
+      'Preserve the exact composition, background, lighting, mood, text overlays, and pose. Only change the clothing to match the reference product exactly — same color, same silhouette, same fabric.',
+      personPart,
+    ].filter(Boolean).join(' ');
 
     const response = await openai.images.edit({
       model: 'gpt-image-2',
-      image: imageFile,
-      prompt: editPrompt,
+      image: conceptFile,
+      prompt: fallbackPrompt,
       size: '1024x1536',
-      quality: 'medium',
+      quality: 'high',
     });
     const base64 = response.data?.[0]?.b64_json || '';
-    if (base64) return NextResponse.json({ base64, applied: true });
-    console.error('apply-product: images.edit returned empty b64_json');
+    if (base64) return NextResponse.json({ base64, applied: true, fallback: true });
+    console.error('apply-product: fallback images.edit sin b64_json');
   } catch (err) {
-    console.error('apply-product images.edit fallback failed:', err);
+    console.error('apply-product: fallback images.edit falló:', err);
   }
 
-  // Last resort: return original with flag so client can warn the user
-  return NextResponse.json({ base64: conceptImageBase64, applied: false });
+  // Todo falló — avisar al cliente
+  return NextResponse.json({
+    base64: '',
+    applied: false,
+    error: 'No se pudo aplicar el producto a este concepto después de 3 intentos. Podés ajustarlo manualmente en el paso de afinación.',
+  });
 }
