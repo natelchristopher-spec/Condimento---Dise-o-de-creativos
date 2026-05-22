@@ -50,6 +50,12 @@ export default function Home() {
   const [refineImageHistory, setRefineImageHistory] = useState<string[]>([]);
   const refineInputRef = useRef<HTMLInputElement>(null);
 
+  const [applyStatuses, setApplyStatuses] = useState<Array<'pending' | 'applying' | 'done'>>([]);
+  const [refineInputs, setRefineInputs] = useState<string[]>([]);
+  const [refineHistories, setRefineHistories] = useState<string[][]>([]);
+  const [refineImageHistories, setRefineImageHistories] = useState<string[][]>([]);
+  const [refiningIndex, setRefiningIndex] = useState<number | null>(null);
+
   useRequireAuth();
   const supabase = createSupabaseBrowser();
 
@@ -275,70 +281,85 @@ export default function Home() {
     });
   };
 
-  const applyRefinement = async () => {
-    if (!refineInput.trim() || !refineImage || !brandKit) return;
-    const instruction = refineInput.trim();
-    setRefineInput('');
-    startLoading('Aplicando ajuste...');
+  const applyRefinement = async (conceptIndex: number) => {
+    const input = refineInputs[conceptIndex]?.trim();
+    if (!input || !brandKit) return;
+    setRefiningIndex(conceptIndex);
+    setRefineInputs(prev => { const n = [...prev]; n[conceptIndex] = ''; return n; });
     setError('');
     try {
+      const concept = selectedConcepts[conceptIndex];
       const res = await fetch('/api/adjust-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          imageBase64: refineImage.base64,
-          instruction,
+          imageBase64: concept.base64,
+          instruction: input,
           productDetailImages,
         }),
       });
       if (!res.ok) throw new Error(await res.text());
       const { base64, error: apiError } = await res.json();
       if (apiError) throw new Error(apiError);
-      setRefineImageHistory(prev => [...prev, refineImage.base64]);
-      setRefineHistory(prev => [...prev, instruction]);
-      const updated = { ...refineImage, base64 };
-      setRefineImage(updated);
-      setSelectedConcepts(prev => prev.map(c => c.id === refineImage.id ? updated : c));
+      setRefineImageHistories(prev => {
+        const n = prev.map(h => [...h]);
+        n[conceptIndex] = [...n[conceptIndex], concept.base64];
+        return n;
+      });
+      setRefineHistories(prev => {
+        const n = prev.map(h => [...h]);
+        n[conceptIndex] = [...n[conceptIndex], input];
+        return n;
+      });
+      setSelectedConcepts(prev => prev.map((c, i) => i === conceptIndex ? { ...c, base64 } : c));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error aplicando ajuste');
     } finally {
-      stopLoading();
-      setTimeout(() => refineInputRef.current?.focus(), 50);
+      setRefiningIndex(null);
     }
   };
 
-  const undoRefinement = () => {
-    if (!refineImageHistory.length || !refineImage) return;
-    const prev = refineImageHistory[refineImageHistory.length - 1];
-    setRefineImageHistory(h => h.slice(0, -1));
-    setRefineHistory(h => h.slice(0, -1));
-    const restored = { ...refineImage, base64: prev };
-    setRefineImage(restored);
-    setSelectedConcepts(prev2 => prev2.map(c => c.id === refineImage.id ? restored : c));
+  const undoRefinement = (conceptIndex: number) => {
+    const imageHistory = refineImageHistories[conceptIndex];
+    if (!imageHistory?.length) return;
+    const prevBase64 = imageHistory[imageHistory.length - 1];
+    setRefineImageHistories(prev => {
+      const n = prev.map(h => [...h]);
+      n[conceptIndex] = n[conceptIndex].slice(0, -1);
+      return n;
+    });
+    setRefineHistories(prev => {
+      const n = prev.map(h => [...h]);
+      n[conceptIndex] = n[conceptIndex].slice(0, -1);
+      return n;
+    });
+    setSelectedConcepts(prev => prev.map((c, i) => i === conceptIndex ? { ...c, base64: prevBase64 } : c));
   };
 
   const enterRefine = async () => {
     if (selectedConcepts.length === 0 || !brandKit) return;
-    setRefineIndex(0);
-    setRefineHistory([]);
-    setRefineImageHistory([]);
-    setRefineInput('');
+    const n = selectedConcepts.length;
+    setRefineInputs(Array(n).fill(''));
+    setRefineHistories(Array(n).fill([]));
+    setRefineImageHistories(Array(n).fill([]));
+    setRefiningIndex(null);
+    setError('');
 
     if (productDetailImages.length > 0 && peopleMode === 'real') {
-      const n = selectedConcepts.length;
-      setError('');
-      setApplyProgress({ current: 0, total: n });
-      const applied: typeof selectedConcepts = [];
-      for (let i = 0; i < selectedConcepts.length; i++) {
-        setApplyProgress({ current: i + 1, total: n });
-        startLoading(`Aplicando producto ${i + 1} de ${n}...`);
-        const concept = selectedConcepts[i];
+      const statuses: Array<'pending' | 'applying' | 'done'> = Array(n).fill('pending');
+      setApplyStatuses([...statuses]);
+      setStep('refine');
+
+      const applied = [...selectedConcepts];
+      for (let i = 0; i < n; i++) {
+        statuses[i] = 'applying';
+        setApplyStatuses([...statuses]);
         try {
           const res = await fetch('/api/apply-product', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              conceptImageBase64: concept.base64,
+              conceptImageBase64: applied[i].base64,
               productDetailImages,
               productDescription,
               peopleMode,
@@ -347,19 +368,16 @@ export default function Home() {
           });
           const { base64, error: apiError } = await res.json();
           if (apiError) setError(`Concepto ${i + 1}: ${apiError}`);
-          applied.push(base64 ? { ...concept, base64 } : concept);
-        } catch {
-          applied.push(concept);
-        }
+          if (base64) applied[i] = { ...applied[i], base64 };
+          setSelectedConcepts([...applied]);
+        } catch { /* keep original */ }
+        statuses[i] = 'done';
+        setApplyStatuses([...statuses]);
       }
-      stopLoading();
-      setApplyProgress(null);
-      setSelectedConcepts(applied);
-      setRefineImage(applied[0]);
     } else {
-      setRefineImage(selectedConcepts[0]);
+      setApplyStatuses(Array(n).fill('done'));
+      setStep('refine');
     }
-    setStep('refine');
   };
 
   const saveRefinedAndNext = () => {
@@ -431,6 +449,11 @@ export default function Home() {
     setReferenceImages([]);
     setAdaptFormats([]);
     setAdaptedImages([]);
+    setApplyStatuses([]);
+    setRefineInputs([]);
+    setRefineHistories([]);
+    setRefineImageHistories([]);
+    setRefiningIndex(null);
   };
 
   const regenerateConcepts = async () => {
@@ -873,182 +896,168 @@ export default function Home() {
         )}
 
         {/* Step: REFINE */}
-        {step === 'refine' && refineImage && (
+        {step === 'refine' && (
           <div className="space-y-6">
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-2xl font-bold mb-1">
-                  Afiná el concepto
-                  {selectedConcepts.length > 1 && (
-                    <span className="ml-3 text-base font-normal text-[#e42820]">{refineIndex + 1} de {selectedConcepts.length}</span>
-                  )}
-                </h2>
-                <p className="text-gray-500 text-sm">{refineImage.conceptName}</p>
+                <h2 className="text-2xl font-bold mb-1">Afiná los conceptos</h2>
+                <p className="text-gray-500 text-sm">
+                  {applyStatuses.some(s => s !== 'done')
+                    ? 'Aplicando producto — los conceptos se van desbloqueando a medida que están listos'
+                    : 'Editá cada concepto directamente'}
+                </p>
               </div>
-              <button
-                onClick={() => {
-                  if (refineIndex > 0) {
-                    const prev = selectedConcepts[refineIndex - 1];
-                    setRefineIndex(refineIndex - 1);
-                    setRefineImage(prev);
-                    setRefineHistory([]);
-                    setRefineImageHistory([]);
-                    setRefineInput('');
-                  } else {
-                    setStep('concepts');
-                  }
-                }}
-                className="text-gray-500 hover:text-gray-600 text-sm transition-colors"
-              >
-                ← {refineIndex > 0 ? 'Concepto anterior' : 'Volver'}
-              </button>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-8 items-start">
-              <div className="space-y-3">
-                <div className="rounded-xl overflow-hidden border border-gray-200 relative">
-                  <img
-                    src={`data:image/png;base64,${refineImage.base64}`}
-                    alt="Concepto"
-                    className={`w-full transition-all duration-300 ${loading ? 'blur-sm scale-[1.02]' : ''}`}
-                  />
-                  {loading && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px] gap-3 px-6 text-center">
-                      <div className="w-8 h-8 border-[3px] border-white/30 border-t-white rounded-full animate-spin" />
-                      <p className="text-white text-sm font-semibold">{loadingMsg || 'Aplicando producto...'}</p>
-                      <div className="w-full max-w-[180px] bg-white/20 rounded-full h-1.5">
-                        <div
-                          className="bg-white h-1.5 rounded-full transition-all duration-1000"
-                          style={{ width: `${Math.min(93, Math.max(4, (elapsedSec / 45) * 100))}%` }}
-                        />
-                      </div>
-                      <p className="text-white/70 text-xs tabular-nums">
-                        {elapsedSec < 8 ? 'Esto tarda entre 30 y 60 segundos...' :
-                         elapsedSec < 25 ? `${elapsedSec}s — procesando...` :
-                         elapsedSec < 45 ? `${elapsedSec}s — casi listo...` :
-                         `${elapsedSec}s — tardando un poco más, aguantá`}
-                      </p>
-                    </div>
-                  )}
-                </div>
+              <div className="flex items-center gap-3">
+                <button onClick={() => setStep('concepts')} className="text-gray-500 hover:text-gray-600 text-sm transition-colors">← Volver</button>
                 <button
-                  onClick={() => {
-                    const a = document.createElement('a');
-                    a.href = `data:image/png;base64,${refineImage.base64}`;
-                    a.download = `${brandKit?.name || 'concepto'}-${refineImage.conceptName.replace(/\s+/g, '-')}.png`;
-                    a.click();
-                  }}
-                  className="w-full bg-white hover:bg-gray-100 border border-gray-200 text-gray-500 hover:text-gray-900 text-sm px-4 py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2"
+                  onClick={finishRefine}
+                  disabled={applyStatuses.some(s => s !== 'done')}
+                  className="bg-[#e42820] hover:bg-[#c41f18] disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium px-4 py-2 rounded-xl transition-colors text-sm flex items-center gap-2"
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                  Descargar este concepto
+                  Finalizar
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                 </button>
               </div>
+            </div>
 
-              <div className="space-y-4">
-                {refineHistory.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Aplicados</p>
-                    <div className="space-y-1.5 max-h-32 overflow-y-auto">
-                      {refineHistory.map((h, i) => (
-                        <div key={i} className="bg-white rounded-lg px-3 py-2 text-sm text-gray-500 flex items-start gap-2">
-                          <span className="text-[#e42820] mt-0.5">✓</span>{h}
+            <div className="space-y-6">
+              {selectedConcepts.map((concept, i) => {
+                const status = applyStatuses[i] ?? 'done';
+                const isApplying = status === 'pending' || status === 'applying';
+                const isRefining = refiningIndex === i;
+                const busy = isApplying || isRefining;
+                const history = refineHistories[i] || [];
+                const imageHistory = refineImageHistories[i] || [];
+                const input = refineInputs[i] || '';
+
+                return (
+                  <div key={concept.id} className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+                    <div className="flex flex-col md:flex-row gap-0">
+                      {/* Image */}
+                      <div className="relative md:w-72 shrink-0">
+                        <img
+                          src={`data:image/png;base64,${concept.base64}`}
+                          alt={concept.conceptName}
+                          className={`w-full h-full object-cover transition-all duration-300 ${isRefining ? 'blur-sm' : ''}`}
+                          style={{ maxHeight: '520px', objectFit: 'cover' }}
+                        />
+                        {isApplying && (
+                          <div className="absolute inset-0 bg-white/85 flex flex-col items-center justify-center gap-3 px-6 text-center">
+                            <div className="w-8 h-8 border-[3px] border-[#e42820] border-t-transparent rounded-full animate-spin" />
+                            <p className="text-sm text-gray-700 font-medium">
+                              {status === 'applying' ? 'Aplicando producto...' : 'En cola...'}
+                            </p>
+                            <p className="text-xs text-gray-400">Esto tarda ~60 segundos</p>
+                          </div>
+                        )}
+                        {isRefining && (
+                          <div className="absolute inset-0 bg-white/70 flex flex-col items-center justify-center gap-3">
+                            <div className="w-8 h-8 border-[3px] border-[#e42820] border-t-transparent rounded-full animate-spin" />
+                            <p className="text-sm text-gray-700 font-medium">Aplicando ajuste...</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Controls */}
+                      <div className="flex-1 p-5 space-y-4">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="font-semibold text-gray-900 text-sm">{concept.conceptName}</p>
+                            <p className="text-xs text-gray-400">{i + 1} de {selectedConcepts.length}</p>
+                          </div>
+                          <button
+                            onClick={() => {
+                              const a = document.createElement('a');
+                              a.href = `data:image/png;base64,${concept.base64}`;
+                              a.download = `${brandKit?.name || 'concepto'}-${i + 1}-${concept.conceptName.replace(/\s+/g, '-')}.png`;
+                              a.click();
+                            }}
+                            disabled={isApplying}
+                            className="text-gray-400 hover:text-gray-600 disabled:opacity-30 transition-colors"
+                            title="Descargar"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                          </button>
                         </div>
-                      ))}
+
+                        {history.length > 0 && (
+                          <div className="space-y-1 max-h-20 overflow-y-auto">
+                            {history.map((h, j) => (
+                              <div key={j} className="bg-gray-50 rounded-lg px-3 py-1.5 text-xs text-gray-500 flex items-start gap-1.5">
+                                <span className="text-[#e42820] mt-0.5">✓</span>{h}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="space-y-2">
+                          <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">Ajustes rápidos</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {[
+                              ...(brandKit?.quickAdjustments || []),
+                              ...(productDetailImages.length > 0 && peopleMode === 'none'
+                                ? ['Fondo más oscuro', 'Fondo blanco limpio', 'Más contraste', 'Producto más grande', 'Colores más vibrantes']
+                                : ['Fondo más oscuro', 'Fondo blanco limpio', 'Más contraste', 'Iluminación más suave', 'Colores más vibrantes', 'Modelo mujer joven', 'Modelo hombre joven', 'Solo producto flat lay', 'Agregar texto de marca']
+                              ),
+                            ].map((preset, j) => {
+                              const isClientPreset = j < (brandKit?.quickAdjustments?.length || 0);
+                              return (
+                                <button
+                                  key={`${preset}-${j}`}
+                                  onClick={() => {
+                                    if (!busy) setRefineInputs(prev => { const n = [...prev]; n[i] = preset; return n; });
+                                  }}
+                                  disabled={busy}
+                                  className={`text-xs px-2.5 py-1 rounded-lg transition-colors border disabled:opacity-40 ${
+                                    isClientPreset
+                                      ? 'bg-[#e42820]/10 border-[#e42820]/30 text-[#e42820] hover:bg-[#e42820]/20'
+                                      : 'bg-white hover:bg-gray-100 border-gray-200 text-gray-500 hover:text-gray-900'
+                                  }`}
+                                >
+                                  {preset}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={input}
+                            onChange={e => { if (!busy) setRefineInputs(prev => { const n = [...prev]; n[i] = e.target.value; return n; }); }}
+                            onKeyDown={e => { if (e.key === 'Enter' && !busy && input.trim()) applyRefinement(i); }}
+                            placeholder="O escribí tu ajuste..."
+                            disabled={busy}
+                            className="flex-1 bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] text-sm disabled:opacity-50"
+                          />
+                          <button
+                            onClick={() => applyRefinement(i)}
+                            disabled={!input.trim() || busy}
+                            className="bg-gray-900 hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium px-4 py-2.5 rounded-xl transition-colors text-sm whitespace-nowrap"
+                          >
+                            {isRefining ? 'Aplicando...' : 'Aplicar'}
+                          </button>
+                          {imageHistory.length > 0 && (
+                            <button
+                              onClick={() => undoRefinement(i)}
+                              disabled={busy}
+                              className="bg-white hover:bg-gray-100 border border-gray-200 disabled:opacity-40 text-gray-500 hover:text-gray-900 px-3 py-2.5 rounded-xl transition-colors"
+                              title="Deshacer"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                )}
-
-                <div className="space-y-2">
-                  <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Ajustes rápidos</p>
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      ...(brandKit?.quickAdjustments || []),
-                      ...(productDetailImages.length > 0 && peopleMode === 'none'
-                        ? ['Fondo más oscuro', 'Fondo blanco limpio', 'Fondo con textura industrial', 'Más contraste', 'Producto más grande', 'Producto centrado', 'Agregar sombra al producto', 'Composición más minimalista', 'Colores más vibrantes']
-                        : ['Fondo más oscuro', 'Fondo blanco limpio', 'Más contraste', 'Iluminación más suave', 'Colores más vibrantes', 'Modelo mujer joven', 'Modelo hombre joven', 'Solo producto flat lay', 'Agregar texto de marca']
-                      ),
-                    ].map((preset, i) => {
-                      const isClientPreset = i < (brandKit?.quickAdjustments?.length || 0);
-                      return (
-                        <button
-                          key={`${preset}-${i}`}
-                          onClick={() => setRefineInput(preset)}
-                          className={`text-xs px-3 py-1.5 rounded-lg transition-colors border ${
-                            isClientPreset
-                              ? 'bg-[#e42820]/10 border-[#e42820]/30 text-[#e42820] hover:bg-[#e42820]/20'
-                              : 'bg-white hover:bg-gray-100 border-gray-200 hover:border-[#e42820]/50 text-gray-500 hover:text-gray-900'
-                          }`}
-                        >
-                          {preset}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <input
-                    ref={refineInputRef}
-                    type="text"
-                    value={refineInput}
-                    onChange={e => setRefineInput(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && !loading && applyRefinement()}
-                    placeholder="O escribí tu ajuste..."
-                    disabled={loading}
-                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] text-sm disabled:opacity-50"
-                  />
-                  <div className="flex gap-2">
-                    <button
-                      onClick={applyRefinement}
-                      disabled={!refineInput.trim() || loading}
-                      className="flex-1 bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed text-gray-900 font-medium px-4 py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
-                    >
-                      {loading ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{elapsedSec > 0 ? `${elapsedSec}s...` : 'Aplicando...'}</> : 'Aplicar'}
-                    </button>
-                    {refineImageHistory.length > 0 && (
-                      <button
-                        onClick={undoRefinement}
-                        disabled={loading}
-                        className="bg-white hover:bg-gray-100 border border-gray-200 disabled:opacity-40 text-gray-500 hover:text-gray-900 px-3 py-3 rounded-xl transition-colors flex items-center gap-1.5 text-sm"
-                      >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                        </svg>
-                        Deshacer
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex gap-3 pt-1">
-                  {refineIndex < selectedConcepts.length - 1 ? (
-                    <button
-                      onClick={saveRefinedAndNext}
-                      disabled={loading}
-                      className="flex-1 bg-[#e42820] hover:bg-[#e42820] disabled:opacity-40 text-gray-900 font-medium px-4 py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
-                    >
-                      Guardar y siguiente
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                      </svg>
-                    </button>
-                  ) : (
-                    <button
-                      onClick={finishRefine}
-                      disabled={loading}
-                      className="flex-1 bg-[#e42820] hover:bg-[#e42820] disabled:opacity-40 text-gray-900 font-medium px-4 py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
-                    >
-                      Finalizar
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-              </div>
+                );
+              })}
             </div>
           </div>
         )}
