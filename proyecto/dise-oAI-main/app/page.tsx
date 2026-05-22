@@ -55,9 +55,26 @@ export default function Home() {
   const [refineHistories, setRefineHistories] = useState<string[][]>([]);
   const [refineImageHistories, setRefineImageHistories] = useState<string[][]>([]);
   const [refiningIndex, setRefiningIndex] = useState<number | null>(null);
+  const [applyElapsed, setApplyElapsed] = useState(0);
+  const applyTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useRequireAuth();
   const supabase = createSupabaseBrowser();
+
+  useEffect(() => {
+    const isApplyingAny = applyStatuses.some(s => s === 'applying');
+    if (isApplyingAny) {
+      if (!applyTimerRef.current) {
+        setApplyElapsed(0);
+        applyTimerRef.current = setInterval(() => setApplyElapsed(s => s + 1), 1000);
+      }
+    } else {
+      if (applyTimerRef.current) {
+        clearInterval(applyTimerRef.current);
+        applyTimerRef.current = null;
+      }
+    }
+  }, [applyStatuses]);
 
   const startLoading = (msg: string) => {
     setLoading(true);
@@ -961,12 +978,33 @@ export default function Home() {
                           style={{ maxHeight: '520px', objectFit: 'cover' }}
                         />
                         {isApplying && (
-                          <div className="absolute inset-0 bg-white/85 flex flex-col items-center justify-center gap-3 px-6 text-center">
-                            <div className="w-8 h-8 border-[3px] border-[#e42820] border-t-transparent rounded-full animate-spin" />
-                            <p className="text-sm text-gray-700 font-medium">
-                              {status === 'applying' ? 'Aplicando producto...' : 'En cola...'}
-                            </p>
-                            <p className="text-xs text-gray-400">Esto tarda ~60 segundos</p>
+                          <div className="absolute inset-0 bg-white/90 flex flex-col items-center justify-center gap-3 px-6 text-center">
+                            {status === 'applying' ? (
+                              <>
+                                <div className="w-8 h-8 border-[3px] border-[#e42820] border-t-transparent rounded-full animate-spin" />
+                                <p className="text-sm text-gray-800 font-semibold">
+                                  {applyElapsed < 15 ? 'Analizando el producto...' :
+                                   applyElapsed < 35 ? 'Aplicando al concepto...' :
+                                   applyElapsed < 55 ? 'Refinando detalles...' :
+                                   applyElapsed < 80 ? 'Casi listo...' :
+                                   'Un poco más, aguantá...'}
+                                </p>
+                                <div className="w-full max-w-[160px] bg-gray-200 rounded-full h-1.5">
+                                  <div
+                                    className="bg-[#e42820] h-1.5 rounded-full transition-all duration-1000"
+                                    style={{ width: `${Math.min(92, Math.max(4, (applyElapsed / 90) * 100))}%` }}
+                                  />
+                                </div>
+                                <p className="text-xs text-gray-400 tabular-nums">{applyElapsed}s</p>
+                              </>
+                            ) : (
+                              <>
+                                <div className="w-6 h-6 rounded-full border-2 border-gray-300 flex items-center justify-center">
+                                  <div className="w-2 h-2 rounded-full bg-gray-300" />
+                                </div>
+                                <p className="text-xs text-gray-400">En cola...</p>
+                              </>
+                            )}
                           </div>
                         )}
                         {isRefining && (
