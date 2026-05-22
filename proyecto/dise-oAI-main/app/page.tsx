@@ -1148,7 +1148,30 @@ export default function Home() {
 
               {adaptedImages.length > 0 && (
                 <div className="space-y-3">
-                  <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Adaptaciones generadas</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Adaptaciones generadas</p>
+                    <button
+                      onClick={() => {
+                        adaptedImages.forEach((img, i) => {
+                          const concept = selectedConcepts.find(c => c.id === img.conceptId);
+                          const url = URL.createObjectURL(new Blob([Uint8Array.from(atob(img.base64), c => c.charCodeAt(0))], { type: 'image/png' }));
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `${brandKit?.name || 'concepto'}-${img.label.replace(/\s+/g, '-')}-${concept?.conceptName?.replace(/\s+/g, '-') || i + 1}.png`;
+                          document.body.appendChild(a);
+                          a.click();
+                          document.body.removeChild(a);
+                          setTimeout(() => URL.revokeObjectURL(url), 5000);
+                        });
+                      }}
+                      className="flex items-center gap-1.5 text-xs text-[#e42820] hover:text-[#c41f18] font-medium transition-colors"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      Descargar todas ({adaptedImages.length})
+                    </button>
+                  </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {adaptedImages.map((img, i) => {
                       const concept = selectedConcepts.find(c => c.id === img.conceptId);
