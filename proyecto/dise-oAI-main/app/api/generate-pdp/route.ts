@@ -24,6 +24,31 @@ const PDP_TYPES = [
   { type: 'testimonial', label: 'Testimonial' },
 ] as const;
 
+function isRefusal(text: string): boolean {
+  if (!text || text.length < 30) return true;
+  const lower = text.toLowerCase();
+  return (
+    lower.includes("i'm sorry") || lower.includes("i cannot") || lower.includes("i can't") ||
+    lower.includes("cannot assist") || lower.includes("can't assist") ||
+    lower.includes("lo siento") || lower.includes("no puedo ayudar") || lower.includes("no puedo asistir") ||
+    lower.includes("no es posible") || lower.includes("lamentablemente no")
+  );
+}
+
+// Same detailed prompt as generate-concepts — critical for color/texture fidelity
+const PRODUCT_DESCRIPTION_PROMPT = `Sos un técnico de producto de moda de alta gama. Analizá este producto y describilo con precisión quirúrgica para que pueda ser reproducido EXACTAMENTE por un modelo de IA generativa. Imaginá que quien lee tu descripción no puede ver la foto — tu texto es el único recurso.
+
+Describí en este orden exacto:
+
+1. TIPO DE PRODUCTO: categoría exacta, silueta y corte, largo o dimensiones
+2. COLOR BASE — ES LO MÁS CRÍTICO: describí el color con máxima precisión. NO uses solo el nombre del color. Usá referencias concretas: tono exacto (ej: "beige arena cálido, similar al tono de la arena seca — NO es blanco, NO es gris, tiene un subtono cálido visible"). Describí su saturación (¿vivo o apagado?), temperatura (¿frío o cálido?) y cómo se ve bajo la luz. Para neutros cálidos (beige, arena, tostado, crudo, khaki), aclará explícitamente que NO debe renderizarse como blanco ni gris.
+3. ESTAMPADO / PRINT: describí cada elemento gráfico. Si es color sólido, indicar "color sólido uniforme".
+4. MATERIALES Y TEXTURA: acabado (mate/satinado/brillante), tejido visible, peso visual
+5. DETALLES DE CONFECCIÓN: corte, bolsillos, cierre, terminaciones, cualquier detalle funcional
+6. ELEMENTOS ÚNICOS: lo que diferencia este producto de uno genérico
+
+CRÍTICO: NO menciones ninguna marca, logo ni texto de terceros que aparezca en la foto — esas marcas no deben reproducirse. Solo describí el producto en sí.`;
+
 export async function POST(req: NextRequest) {
   const ctx = await getUserContext();
   if (!ctx) {
@@ -61,30 +86,35 @@ export async function POST(req: NextRequest) {
     img.startsWith('data:') ? img : `data:image/png;base64,${img}`
   );
 
-  // Step 0: describe the product in text so every slide can anchor to it precisely
+  // Step 0: describe the product with the same detailed prompt as generate-concepts
+  // (color subtone, temperature, warm neutral rules — critical for fidelity across 6 slides)
   let productDescription = brief;
   if (productDataUrls.length > 0) {
-    try {
-      const descResponse = await openai.chat.completions.create({
-        model: 'gpt-4o',
-        messages: [{
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: `Describí este producto con precisión quirúrgica en 3-5 oraciones: tipo de prenda/producto, color exacto (subtono, temperatura, cómo se ve bajo la luz), silueta, materiales visibles, detalles únicos. Esta descripción se va a usar para que un modelo de IA reproduzca el producto EXACTAMENTE en 6 imágenes distintas. Sé muy específico con el color — es lo más crítico. NO menciones ninguna marca, logo ni texto que aparezca en la foto.`,
-            },
-            ...productDataUrls.slice(0, 2).map(url => ({
-              type: 'image_url' as const,
-              image_url: { url, detail: 'high' as const },
-            })),
-          ],
-        }],
-        max_tokens: 400,
-      });
-      productDescription = descResponse.choices[0].message.content || brief;
-    } catch (err) {
-      console.error('PDP product description failed, using brief:', err);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const descResponse = await openai.chat.completions.create({
+          model: 'gpt-4o',
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'text', text: PRODUCT_DESCRIPTION_PROMPT },
+              ...productDataUrls.slice(0, 2).map(url => ({
+                type: 'image_url' as const,
+                image_url: { url, detail: 'high' as const },
+              })),
+            ],
+          }],
+          max_tokens: 800,
+        });
+        const desc = descResponse.choices[0].message.content || '';
+        if (!isRefusal(desc)) {
+          productDescription = desc;
+          break;
+        }
+        console.warn(`PDP describe-product attempt ${attempt + 1} returned refusal`);
+      } catch (err) {
+        console.error(`PDP describe-product attempt ${attempt + 1} failed:`, err);
+      }
     }
   }
 
@@ -123,11 +153,11 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
     { type: 'text', text: `BRAND KIT:\n${brandKitContext}\n\nBRIEF:\n${brief}` },
     ...productDataUrls.slice(0, 2).map(url => ({
       type: 'image_url' as const,
-      image_url: { url, detail: 'low' as const },
+      image_url: { url, detail: 'high' as const },
     })),
     ...(hasPeople ? referenceDataUrls.slice(0, 1).map(url => ({
       type: 'image_url' as const,
-      image_url: { url, detail: 'low' as const },
+      image_url: { url, detail: 'high' as const },
     })) : []),
   ];
 
@@ -191,7 +221,8 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
               `Typography: ${brandKit.typography || 'bold sans-serif'}.`,
               'Professional e-commerce product photography or high-end retail graphic design. Square 1:1 format for Shopify / Tienda Nube. Premium quality, clean, conversion-focused.',
               'CRITICAL: show ONLY the exact product described above — same color, same silhouette, same material. Do NOT invent a different product.',
-              'Do NOT reproduce any brand logos, labels, or marks from the reference photos — those images are for product shape/color reference only.',
+              'COLOR ACCURACY — CRITICAL: replicate the product color with pixel-level accuracy. Do NOT shift, lighten, darken, or desaturate. For warm neutrals (beige, sand, stone, khaki): preserve the warm undertone exactly, never render as white or gray.',
+              'Do NOT reproduce any brand logos, labels, or marks from the reference photos — those images are for product shape/color reference only. The only brand mark allowed is from the brand kit.',
               'Do NOT include invented trust badges ("Compra Segura", "Sitio Protegido", "Envío Gratis") unless explicitly in the brief.',
               'Do NOT include button-style CTAs ("Compra ahora", "Buy Now", etc.).',
               'Do NOT include invented prices, discounts, or false metrics.',
