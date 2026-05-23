@@ -76,10 +76,20 @@ export default function PerfilPage() {
           <p className="text-gray-500 text-sm">{email}</p>
         </div>
 
+        {!savedKey && (
+          <div className="bg-[#e42820]/5 border border-[#e42820]/20 rounded-2xl p-5 space-y-1">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="bg-[#e42820] text-white text-xs font-bold px-2 py-0.5 rounded-md">Paso 1 de 2</span>
+            </div>
+            <p className="text-sm font-semibold text-gray-900">Conectá tu cuenta de OpenAI</p>
+            <p className="text-xs text-gray-500">Condimento automatiza la producción de tu marca usando la IA de OpenAI. La clave conecta tu cuenta para que cada pieza se genere con tu identidad de marca — colores, tipografía y estilo — de forma automática.</p>
+          </div>
+        )}
+
         <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-5">
           <div>
             <h2 className="text-base font-semibold text-gray-900 mb-1">API Key de OpenAI</h2>
-            <p className="text-gray-500 text-xs">Las imágenes se generan con tu propia cuenta de OpenAI. Los costos van directamente a tu cuenta.</p>
+            <p className="text-gray-500 text-xs">Los costos de generación van directamente a tu cuenta de OpenAI. Condimento no cobra por uso de IA.</p>
           </div>
 
           {savedKey && (

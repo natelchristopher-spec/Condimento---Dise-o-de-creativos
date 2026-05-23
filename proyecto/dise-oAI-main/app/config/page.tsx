@@ -217,8 +217,18 @@ export default function ConfigPage() {
       <main className="max-w-2xl mx-auto px-6 py-10">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-1">Mi marca</h1>
-          <p className="text-gray-500 text-sm">Configurá el brand kit de tu marca. Se usará en todas tus generaciones.</p>
+          <p className="text-gray-500 text-sm">Configurá tu identidad de marca. Condimento la aplica automáticamente en cada pieza que generés.</p>
         </div>
+
+        {!hasKit && hasApiKey && (
+          <div className="mb-6 bg-[#e42820]/5 border border-[#e42820]/20 rounded-2xl p-5 space-y-1">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="bg-[#e42820] text-white text-xs font-bold px-2 py-0.5 rounded-md">Paso 2 de 2</span>
+            </div>
+            <p className="text-sm font-semibold text-gray-900">Configurá tu marca</p>
+            <p className="text-xs text-gray-500">Cargá colores, tipografía y estilo de comunicación. A partir de acá la IA producirá cada anuncio, carrusel y ficha de producto respetando tu identidad — sin que tengas que explicarla cada vez.</p>
+          </div>
+        )}
 
         {hasApiKey === false && (
           <div className="mb-6 bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-4 text-sm flex items-start gap-3">

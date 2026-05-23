@@ -23,10 +23,10 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: `${window.location.origin}/` },
+        options: { emailRedirectTo: `${window.location.origin}/perfil` },
       });
       if (error) { setError(error.message); }
-      else { setSuccess('Revisá tu email para confirmar la cuenta.'); }
+      else { setSuccess('Te enviamos un email de confirmación. Al hacer click en el link empezás a configurar tu marca.'); }
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) { setError('Email o contraseña incorrectos.'); }
@@ -47,7 +47,7 @@ export default function LoginPage() {
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Condimento</h1>
           <p className="text-gray-500 text-sm mt-1">
-            {isSignUp ? 'Creá tu cuenta' : 'Ingresá a tu cuenta'}
+            {isSignUp ? 'Automatizá la producción de tu marca con IA' : 'Ingresá a tu cuenta'}
           </p>
         </div>
 

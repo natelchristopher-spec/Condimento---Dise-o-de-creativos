@@ -542,6 +542,21 @@ export default function Home() {
         {step === 'brief' && (
           <div className="space-y-8">
 
+            {/* Skeleton mientras carga el estado inicial */}
+            {hasApiKey === null && (
+              <div className="space-y-5 animate-pulse">
+                <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
+                  <div className="h-3 w-24 bg-gray-200 rounded-full" />
+                  <div className="h-12 bg-gray-100 rounded-xl" />
+                  <div className="h-12 bg-gray-100 rounded-xl" />
+                </div>
+                <div className="h-3 w-16 bg-gray-200 rounded-full" />
+                <div className="grid grid-cols-3 gap-3">
+                  {[1,2,3].map(i => <div key={i} className="h-20 bg-white border border-gray-200 rounded-xl" />)}
+                </div>
+              </div>
+            )}
+
             {/* ── DASHBOARD: setup + modules ── */}
             {hasApiKey !== null && (
               <div className="space-y-5">
