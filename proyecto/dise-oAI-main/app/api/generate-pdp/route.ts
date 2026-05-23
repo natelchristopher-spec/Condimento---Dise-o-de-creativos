@@ -292,8 +292,13 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
       response_format: { type: 'json_object' },
     });
 
-    const parsed = JSON.parse(conceptsResponse.choices[0].message.content || '{}');
-    const pdpItems: PdpImageItem[] = parsed.pdp_images || [];
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(conceptsResponse.choices[0].message.content || '{}');
+    } catch {
+      parsed = {};
+    }
+    const pdpItems: PdpImageItem[] = (parsed.pdp_images as PdpImageItem[]) || [];
 
     orderedItems = PDP_TYPES.map(t => {
       const found = pdpItems.find(item => item.type === t.type);
@@ -406,13 +411,17 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
             // images.edit treats all inputs as editable source material and would blend/misuse them.
             if (!base64) {
               try {
-                const imageFiles = await Promise.all(
+                const fileResults = await Promise.allSettled(
                   productDataUrls.slice(0, 2).map(async (dataUrl, i) => {
                     const b64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
                     const mimeType = dataUrl.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
                     return toFile(Buffer.from(b64, 'base64'), `product_${i}.${mimeType === 'image/png' ? 'png' : 'jpg'}`, { type: mimeType });
                   })
                 );
+                const imageFiles = fileResults
+                  .filter((r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof toFile>>> => r.status === 'fulfilled')
+                  .map(r => r.value);
+                if (imageFiles.length === 0) throw new Error('No se pudo procesar ninguna imagen de producto');
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const editResult = await (openai.images.edit as any)({
                   model: 'gpt-image-2',

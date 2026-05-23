@@ -267,8 +267,13 @@ Respondé SOLO con JSON:
     response_format: { type: 'json_object' },
   });
 
-  const parsed = JSON.parse(planResponse.choices[0].message.content || '{}');
-  const pdpItems: PdpPlan[] = parsed.pdp_images || [];
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(planResponse.choices[0].message.content || '{}');
+  } catch {
+    return NextResponse.json({ error: 'Error al procesar el plan. Intentá de nuevo.' }, { status: 500 });
+  }
+  const pdpItems: PdpPlan[] = (parsed.pdp_images as PdpPlan[]) || [];
 
   // Ensure all 6 types present with fixed labels
   const plans: PdpPlan[] = PDP_TYPES.map(t => {

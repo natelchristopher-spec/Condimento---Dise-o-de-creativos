@@ -40,6 +40,11 @@ Si hay menos de 3 colores en alguna paleta, repetí el más relevante o usá una
     response_format: { type: 'json_object' },
   });
 
-  const extracted = JSON.parse(response.choices[0].message.content || '{}');
+  let extracted: Record<string, unknown>;
+  try {
+    extracted = JSON.parse(response.choices[0].message.content || '{}');
+  } catch {
+    return NextResponse.json({ error: 'No se pudo procesar la respuesta del modelo.' }, { status: 500 });
+  }
   return NextResponse.json(extracted);
 }

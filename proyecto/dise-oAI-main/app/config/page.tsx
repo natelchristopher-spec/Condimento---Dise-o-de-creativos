@@ -165,7 +165,10 @@ export default function ConfigPage() {
         body: JSON.stringify({ images: remaining }),
       });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error analizando piezas');
       setForm(f => ({ ...f, referencePiecesThumbnails: remaining, referencePiecesStyle: data.styleDescription }));
+    } catch {
+      alert('No se pudieron analizar las piezas restantes. Intentá de nuevo.');
     } finally {
       setAnalyzingRefs(false);
     }

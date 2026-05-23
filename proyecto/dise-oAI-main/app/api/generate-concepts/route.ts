@@ -306,8 +306,13 @@ El image_prompt debe mencionar colores hex exactos, disposición, estilo y eleme
     response_format: { type: 'json_object' },
   });
 
-  const parsed = JSON.parse(conceptsResponse.choices[0].message.content || '{}');
-  const concepts: ConceptItem[] = parsed.concepts || [];
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(conceptsResponse.choices[0].message.content || '{}');
+  } catch {
+    parsed = {};
+  }
+  const concepts: ConceptItem[] = (parsed.concepts as ConceptItem[]) || [];
 
   // In similar mode: style references lead; otherwise brand visual refs lead.
   const inputImages = [
