@@ -431,6 +431,16 @@ export default function PdpPage() {
                   <span className="font-normal text-gray-400 ml-1">(hasta 3, JPG o PNG)</span>
                 </label>
                 <p className="text-xs text-gray-400">Requerido. Usá fotos claras del producto — fondo blanco o neutro funciona mejor.</p>
+                {mode === 'fashion' && (
+                  <div className="flex gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-3.5 py-2.5">
+                    <svg className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-xs text-amber-700">
+                      <span className="font-semibold">Para indumentaria:</span> subí fotos donde se vean todas las partes de la prenda — frente, espalda y detalles del estampado. Cuanto más completa la vista, mejor el modelo captura colores, corte y print.
+                    </p>
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-3">
                   {productImages.map((img, i) => (
                     <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-gray-200 bg-gray-100">
