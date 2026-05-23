@@ -11,6 +11,7 @@ export default function PerfilPage() {
   const [savedKey, setSavedKey] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [redirecting, setRedirecting] = useState(false);
   const [email, setEmail] = useState('');
   const [showKey, setShowKey] = useState(false);
@@ -31,13 +32,15 @@ export default function PerfilPage() {
   const handleSave = async () => {
     if (!apiKey.trim()) return;
     setSaving(true);
+    setSaveError('');
     const isFirstTime = !savedKey;
     try {
-      await fetch('/api/profile', {
+      const res = await fetch('/api/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ openai_api_key: apiKey.trim() }),
       });
+      if (!res.ok) throw new Error('No se pudo guardar la API key. Intentá de nuevo.');
       setSavedKey(apiKey.trim());
       setSaved(true);
       if (isFirstTime) {
@@ -46,6 +49,8 @@ export default function PerfilPage() {
       } else {
         setTimeout(() => setSaved(false), 2000);
       }
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : 'Error guardando');
     } finally {
       setSaving(false);
     }
@@ -113,6 +118,9 @@ export default function PerfilPage() {
             </div>
           </div>
 
+          {saveError && (
+            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">{saveError}</div>
+          )}
           <button
             onClick={handleSave}
             disabled={!apiKey.trim() || saving || apiKey === savedKey}

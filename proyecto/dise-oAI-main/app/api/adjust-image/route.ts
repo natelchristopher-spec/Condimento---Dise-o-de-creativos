@@ -4,6 +4,17 @@ import { getUserContext } from '@/app/lib/get-user-context';
 
 export const maxDuration = 300;
 
+function getOpenAIErrorMessage(e: unknown): string {
+  const msg = e instanceof Error ? e.message : String(e);
+  if (msg.includes('401') || msg.includes('Incorrect API key') || msg.includes('invalid_api_key'))
+    return 'API key de OpenAI inválida. Verificá la clave en tu perfil.';
+  if (msg.includes('429') || msg.includes('rate limit') || msg.includes('quota'))
+    return 'Límite de uso de OpenAI alcanzado. Esperá unos minutos o revisá tu plan.';
+  if (msg.includes('insufficient_quota'))
+    return 'Sin crédito en tu cuenta de OpenAI. Recargá saldo en platform.openai.com.';
+  return 'Error al conectar con OpenAI. Intentá de nuevo.';
+}
+
 const EDIT_PROMPT = (instruction: string) =>
   `Apply ONLY this specific adjustment: "${instruction}".
 
@@ -43,6 +54,10 @@ export async function POST(req: NextRequest) {
     console.error('adjust-image: images.edit returned empty');
   } catch (err) {
     console.error('adjust-image images.edit failed, trying Responses API:', err);
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes('401') || msg.includes('429') || msg.includes('insufficient_quota') || msg.includes('invalid_api_key')) {
+      return NextResponse.json({ error: getOpenAIErrorMessage(err) }, { status: 500 });
+    }
   }
 
   // Fallback: Responses API with product reference for complex adjustments
@@ -68,6 +83,7 @@ export async function POST(req: NextRequest) {
     }
   } catch (err) {
     console.error('adjust-image Responses API fallback failed:', err);
+    return NextResponse.json({ error: getOpenAIErrorMessage(err) }, { status: 500 });
   }
 
   return NextResponse.json({ error: 'No image returned from API' }, { status: 500 });

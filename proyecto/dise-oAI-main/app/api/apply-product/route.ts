@@ -4,6 +4,17 @@ import { getUserContext } from '@/app/lib/get-user-context';
 
 export const maxDuration = 300;
 
+function getOpenAIErrorMessage(e: unknown): string {
+  const msg = e instanceof Error ? e.message : String(e);
+  if (msg.includes('401') || msg.includes('Incorrect API key') || msg.includes('invalid_api_key'))
+    return 'API key de OpenAI inválida. Verificá la clave en tu perfil.';
+  if (msg.includes('429') || msg.includes('rate limit') || msg.includes('quota'))
+    return 'Límite de uso de OpenAI alcanzado. Esperá unos minutos o revisá tu plan.';
+  if (msg.includes('insufficient_quota'))
+    return 'Sin crédito en tu cuenta de OpenAI. Recargá saldo en platform.openai.com.';
+  return 'Error al conectar con OpenAI. Intentá de nuevo.';
+}
+
 export async function POST(req: NextRequest) {
   const ctx = await getUserContext();
   if (!ctx) return NextResponse.json({ error: 'Configurá tu API key de OpenAI en el perfil.' }, { status: 401 });
@@ -108,6 +119,10 @@ REGLAS de producto:
       console.warn(`apply-product: intento ${attempt} sin bloque de imagen`);
     } catch (err) {
       console.error(`apply-product: intento ${attempt} falló:`, err);
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('401') || msg.includes('429') || msg.includes('insufficient_quota') || msg.includes('invalid_api_key')) {
+        return NextResponse.json({ error: getOpenAIErrorMessage(err) }, { status: 500 });
+      }
       if (attempt === 3) break;
       await new Promise(r => setTimeout(r, attempt * 1500));
     }
@@ -146,6 +161,10 @@ REGLAS de producto:
     console.error('apply-product: fallback images.edit sin b64_json');
   } catch (err) {
     console.error('apply-product: fallback images.edit falló:', err);
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes('401') || msg.includes('429') || msg.includes('insufficient_quota') || msg.includes('invalid_api_key')) {
+      return NextResponse.json({ error: getOpenAIErrorMessage(err) }, { status: 500 });
+    }
   }
 
   // Ambos fallaron — avisar al cliente, nunca descripción sola

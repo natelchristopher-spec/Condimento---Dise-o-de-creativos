@@ -94,32 +94,31 @@ export default function ConfigPage() {
         styleDescription: data.styleDescription || f.styleDescription,
       }));
     } catch (e) {
-      alert(`Error: ${e instanceof Error ? e.message : 'No se pudo leer el PDF'}`);
+      setSaveError(e instanceof Error ? e.message : 'No se pudo leer el PDF');
     } finally {
       setExtracting(false);
       e.target.value = '';
     }
   };
 
-  const compressImage = (file: File): Promise<string> =>
+  const compressImage = (file: File, maxDim = 1024, quality = 0.75): Promise<string> =>
     new Promise(resolve => {
       const reader = new FileReader();
       reader.onload = () => {
         const dataUrl = reader.result as string;
         const img = new Image();
         img.onload = () => {
-          const MAX = 1024;
           let { naturalWidth: w, naturalHeight: h } = img;
           if (!w || !h) { resolve(dataUrl); return; }
-          if (w > MAX || h > MAX) {
-            if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-            else { w = Math.round(w * MAX / h); h = MAX; }
+          if (w > maxDim || h > maxDim) {
+            if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+            else { w = Math.round(w * maxDim / h); h = maxDim; }
           }
           try {
             const canvas = document.createElement('canvas');
             canvas.width = w; canvas.height = h;
             canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
-            const result = canvas.toDataURL('image/jpeg', 0.75);
+            const result = canvas.toDataURL('image/jpeg', quality);
             resolve(result.length > 100 ? result : dataUrl);
           } catch { resolve(dataUrl); }
         };
@@ -146,7 +145,7 @@ export default function ConfigPage() {
       const data = await res.json();
       setForm(f => ({ ...f, referencePiecesThumbnails: allImages, referencePiecesStyle: data.styleDescription }));
     } catch {
-      alert('No se pudieron analizar las piezas. Intentá de nuevo.');
+      setSaveError('No se pudieron analizar las piezas. Intentá de nuevo.');
     } finally {
       setAnalyzingRefs(false);
       e.target.value = '';
@@ -170,18 +169,18 @@ export default function ConfigPage() {
       if (!res.ok) throw new Error(data.error || 'Error analizando piezas');
       setForm(f => ({ ...f, referencePiecesThumbnails: remaining, referencePiecesStyle: data.styleDescription }));
     } catch {
-      alert('No se pudieron analizar las piezas restantes. Intentá de nuevo.');
+      setSaveError('No se pudieron analizar las piezas restantes. Intentá de nuevo.');
     } finally {
       setAnalyzingRefs(false);
     }
   };
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setForm(f => ({ ...f, logoBase64: reader.result as string, logoColorBase64: reader.result as string }));
-    reader.readAsDataURL(file);
+    const compressed = await compressImage(file, 800, 0.85);
+    setForm(f => ({ ...f, logoBase64: compressed, logoColorBase64: compressed }));
+    e.target.value = '';
   };
 
   const handleSave = async () => {

@@ -4,6 +4,21 @@ import { getUserContext } from '@/app/lib/get-user-context';
 
 export const maxDuration = 60;
 
+// Bloquear IPs privadas y metadatos cloud
+function isSafeUrl(rawUrl: string): boolean {
+  try {
+    const parsed = new URL(rawUrl);
+    if (!['http:', 'https:'].includes(parsed.protocol)) return false;
+    const host = parsed.hostname;
+    // Bloquear localhost, IPs privadas y metadata endpoints
+    if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0') return false;
+    if (host === '169.254.169.254' || host === 'metadata.google.internal') return false;
+    if (/^10\./.test(host) || /^192\.168\./.test(host) || /^172\.(1[6-9]|2\d|3[01])\./.test(host)) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function extractText(html: string): string {
   return html
@@ -25,6 +40,9 @@ export async function POST(req: NextRequest) {
 
   const { url }: { url: string } = await req.json();
   if (!url?.startsWith('http')) return NextResponse.json({ error: 'URL inválida.' }, { status: 400 });
+  if (!isSafeUrl(url)) {
+    return NextResponse.json({ error: 'URL no permitida' }, { status: 400 });
+  }
 
   let pageText = '';
   try {
@@ -45,22 +63,37 @@ export async function POST(req: NextRequest) {
 
   const openai = new OpenAI({ apiKey: ctx.openaiApiKey });
 
-  const { choices } = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [
-      {
-        role: 'system',
-        content: `Sos un especialista en publicidad digital para e-commerce latinoamericano. Dado el texto de una página de producto, generás una solicitud de diseño lista para usar en un generador de creativos. La solicitud debe ser específica, incluir TODOS los datos numéricos encontrados (precios, descuentos, cuotas, montos mínimos, fechas) y sugerir el tipo de campaña más efectivo para ese producto. Respondé SOLO con el texto de la solicitud, sin encabezados ni explicaciones.`,
-      },
-      {
-        role: 'user',
-        content: `Página de producto (texto extraído):\n\n${pageText}\n\nGenerá la solicitud de diseño incluyendo: nombre y descripción del producto, precio actual y precio original si hay descuento, porcentaje de descuento, mecánicas de pago (cuotas, sin interés, monto mínimo), beneficios logísticos (envío gratis, retiro en tienda), y una propuesta de qué tipo de creativo haría más sentido para este producto y promoción.`,
-      },
-    ],
-    max_tokens: 600,
-    temperature: 0.4,
-  });
+  try {
+    const { choices } = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: `Sos un especialista en publicidad digital para e-commerce latinoamericano. Dado el texto de una página de producto, generás una solicitud de diseño lista para usar en un generador de creativos. La solicitud debe ser específica, incluir TODOS los datos numéricos encontrados (precios, descuentos, cuotas, montos mínimos, fechas) y sugerir el tipo de campaña más efectivo para ese producto. Respondé SOLO con el texto de la solicitud, sin encabezados ni explicaciones.`,
+        },
+        {
+          role: 'user',
+          content: `Página de producto (texto extraído):\n\n${pageText}\n\nGenerá la solicitud de diseño incluyendo: nombre y descripción del producto, precio actual y precio original si hay descuento, porcentaje de descuento, mecánicas de pago (cuotas, sin interés, monto mínimo), beneficios logísticos (envío gratis, retiro en tienda), y una propuesta de qué tipo de creativo haría más sentido para este producto y promoción.`,
+        },
+      ],
+      max_tokens: 600,
+      temperature: 0.4,
+    });
 
-  const clientRequest = choices[0].message.content?.trim() || '';
-  return NextResponse.json({ clientRequest });
+    const clientRequest = choices[0].message.content?.trim() || '';
+    return NextResponse.json({ clientRequest });
+  } catch (e) {
+    return NextResponse.json({ error: getOpenAIErrorMessage(e) }, { status: 500 });
+  }
+}
+
+function getOpenAIErrorMessage(e: unknown): string {
+  const msg = e instanceof Error ? e.message : String(e);
+  if (msg.includes('401') || msg.includes('Incorrect API key') || msg.includes('invalid_api_key'))
+    return 'API key de OpenAI inválida. Verificá la clave en tu perfil.';
+  if (msg.includes('429') || msg.includes('rate limit') || msg.includes('quota'))
+    return 'Límite de uso de OpenAI alcanzado. Esperá unos minutos o revisá tu plan.';
+  if (msg.includes('insufficient_quota'))
+    return 'Sin crédito en tu cuenta de OpenAI. Recargá saldo en platform.openai.com.';
+  return 'Error al conectar con OpenAI. Intentá de nuevo.';
 }

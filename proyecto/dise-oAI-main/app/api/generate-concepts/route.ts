@@ -18,6 +18,17 @@ function isRefusal(text: string): boolean {
 
 export const maxDuration = 300;
 
+function getOpenAIErrorMessage(e: unknown): string {
+  const msg = e instanceof Error ? e.message : String(e);
+  if (msg.includes('401') || msg.includes('Incorrect API key') || msg.includes('invalid_api_key'))
+    return 'API key de OpenAI inválida. Verificá la clave en tu perfil.';
+  if (msg.includes('429') || msg.includes('rate limit') || msg.includes('quota'))
+    return 'Límite de uso de OpenAI alcanzado. Esperá unos minutos o revisá tu plan.';
+  if (msg.includes('insufficient_quota'))
+    return 'Sin crédito en tu cuenta de OpenAI. Recargá saldo en platform.openai.com.';
+  return 'Error al conectar con OpenAI. Intentá de nuevo.';
+}
+
 type PeopleMode = 'none' | 'ai' | 'real';
 
 interface ConceptItem {
@@ -187,18 +198,23 @@ export async function POST(req: NextRequest) {
   }
 
   if (peopleMode === 'real' && referenceImages.length > 0) {
-    const visionResponse = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'text', text: 'Describí brevemente las características físicas de las personas en estas imágenes: tono de piel, cabello, complexión, edad aproximada. Máximo 2 oraciones.' },
-          ...referenceImages.map(img => ({ type: 'image_url' as const, image_url: { url: img, detail: 'low' as const } })),
-        ],
-      }],
-      max_tokens: 150,
-    });
-    personDescription = visionResponse.choices[0].message.content || '';
+    try {
+      const visionResponse = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Describí brevemente las características físicas de las personas en estas imágenes: tono de piel, cabello, complexión, edad aproximada. Máximo 2 oraciones.' },
+            ...referenceImages.map(img => ({ type: 'image_url' as const, image_url: { url: img, detail: 'low' as const } })),
+          ],
+        }],
+        max_tokens: 150,
+      });
+      personDescription = visionResponse.choices[0].message.content || '';
+    } catch (err) {
+      console.error('describe-person failed:', err);
+      // Non-fatal: continue without person description
+    }
   }
 
   const isProductEcommerce = peopleMode === 'none' && productDetailImages.length > 0;
@@ -297,14 +313,21 @@ El image_prompt debe mencionar colores hex exactos, disposición, estilo y eleme
       : []),
   ];
 
-  const conceptsResponse = await openai.chat.completions.create({
-    model: 'gpt-4o',
-    messages: [
-      { role: 'system', content: systemInstructions },
-      { role: 'user', content: userMessageContent },
-    ],
-    response_format: { type: 'json_object' },
-  });
+  let conceptsResponse;
+  try {
+    conceptsResponse = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: systemInstructions },
+        { role: 'user', content: userMessageContent },
+      ],
+      response_format: { type: 'json_object' },
+    });
+  } catch (e) {
+    const errMsg = getOpenAIErrorMessage(e);
+    const errStream = new ReadableStream({ start(c) { c.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ error: errMsg })}\n\n`)); c.close(); } });
+    return new Response(errStream, { headers: { 'Content-Type': 'text/event-stream' } });
+  }
 
   let parsed: Record<string, unknown>;
   try {

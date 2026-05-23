@@ -6,6 +6,17 @@ import { getUserContext } from '@/app/lib/get-user-context';
 
 export const maxDuration = 60;
 
+function getOpenAIErrorMessage(e: unknown): string {
+  const msg = e instanceof Error ? e.message : String(e);
+  if (msg.includes('401') || msg.includes('Incorrect API key') || msg.includes('invalid_api_key'))
+    return 'API key de OpenAI inválida. Verificá la clave en tu perfil.';
+  if (msg.includes('429') || msg.includes('rate limit') || msg.includes('quota'))
+    return 'Límite de uso de OpenAI alcanzado. Esperá unos minutos o revisá tu plan.';
+  if (msg.includes('insufficient_quota'))
+    return 'Sin crédito en tu cuenta de OpenAI. Recargá saldo en platform.openai.com.';
+  return 'Error al conectar con OpenAI. Intentá de nuevo.';
+}
+
 type FunnelStage = 'TOFU' | 'MOFU' | 'BOFU';
 
 export interface CarouselSlide {
@@ -94,7 +105,7 @@ Respondé SOLO con JSON válido:
       slides: (data.slides || []) as CarouselSlide[],
       post_copy: data.post_copy || null,
     });
-  } catch {
-    return NextResponse.json({ error: 'Error planificando carousel. Intentá de nuevo.' }, { status: 500 });
+  } catch (e) {
+    return NextResponse.json({ error: getOpenAIErrorMessage(e) }, { status: 500 });
   }
 }
