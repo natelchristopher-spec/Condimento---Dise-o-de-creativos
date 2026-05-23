@@ -530,8 +530,8 @@ export default function Home() {
             {hasApiKey !== null && (
               <div className="space-y-5">
 
-                {/* Setup checklist */}
-                <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
+                {/* Setup checklist — only shown when something is missing */}
+                {!(hasApiKey && brandKit) && <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
                   <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Configuración</p>
                   {/* API Key */}
                   <div className={`flex items-center gap-3 p-3.5 rounded-xl border ${hasApiKey ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
@@ -561,7 +561,7 @@ export default function Home() {
                       </Link>
                     )}
                   </div>
-                </div>
+                </div>}
 
                 {/* Module cards */}
                 <div>
