@@ -21,6 +21,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from('sessions')
     .select('id, client_name, client_id, step, brief, data, created_at, updated_at')
+    .eq('user_id', userId)
     .order('updated_at', { ascending: false });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data || []);
@@ -33,6 +34,7 @@ export async function POST(req: NextRequest) {
   const session = await req.json();
   const { error } = await supabase.from('sessions').upsert({
     id: session.id,
+    user_id: userId,
     client_name: session.clientName,
     client_id: session.clientId,
     step: session.step,
@@ -50,7 +52,7 @@ export async function DELETE(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id } = await req.json();
-  const { error } = await supabase.from('sessions').delete().eq('id', id);
+  const { error } = await supabase.from('sessions').delete().eq('id', id).eq('user_id', userId);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }
