@@ -125,20 +125,27 @@ export default function RedesPage() {
     e.target.value = '';
   };
 
-  const suggestTopics = async () => {
+  const suggestTopics = async (append = false) => {
     if (!brandKit) return;
     setLoadingTopics(true);
     setError('');
     try {
+      const excludeTopics = append
+        ? [...usedTopics, ...topics.map(t => t.title)]
+        : usedTopics;
       const res = await fetch('/api/research-carousel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ brandKit, topicHint, excludeTopics: usedTopics }),
+        body: JSON.stringify({ brandKit, topicHint, excludeTopics }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error generando temas');
-      setTopics(data.topics || []);
-      setStep('topics');
+      if (append) {
+        setTopics(prev => [...prev, ...(data.topics || [])]);
+      } else {
+        setTopics(data.topics || []);
+        setStep('topics');
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error generando temas');
     } finally {
@@ -414,16 +421,7 @@ export default function RedesPage() {
                   <h2 className="text-lg font-bold text-gray-900">Elegí un tema</h2>
                   <p className="text-sm text-gray-500">9 ideas organizadas por etapa del funnel. Hacé clic para planificar el carousel.</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={suggestTopics}
-                    disabled={loadingTopics}
-                    className="text-sm text-[#e42820] hover:text-[#c41f18] border border-[#e42820]/30 hover:border-[#e42820]/60 px-4 py-2 rounded-xl transition-colors flex items-center gap-1.5 disabled:opacity-40"
-                  >
-                    {loadingTopics ? <><div className="w-3.5 h-3.5 border-2 border-[#e42820]/30 border-t-[#e42820] rounded-full animate-spin" />Cargando...</> : 'Sugerir más'}
-                  </button>
-                  <button onClick={reset} className="text-sm text-gray-500 hover:text-gray-700 border border-gray-200 hover:border-gray-300 px-4 py-2 rounded-xl transition-colors">Volver</button>
-                </div>
+                <button onClick={reset} className="text-sm text-gray-500 hover:text-gray-700 border border-gray-200 hover:border-gray-300 px-4 py-2 rounded-xl transition-colors">Volver</button>
               </div>
 
               {(['TOFU', 'MOFU', 'BOFU'] as FunnelStage[]).map(stage => {
@@ -463,6 +461,18 @@ export default function RedesPage() {
                   </div>
                 );
               })}
+
+              <button
+                onClick={() => suggestTopics(true)}
+                disabled={loadingTopics}
+                className="w-full border border-dashed border-gray-300 hover:border-[#e42820]/40 hover:bg-[#e42820]/[0.02] rounded-xl py-3.5 text-sm text-gray-400 hover:text-[#e42820] transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+              >
+                {loadingTopics ? (
+                  <><div className="w-3.5 h-3.5 border-2 border-gray-200 border-t-[#e42820] rounded-full animate-spin" />Cargando más ideas...</>
+                ) : (
+                  <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>Ver más ideas</>
+                )}
+              </button>
             </div>
           )}
 
