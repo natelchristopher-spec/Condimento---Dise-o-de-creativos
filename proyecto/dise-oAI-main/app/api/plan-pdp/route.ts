@@ -229,7 +229,7 @@ ${lifestyleInstruction}
 
 5. HOW TO USE
    - 3 pasos de uso numerados. Cada paso es una INSTRUCCIÓN DE ACCIÓN — NO un beneficio.
-   - display_copy.items: array de exactamente 3 strings en español, formato "Verbo + qué/cómo/cuándo". ADAPTÁ AL TIPO DE PRODUCTO. Ej suplemento: "Mezclar 1 medida con 300ml de leche" | Ej tech: "Cargá completamente antes del primer uso" | Ej cosmético: "Aplicá 2 gotas sobre piel limpia" | Ej calzado: "Usá con medias del grosor recomendado"}
+   - display_copy.items: array de exactamente 3 strings en español, formato "Verbo + qué/cómo/cuándo". ADAPTÁ AL TIPO DE PRODUCTO. Ej suplemento: "Mezclar 1 medida con 300ml de leche" | Ej tech: "Cargá completamente antes del primer uso" | Ej cosmético: "Aplicá 2 gotas sobre piel limpia" | Ej calzado: "Usá con medias del grosor recomendado"`}
 
 6. TESTIMONIAL
    - Producto con prueba social: reseña de cliente.
