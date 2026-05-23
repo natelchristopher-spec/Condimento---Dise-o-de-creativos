@@ -13,6 +13,10 @@ export function buildBrandKitContext(brandKit: BrandKit): string {
     ? `\nNEGOCIO — QUÉ VENDE Y A QUIÉN:\n${brandKit.clientRequest}`
     : '';
 
+  const adjustmentsSection = brandKit.quickAdjustments && brandKit.quickAdjustments.length > 0
+    ? `\nAJUSTES APROBADOS POR EL CLIENTE (aplicar siempre en los creativos):\n${brandKit.quickAdjustments.map(a => `- ${a}`).join('\n')}`
+    : '';
+
   return `
 MARCA: ${brandKit.name}
 ${businessSection}
@@ -31,6 +35,7 @@ TIPOGRAFÍA: ${brandKit.typography || 'No especificada'}
 ESTILO Y REGLAS DE MARCA:
 ${brandKit.styleDescription}
 ${referencesSection}
+${adjustmentsSection}
 ${logoSection}
 `.trim();
 }

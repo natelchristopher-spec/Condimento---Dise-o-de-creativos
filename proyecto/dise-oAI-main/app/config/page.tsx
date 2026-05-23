@@ -52,6 +52,7 @@ export default function ConfigPage() {
   const [analyzingRefs, setAnalyzingRefs] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [newAdjustment, setNewAdjustment] = useState('');
 
   useEffect(() => {
@@ -179,23 +180,27 @@ export default function ConfigPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => setForm(f => ({ ...f, logoBase64: reader.result as string }));
+    reader.onload = () => setForm(f => ({ ...f, logoBase64: reader.result as string, logoColorBase64: reader.result as string }));
     reader.readAsDataURL(file);
   };
 
   const handleSave = async () => {
     if (!form.name.trim() || !form.styleDescription.trim()) return;
     setSaving(true);
+    setSaveError('');
     try {
       const kit: BrandKit = { ...form, id: 'user' };
-      await fetch('/api/brand-kits', {
+      const res = await fetch('/api/brand-kits', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(kit),
       });
+      if (!res.ok) throw new Error('Error guardando la marca. Intentá de nuevo.');
       setHasKit(true);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : 'Error guardando');
     } finally {
       setSaving(false);
     }
@@ -433,6 +438,9 @@ export default function ConfigPage() {
           </div>
 
           {/* Save */}
+          {saveError && (
+            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">{saveError}</div>
+          )}
           <button
             onClick={handleSave}
             disabled={!form.name.trim() || !form.styleDescription.trim() || saving}
