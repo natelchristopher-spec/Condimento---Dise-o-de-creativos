@@ -239,7 +239,7 @@ export async function POST(req: NextRequest) {
 2. OFFER FOCUS — la oferta es el protagonista. Pricing grande en tipografía bold, descuento destacado (ej: "30% OFF"), TODAS las mecánicas del brief (cuotas, fechas, envío gratis, retiro). Contraste fuerte. Composición lista para publicar y generar clic.
 3. BENEFIT FOCUS — se vende el resultado, no el producto. Claims claros en tipografía grande, iconos o checkmarks, highlights de beneficios. ¿Qué gana la persona? (ej: más energía, piel más limpia, frío 24h, mayor rendimiento). El producto aparece secundario.
 4. FEATURE FOCUS — se venden características técnicas para elevar percepción de calidad. Closeup/macro del producto, ingredientes o materiales visibles, specs técnicos como copy. Composición de catálogo de alta gama.
-5. PROBLEM / SOLUTION — mostrar el dolor y la solución. Composición split screen, before/after o comparativa visual. Hace obvio el problema que resuelve el producto. Contraste dramático entre el "sin" y el "con".
+5. NEED / BENEFIT — dos zonas visuales en la misma imagen: zona izquierda muestra el contexto SIN el producto (ambiente sin resolver, textura difícil, situación cotidiana incómoda — sin personas en estados negativos), zona derecha muestra el producto como respuesta. Copy que nombra el beneficio clave. Sin transformación de personas, sin imágenes de malestar físico.
 ${slot6}`
     : `MODO FASHION / IN USE — el producto es experimentado por personas. El foco es la experiencia e identidad. CADA concepto usa una estrategia visual completamente distinta Y TODOS deben incluir texto/copy GRANDE Y VISIBLE en la imagen. REGLA DE TEXTO: el copy debe ser tipografía bold, grande, claramente legible — nunca pequeño, nunca sutil, nunca decorativo. Debe ocupar una porción importante de la imagen y ser lo primero que se lee:
 1. OFFER FOCUS — la oferta/promoción/descuento como protagonista visual. Pricing grande en tipografía bold, descuento destacado, mecánicas de venta (cuotas, envío gratis, fechas). La persona muestra/usa el producto mientras el copy de la promo domina. Concepto diseñado para generar clic.
@@ -283,6 +283,7 @@ ${conceptDirections}
 - Si hay descripción de productos, los image_prompts deben referenciar esos productos específicos
 - Si hay referencias visuales de marca, los image_prompts deben seguir ese estilo visual
 - PROHIBIDO inventar: precios, descuentos, porcentajes, cupones, promos, mecánicas. Solo lo que esté EXPLÍCITAMENTE en el brief.
+- IDIOMA OBLIGATORIO: todos los textos, claims, beneficios, features y copy de los image_prompts deben estar en ESPAÑOL. Solo se permite inglés si es el nombre de marca o nombre de producto (ej: "Ultra Mass", "Weight Gainer"). NUNCA generar copy descriptivo en inglés.
 ${isProductEcommerce ? `
 MODO E-COMMERCE CON PRODUCTO: cada image_prompt es una INSTRUCCIÓN DE EDICIÓN para images.edit.
 El modelo recibe la foto del producto y la transforma. Describí:
@@ -376,14 +377,29 @@ El image_prompt debe mencionar colores hex exactos, disposición, estilo y eleme
               styleSuffix,
               productHint,
               styleHint,
+              'IDIOMA — CRÍTICO: TODO el texto generado (beneficios, features, claims, CTAs, etiquetas, descripciones) debe estar en ESPAÑOL. Solo se permite inglés si es parte del nombre de marca o nombre de producto (ej: "Ultra Mass", "Weight Gainer"). Ningún texto descriptivo o de comunicación puede estar en inglés.',
               'do NOT include any invented text, prices, discounts, coupons, promo codes, or promotional copy that is not explicitly in the brief.',
               'do NOT include button-style CTA elements in the image (e.g. "Compra ahora", "Ver más", "Buy Now", "Shop Now" rendered as a visual button, pill, or badge) — those CTAs are configured in the ad platform (Meta, Google), not inside the creative image itself.',
             ].filter(Boolean).join(' ');
 
             try {
-              const base64 = isProductEcommerce && productDetailImages[0]
+              let base64 = isProductEcommerce && productDetailImages[0]
                 ? await editProductForConcept(openai, productDetailImages[0], fullPrompt)
                 : await generateWithGptImage2(openai, fullPrompt, inputImages);
+
+              // Retry with simplified prompt if content filter likely blocked the first attempt
+              if (!base64) {
+                const retryPrompt = [
+                  `Premium advertising creative for ${brandKit.name}.`,
+                  `${concept.concept_name} concept.`,
+                  `Brand colors: ${brandKit.primary1}, ${brandKit.primary2}, ${brandKit.primary3}.`,
+                  `Typography: ${brandKit.typography || 'bold sans-serif'}.`,
+                  'Clean composition, product-focused, professional photography style.',
+                  'Text in Spanish only.',
+                  styleSuffix,
+                ].filter(Boolean).join(' ');
+                base64 = await generateWithGptImage2(openai, retryPrompt, []);
+              }
 
               if (!base64) throw new Error('Image generation returned empty result');
 
