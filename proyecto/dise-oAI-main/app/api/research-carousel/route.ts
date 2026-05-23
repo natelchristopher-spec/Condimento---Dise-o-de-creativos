@@ -49,7 +49,7 @@ Donde: funnel = "TOFU"|"MOFU"|"BOFU", title = nombre del carousel (max 6 palabra
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4o-mini',
       messages: [{ role: 'user', content: prompt }],
       response_format: { type: 'json_object' },
       max_tokens: 1200,

@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const { choices } = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4o-mini',
       messages: [{
         role: 'user',
         content: `Analizá el contenido de esta tienda/negocio online y extraé información de la marca.
