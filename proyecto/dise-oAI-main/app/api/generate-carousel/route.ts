@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
             } else if (slide.role === 'value') {
               copyText = `LIST ITEMS: ${(slide.items || []).map((it, i) => `${i + 1}. "${it}"`).join(' | ')}`;
             } else {
-              copyText = `MAIN TEXT: "${slide.title}" | CTA: "${slide.cta}"`;
+              copyText = `CLOSING TEXT: "${slide.title}"`;
             }
 
             const fullPrompt = [
