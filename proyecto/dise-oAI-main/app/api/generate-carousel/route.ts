@@ -87,13 +87,11 @@ export async function POST(req: NextRequest) {
 
             if (!base64) {
               try {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const result = await (openai.images.generate as any)({
+                const result = await openai.images.generate({
                   model: 'gpt-image-2',
                   prompt: fullPrompt,
                   size: '1024x1536',
                   quality: 'low',
-                  response_format: 'b64_json',
                   n: 1,
                 });
                 base64 = result.data?.[0]?.b64_json || '';

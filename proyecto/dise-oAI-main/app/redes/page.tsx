@@ -227,6 +227,8 @@ export default function RedesPage() {
           } catch { /* ignore malformed chunk */ }
         }
       }
+      // Ensure we exit generating state even if server closed without sending done
+      setStep('done');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error generando carousel');
       setStep('plan');
@@ -526,6 +528,11 @@ export default function RedesPage() {
                       <div className="aspect-[4/5] rounded-xl overflow-hidden border border-gray-200 bg-gray-100 relative">
                         {slide ? (
                           <img src={`data:image/png;base64,${slide.base64}`} alt={labels[i]} className="w-full h-full object-cover" />
+                        ) : step === 'done' ? (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-4 text-center">
+                            <svg className="w-6 h-6 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            <p className="text-xs text-gray-400">No se pudo generar</p>
+                          </div>
                         ) : (
                           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
                             <div className="w-5 h-5 border-2 border-gray-200 border-t-[#e42820] rounded-full animate-spin" />
