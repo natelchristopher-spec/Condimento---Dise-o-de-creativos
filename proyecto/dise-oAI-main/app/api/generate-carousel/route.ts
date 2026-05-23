@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
               slide.image_direction,
               `Brand: ${brandKit.name}. Primary color: ${brandKit.primary1 || '#000000'}. Secondary: ${brandKit.primary2 || '#ffffff'}. Typography: ${brandKit.typography || 'bold sans-serif'}.`,
               `EXACT TEXT TO DISPLAY — use verbatim, do NOT modify or translate: ${copyText}`,
-              `Funnel: ${funnel}. Premium graphic design for Instagram, portrait 4:5. Large bold legible typography. Clean, conversion-focused.`,
+              `Premium graphic design for Instagram, portrait 4:5. Large bold legible typography. Clean, conversion-focused. Do NOT include funnel stage labels or internal tags as visible text.`,
               'ALL TEXT IN THE IMAGE MUST BE IN SPANISH. No invented prices, discounts, or trust badges.',
             ].join(' ');
 
