@@ -99,7 +99,7 @@ ONE short tagline in big bold text. NO bullet lists.`
       ? 'COMPOSITION: extreme closeup of fabric texture, stitching, construction detail or label. NO person. Clinical detail photography feel. Text callouts pointing to specific zones of the garment.'
       : 'COMPOSITION: product in center with 3-4 technical callout lines/arrows pointing to specific product zones. Clinical technical feel. NO benefit bullets — specs and technical data only.',
     howto: isFashion
-      ? 'COMPOSITION: 3 numbered care/washing instructions (1→2→3). Flat lay or product only — NO person. Infographic style with icons (washing machine, iron, etc.). Care symbols if appropriate. USE BRAND PRIMARY COLOR as background — dark or solid-colored background with high-contrast text, NOT white or near-white. Brand identity must be strong.'
+      ? 'COMPOSITION: 3 numbered care/washing instructions (1→2→3). Flat lay or product only — NO person. Infographic style with icons (washing machine, iron, etc.). Care symbols if appropriate. USE BRAND PRIMARY COLOR as background — dark or solid-colored background with high-contrast text, NOT white or near-white. Brand identity must be strong. GARMENT COLOR CRITICAL: reproduce the exact garment color from the reference photos — warm beige/neutral tones must NOT be rendered as white or bleached-out. The garment must read as clearly distinct from the background.'
       : hasPeople
         ? `COMPOSITION: 3 numbered steps (1→2→3). MINIMUM RISK — product in original form in each step. Safe: opening container, measuring, placing, pairing. Avoid: applying to skin, mixing, consuming. Infographic style.`
         : 'COMPOSITION: 3 horizontal numbered steps (1→2→3) infographic style. Product in original form per step. ACTION verbs only.',
@@ -177,7 +177,7 @@ function buildFallbackPrompt(
       return [
         base,
         isFashion
-          ? `Show 3 care/washing instructions as a numbered infographic. Flat lay — no person. Background must be ${bg} (brand primary color) — NOT white or light gray. High contrast between background and text/icons.`
+          ? `Show 3 care/washing instructions as a numbered infographic. Flat lay — no person. Background must be ${bg} (brand primary color) — NOT white or light gray. High contrast between background and text/icons. The garment color must match the reference photos exactly — warm neutral tones (beige, sand, stone) must stay true to their original hue and NOT be rendered white or bleached.`
           : `3 numbered horizontal steps infographic. Product in original form in each step.`,
         items.length
           ? `Steps verbatim: ${items.map((it, i) => `${i + 1}. "${it}"`).join(' | ')}`
