@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
   if (!images?.length) return NextResponse.json({ error: 'No images provided' }, { status: 400 });
 
   const response = await openai.chat.completions.create({
-    model: 'gpt-4o',
+    model: 'gpt-4o-mini',
     messages: [
       {
         role: 'user',
