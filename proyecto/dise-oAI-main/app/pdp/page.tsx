@@ -232,6 +232,8 @@ export default function PdpPage() {
     setMsgIdx(0);
     setStep('generating');
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5 * 60 * 1000); // 5 min
     try {
       const compressedProducts = await Promise.all(
         productImages.map(img => compressToJpeg(img.includes(',') ? img.split(',')[1] : img))
@@ -253,6 +255,7 @@ export default function PdpPage() {
           plans,
           productDescription,
         }),
+        signal: controller.signal,
       });
 
       if (!res.ok) throw new Error(await res.text());
@@ -294,8 +297,14 @@ export default function PdpPage() {
         }
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error generando imágenes PDP');
+      if (e instanceof Error && e.name === 'AbortError') {
+        setError('La generación tardó demasiado. Intentá con menos conceptos.');
+      } else {
+        setError(e instanceof Error ? e.message : 'Error generando imágenes PDP');
+      }
       setStep('review');
+    } finally {
+      clearTimeout(timeout);
     }
   };
 

@@ -116,7 +116,10 @@ export async function POST(req: NextRequest) {
               send(controller, { slide: { id: Math.random().toString(36).slice(2), index: slide.index, role: slide.role, base64 } });
             } else {
               console.error(`Carousel slide ${slide.index} final error:`, lastError);
-              send(controller, { error: `Slide ${slide.index}: no se pudo generar. Intentá de nuevo.` });
+              const errMsg = lastError
+                ? getOpenAIErrorMessage(new Error(lastError))
+                : `Slide ${slide.index}: no se pudo generar. Intentá de nuevo.`;
+              send(controller, { error: errMsg });
             }
           })
         );

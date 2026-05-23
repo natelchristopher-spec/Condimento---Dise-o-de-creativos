@@ -208,6 +208,8 @@ export default function RedesPage() {
     setMsgIdx(0);
     setStep('generating');
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5 * 60 * 1000); // 5 min
     try {
       const compressedProducts = productImages.map(img => img.includes(',') ? img.split(',')[1] : img);
       const res = await fetch('/api/generate-carousel', {
@@ -219,6 +221,7 @@ export default function RedesPage() {
           productImages: compressedProducts,
           funnel: selectedTopic?.funnel || 'TOFU',
         }),
+        signal: controller.signal,
       });
 
       if (!res.ok) throw new Error(await res.text());
@@ -255,8 +258,14 @@ export default function RedesPage() {
       setStep('done');
       if (selectedTopic) setUsedTopics(prev => prev.includes(selectedTopic.title) ? prev : [...prev, selectedTopic.title]);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error generando carousel');
+      if (e instanceof Error && e.name === 'AbortError') {
+        setError('La generación tardó demasiado. Intentá con menos conceptos.');
+      } else {
+        setError(e instanceof Error ? e.message : 'Error generando carousel');
+      }
       setStep('plan');
+    } finally {
+      clearTimeout(timeout);
     }
   };
 

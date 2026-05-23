@@ -244,6 +244,8 @@ export default function Home() {
     setStep('concepts');
     startLoading('Generando conceptos...');
     setError('');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5 * 60 * 1000); // 5 min
     try {
       const res = await fetch('/api/generate-concepts', {
         method: 'POST',
@@ -256,6 +258,7 @@ export default function Home() {
           referenceImages,
           count,
         }),
+        signal: controller.signal,
       });
       if (!res.ok) throw new Error(await res.text());
       const { productDescription: pd, personDescription: prd } = await parseConceptStream(res, img =>
@@ -264,9 +267,14 @@ export default function Home() {
       setProductDescription(pd);
       setPersonDescription(prd);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error generando conceptos');
+      if (e instanceof Error && e.name === 'AbortError') {
+        setError('La generación tardó demasiado. Intentá con menos conceptos.');
+      } else {
+        setError(e instanceof Error ? e.message : 'Error generando conceptos');
+      }
       setStep('brief');
     } finally {
+      clearTimeout(timeout);
       stopLoading();
     }
   };
@@ -280,6 +288,8 @@ export default function Home() {
     setConcepts([...pinned]);
     startLoading(`Generando ${newCount} similar${newCount > 1 ? 'es' : ''}...`);
     setError('');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5 * 60 * 1000); // 5 min
     try {
       const res = await fetch('/api/generate-concepts', {
         method: 'POST',
@@ -293,6 +303,7 @@ export default function Home() {
           styleReferenceImages: pinned.map(c => c.base64),
           count: newCount,
         }),
+        signal: controller.signal,
       });
       if (!res.ok) throw new Error(await res.text());
       const { productDescription: pd } = await parseConceptStream(res, img =>
@@ -301,8 +312,13 @@ export default function Home() {
       if (pd && !productDescription) setProductDescription(pd);
       setSelectedConcepts([]);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error generando similares');
+      if (e instanceof Error && e.name === 'AbortError') {
+        setError('La generación tardó demasiado. Intentá con menos conceptos.');
+      } else {
+        setError(e instanceof Error ? e.message : 'Error generando similares');
+      }
     } finally {
+      clearTimeout(timeout);
       stopLoading();
     }
   };
