@@ -522,70 +522,89 @@ export default function Home() {
           </div>
         )}
 
-        {/* Onboarding wizard — shown when setup is incomplete */}
-        {step === 'brief' && hasApiKey !== null && (!hasApiKey || !brandKit) && (
-          <div className="rounded-2xl border border-gray-200 bg-white p-6 space-y-4">
-            <div>
-              <h2 className="font-semibold text-base">Configuración inicial</h2>
-              <p className="text-sm text-gray-500 mt-0.5">Completá estos dos pasos antes de empezar a generar.</p>
-            </div>
-            <div className="space-y-3">
-              {/* Step 1: API key */}
-              <div className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${
-                hasApiKey ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-[#e42820]/40 bg-[#e42820]/5'
-              }`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
-                  hasApiKey ? 'bg-emerald-500/20 text-emerald-400' : 'bg-[#e42820]/20 text-[#e42820]'
-                }`}>
-                  {hasApiKey ? '✓' : '1'}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-medium ${hasApiKey ? 'text-emerald-400' : 'text-white'}`}>
-                    {hasApiKey ? 'API key de OpenAI configurada' : 'Agregá tu API key de OpenAI'}
-                  </p>
-                  {!hasApiKey && (
-                    <p className="text-xs text-gray-500 mt-0.5">La necesitás para generar imágenes con IA.</p>
-                  )}
-                </div>
-                {!hasApiKey && (
-                  <Link href="/perfil" className="shrink-0 bg-[#e42820] text-gray-900 text-xs font-medium px-4 py-2 rounded-lg hover:bg-[#c41f18] transition-colors">
-                    Configurar
-                  </Link>
-                )}
-              </div>
-
-              {/* Step 2: Brand kit */}
-              <div className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${
-                brandKit ? 'border-emerald-500/30 bg-emerald-500/5' :
-                hasApiKey ? 'border-[#e42820]/40 bg-[#e42820]/5' : 'border-gray-200 bg-white opacity-50'
-              }`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
-                  brandKit ? 'bg-emerald-500/20 text-emerald-400' :
-                  hasApiKey ? 'bg-[#e42820]/20 text-[#e42820]' : 'bg-gray-100 text-gray-500'
-                }`}>
-                  {brandKit ? '✓' : '2'}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-medium ${brandKit ? 'text-emerald-400' : hasApiKey ? 'text-white' : 'text-gray-500'}`}>
-                    {brandKit ? 'Brand kit configurado' : 'Configurá tu brand kit'}
-                  </p>
-                  {!brandKit && hasApiKey && (
-                    <p className="text-xs text-gray-500 mt-0.5">Subí tu manual de marca o completalo manualmente.</p>
-                  )}
-                </div>
-                {!brandKit && hasApiKey && (
-                  <Link href="/config" className="shrink-0 bg-[#e42820] text-gray-900 text-xs font-medium px-4 py-2 rounded-lg hover:bg-[#c41f18] transition-colors">
-                    Configurar
-                  </Link>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Step: BRIEF */}
+        {/* Step: BRIEF / DASHBOARD */}
         {step === 'brief' && (
           <div className="space-y-8">
+
+            {/* ── DASHBOARD: setup + modules ── */}
+            {hasApiKey !== null && (
+              <div className="space-y-5">
+
+                {/* Setup checklist */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Configuración</p>
+                  {/* API Key */}
+                  <div className={`flex items-center gap-3 p-3.5 rounded-xl border ${hasApiKey ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${hasApiKey ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-700'}`}>
+                      {hasApiKey ? '✓' : '1'}
+                    </div>
+                    <p className={`flex-1 text-sm font-medium ${hasApiKey ? 'text-emerald-700' : 'text-amber-800'}`}>
+                      {hasApiKey ? 'API key de OpenAI conectada' : 'Conectá tu API key de OpenAI'}
+                    </p>
+                    {!hasApiKey && (
+                      <Link href="/perfil" className="shrink-0 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
+                        Configurar
+                      </Link>
+                    )}
+                  </div>
+                  {/* Brand kit */}
+                  <div className={`flex items-center gap-3 p-3.5 rounded-xl border ${brandKit ? 'border-emerald-200 bg-emerald-50' : hasApiKey ? 'border-amber-200 bg-amber-50' : 'border-gray-200 bg-gray-50'}`}>
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${brandKit ? 'bg-emerald-100 text-emerald-600' : hasApiKey ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-400'}`}>
+                      {brandKit ? '✓' : '2'}
+                    </div>
+                    <p className={`flex-1 text-sm font-medium ${brandKit ? 'text-emerald-700' : hasApiKey ? 'text-amber-800' : 'text-gray-400'}`}>
+                      {brandKit ? `Marca: ${brandKit.name}` : 'Configurá tu marca'}
+                    </p>
+                    {!brandKit && hasApiKey && (
+                      <Link href="/config" className="shrink-0 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
+                        Configurar
+                      </Link>
+                    )}
+                  </div>
+                </div>
+
+                {/* Module cards */}
+                <div>
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Módulos</p>
+                  <div className="grid grid-cols-3 gap-3">
+                    {([
+                      { href: '/', label: 'Anuncios', desc: 'Conceptos para redes y ads', current: true },
+                      { href: '/pdp', label: 'PDP', desc: '6 imágenes de producto' },
+                      { href: '/redes', label: 'Carruseles IG', desc: '3 slides por carrusel' },
+                    ] as { href: string; label: string; desc: string; current?: boolean }[]).map(mod => {
+                      const enabled = !!(hasApiKey && brandKit);
+                      return (
+                        <div key={mod.href} className="relative group">
+                          <Link
+                            href={enabled ? mod.href : '#'}
+                            onClick={!enabled ? (e: React.MouseEvent) => e.preventDefault() : undefined}
+                            className={`block p-4 rounded-xl border transition-all text-left ${
+                              mod.current && enabled
+                                ? 'border-[#e42820]/40 bg-[#e42820]/5'
+                                : enabled
+                                  ? 'border-gray-200 bg-white hover:border-[#e42820]/40 hover:bg-[#e42820]/[0.02]'
+                                  : 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
+                            }`}
+                          >
+                            <p className={`text-sm font-semibold ${mod.current && enabled ? 'text-[#e42820]' : 'text-gray-900'}`}>{mod.label}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">{mod.desc}</p>
+                          </Link>
+                          {!enabled && (
+                            <div className="absolute inset-0 flex items-end justify-center pb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                              <span className="bg-gray-900/80 text-white text-[10px] rounded-md px-2 py-1 whitespace-nowrap">Completá el setup primero</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── ANUNCIOS FORM — only when setup complete ── */}
+            {hasApiKey && brandKit && (
+            <div className="space-y-8">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-1">Anuncios</h1>
               <p className="text-gray-500 text-sm">Describí lo que necesitás y la IA generará tus creativos y adaptaciones.</p>
@@ -786,6 +805,9 @@ export default function Home() {
                 </>
               )}
             </button>
+          </div>
+        )}
+
           </div>
         )}
 
