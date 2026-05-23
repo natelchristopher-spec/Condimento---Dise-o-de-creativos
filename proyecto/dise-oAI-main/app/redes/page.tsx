@@ -67,6 +67,7 @@ export default function RedesPage() {
   const [loadingTopics, setLoadingTopics] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState(false);
   const [msgIdx, setMsgIdx] = useState(0);
+  const [planCache, setPlanCache] = useState<Record<string, { slides: CarouselSlide[]; post_copy: { caption: string; hashtags: string } | null }>>({});
 
   useEffect(() => {
     fetch('/api/brand-kits').then(r => r.json()).then(kit => {
@@ -146,9 +147,17 @@ export default function RedesPage() {
 
   const selectTopic = async (topic: CarouselTopic) => {
     setSelectedTopic(topic);
-    setLoadingPlan(true);
     setError('');
     setStep('plan');
+
+    // Use cached plan if available — avoids redundant API call and instant UX
+    if (planCache[topic.title]) {
+      setSlides(planCache[topic.title].slides);
+      setPostCopy(planCache[topic.title].post_copy);
+      return;
+    }
+
+    setLoadingPlan(true);
     try {
       const res = await fetch('/api/plan-carousel', {
         method: 'POST',
@@ -157,8 +166,11 @@ export default function RedesPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error planificando carousel');
-      setSlides(data.slides || []);
-      setPostCopy(data.post_copy || null);
+      const slides = data.slides || [];
+      const post_copy = data.post_copy || null;
+      setSlides(slides);
+      setPostCopy(post_copy);
+      setPlanCache(prev => ({ ...prev, [topic.title]: { slides, post_copy } }));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error planificando carousel');
       setStep('topics');
@@ -258,6 +270,7 @@ export default function RedesPage() {
     setCopiedCaption(false);
     setCopiedHashtags(false);
     setError('');
+    setPlanCache({});
   };
 
   const canSuggest = !!brandKit && !!hasApiKey && !loadingTopics;
