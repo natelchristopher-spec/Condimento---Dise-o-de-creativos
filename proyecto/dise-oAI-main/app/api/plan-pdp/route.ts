@@ -56,16 +56,25 @@ CRÍTICO: NO menciones ninguna marca, logo ni texto de terceros que aparezca en 
 
 const PRODUCT_DESCRIPTION_PROMPT_PRODUCT = `Sos un especialista en descripción de productos para e-commerce. Analizá este producto y describilo con precisión para que pueda ser reproducido EXACTAMENTE por un modelo de IA generativa. Tu descripción es el único recurso — quien la lea no puede ver la foto.
 
-Describí en este orden:
+PRIMERO determiná si el producto tiene packaging/envase (suplemento, cosmético, alimento, bebida, limpieza, etc.) o si es un producto sin packaging (electrónico, joyería, mueble, calzado, decoración, libro, accesorio, juguete, etc.).
 
-1. TIPO DE PRODUCTO: nombre exacto, categoría (suplemento, cosmético, alimento, electronico, etc.), variante o sabor visible
+Para PRODUCTOS CON PACKAGING / ENVASE:
+1. TIPO DE PRODUCTO: nombre exacto, categoría, variante o sabor visible
 2. FORMATO / PRESENTACIÓN: tipo de envase (pote, bolsa, botella, caja, tubo), tamaño relativo, cantidad visible en la etiqueta
-3. COLORES DEL ENVASE — CRÍTICO: color exacto del cuerpo del envase (ej: "pote negro mate sin brillo") y color del diseño/etiqueta (ej: "franja roja vibrante en el centro"). Para colores oscuros, aclará que NO debe renderizarse más claro.
-4. DISEÑO GRÁFICO DEL PACKAGING: estilo tipográfico del nombre (bold, condensado, script, etc.), elementos visuales principales (franjas, íconos, geometría, degradados)
-5. TEXTO CLAVE VISIBLE: nombre del producto tal como aparece, sabor/variante si aplica, claims principales visibles en la etiqueta
-6. ELEMENTOS ÚNICOS: forma de la tapa, textura del envase, detalles que distinguen este packaging específico
+3. COLORES DEL ENVASE — CRÍTICO: color exacto del cuerpo y del diseño/etiqueta. Para colores oscuros, aclará que NO debe renderizarse más claro.
+4. DISEÑO GRÁFICO DEL PACKAGING: estilo tipográfico, elementos visuales principales (franjas, íconos, geometría, degradados)
+5. TEXTO CLAVE VISIBLE: nombre del producto, sabor/variante si aplica, claims visibles en la etiqueta
+6. ELEMENTOS ÚNICOS: forma de la tapa, textura, detalles que distinguen este packaging específico
 
-CRÍTICO: NO menciones ninguna marca ni logo de terceros. Solo describí el producto y su packaging.`;
+Para PRODUCTOS SIN PACKAGING (electrónico, joyería, mueble, calzado, decoración, libro, accesorio, etc.):
+1. TIPO DE PRODUCTO: nombre exacto, categoría, función principal
+2. FORMA Y DIMENSIONES: silueta general, proporciones, si es grande/compacto/pequeño/delgado
+3. COLORES — CRÍTICO: color exacto de cada componente visible. Para colores oscuros, aclará que NO debe renderizarse más claro. Para metales, especificá tono (plateado frío, dorado cálido, bronce, etc.).
+4. MATERIALES Y ACABADOS: metales, plásticos, madera, cuero, vidrio, tela, etc. y su acabado (mate/brillante/satinado/texturado)
+5. DETALLES FUNCIONALES O CONSTRUCTIVOS: botones, pantallas, conectores, bisagras, cierres, patas, costuras, herrajes, etc.
+6. ELEMENTOS ÚNICOS: lo que diferencia este producto específico de uno genérico de la misma categoría
+
+CRÍTICO: NO menciones ninguna marca ni logo de terceros. Solo describí el producto en sí.`;
 
 const PDP_TYPES = [
   { type: 'hero',        label: 'Product Hero' },
@@ -182,6 +191,8 @@ Generá exactamente 6 planes de imagen para el carrusel de producto, formato cua
 PRODUCTO (el mismo en TODAS las imágenes):
 ${productDescription}
 
+ANTES DE PLANEAR: determiná la categoría del producto (suplemento, electrónico, cosmético, calzado, joyería, alimento, hogar, decoración, libro, mascota, etc.) y adaptá el tono, el copy y el contenido de cada slide a ese nicho. Los slides deben tener sentido para ESTE producto específico — no para suplementos ni indumentaria si el producto es otro.
+
 TIPOS (en este orden exacto):
 
 ${pdpMode === 'fashion' ? `1. PRODUCT HERO
@@ -207,18 +218,18 @@ ${lifestyleInstruction}
 
 2. BENEFIT IMAGE
    - El producto + exactamente 3 beneficios clave del brief, con íconos y texto bold.
-   - display_copy.items: array de exactamente 3 strings en español. Cada uno: beneficio concreto y corto (máx 5 palabras). Ej: "25g proteína por porción", "Sin azúcar añadida", "Rápida absorción"
+   - display_copy.items: array de exactamente 3 strings en español. Cada uno: beneficio concreto y corto (máx 5 palabras). ADAPTÁ AL TIPO DE PRODUCTO REAL. Ej suplemento: "25g proteína por porción" | Ej tech: "Batería de 72 horas" | Ej cosmética: "Hidratación 24 horas" | Ej calzado: "Suela antideslizante" | Ej hogar: "Madera maciza certificada"
 
 ${lifestyleInstruction}
-   - display_copy.tagline: UNA frase aspiracional corta en español (OBLIGATORIO — máx 6 palabras). Ej: "Entrená sin límites.", "Tu mejor versión, hoy."
+   - display_copy.tagline: UNA frase aspiracional corta en español (OBLIGATORIO — máx 6 palabras). ADAPTÁ AL NICHO. Ej deporte: "Entrená sin límites." | Ej tech: "Tecnología que te libera." | Ej cosmética: "Tu piel, tu mejor versión." | Ej hogar: "Tu espacio, tu refugio."
 
 4. AUTHORITY IMAGE
    - Callouts técnicos apuntando a zonas específicas del producto. Credibilidad y construcción.
-   - display_copy.items: array de 3-4 specs técnicas en español, BASADAS EN LO VISIBLE EN LA FOTO O EL BRIEF — NO inventar. Ej: "40g proteína", "19 vitaminas y minerales", "840 kcal/porción"
+   - display_copy.items: array de 3-4 specs técnicas en español, BASADAS EN LO VISIBLE EN LA FOTO O EL BRIEF — NO inventar datos. ADAPTÁ AL TIPO DE PRODUCTO. Ej suplemento: "40g proteína" | Ej tech: "Pantalla AMOLED 120Hz" | Ej joyería: "Plata 925 certificada" | Ej skincare: "SPF 50+ certificado"
 
 5. HOW TO USE
    - 3 pasos de uso numerados. Cada paso es una INSTRUCCIÓN DE ACCIÓN — NO un beneficio.
-   - display_copy.items: array de exactamente 3 strings en español, formato "Verbo + qué/cómo/cuándo". Ej: "Mezclar 1 medida con 300ml de leche", "Consumir antes o después del entrenamiento", "Tomar 1-2 veces por día"`}
+   - display_copy.items: array de exactamente 3 strings en español, formato "Verbo + qué/cómo/cuándo". ADAPTÁ AL TIPO DE PRODUCTO. Ej suplemento: "Mezclar 1 medida con 300ml de leche" | Ej tech: "Cargá completamente antes del primer uso" | Ej cosmético: "Aplicá 2 gotas sobre piel limpia" | Ej calzado: "Usá con medias del grosor recomendado"}
 
 6. TESTIMONIAL
    - Producto con prueba social: reseña de cliente.

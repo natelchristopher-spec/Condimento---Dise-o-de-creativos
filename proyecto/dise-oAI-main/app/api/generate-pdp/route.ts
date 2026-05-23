@@ -60,16 +60,25 @@ CRÍTICO: NO menciones ninguna marca, logo ni texto de terceros que aparezca en 
 
 const PRODUCT_DESCRIPTION_PROMPT_PRODUCT = `Sos un especialista en descripción de productos para e-commerce. Analizá este producto y describilo con precisión para que pueda ser reproducido EXACTAMENTE por un modelo de IA generativa. Tu descripción es el único recurso — quien la lea no puede ver la foto.
 
-Describí en este orden:
+PRIMERO determiná si el producto tiene packaging/envase (suplemento, cosmético, alimento, bebida, limpieza, etc.) o si es un producto sin packaging (electrónico, joyería, mueble, calzado, decoración, libro, accesorio, juguete, etc.).
 
-1. TIPO DE PRODUCTO: nombre exacto, categoría (suplemento, cosmético, alimento, electrónico, etc.), variante o sabor visible
+Para PRODUCTOS CON PACKAGING / ENVASE:
+1. TIPO DE PRODUCTO: nombre exacto, categoría, variante o sabor visible
 2. FORMATO / PRESENTACIÓN: tipo de envase (pote, bolsa, botella, caja, tubo), tamaño relativo, cantidad visible en la etiqueta
-3. COLORES DEL ENVASE — CRÍTICO: color exacto del cuerpo del envase (ej: "pote negro mate sin brillo") y color del diseño/etiqueta (ej: "franja roja vibrante en el centro"). Para colores oscuros, aclará que NO debe renderizarse más claro.
-4. DISEÑO GRÁFICO DEL PACKAGING: estilo tipográfico del nombre (bold, condensado, script, etc.), elementos visuales principales (franjas, íconos, geometría, degradados)
-5. TEXTO CLAVE VISIBLE: nombre del producto tal como aparece, sabor/variante si aplica, claims principales visibles en la etiqueta
-6. ELEMENTOS ÚNICOS: forma de la tapa, textura del envase, detalles que distinguen este packaging específico
+3. COLORES DEL ENVASE — CRÍTICO: color exacto del cuerpo y del diseño/etiqueta. Para colores oscuros, aclará que NO debe renderizarse más claro.
+4. DISEÑO GRÁFICO DEL PACKAGING: estilo tipográfico, elementos visuales principales (franjas, íconos, geometría, degradados)
+5. TEXTO CLAVE VISIBLE: nombre del producto, sabor/variante si aplica, claims visibles en la etiqueta
+6. ELEMENTOS ÚNICOS: forma de la tapa, textura, detalles que distinguen este packaging específico
 
-CRÍTICO: NO menciones ninguna marca ni logo de terceros. Solo describí el producto y su packaging.`;
+Para PRODUCTOS SIN PACKAGING (electrónico, joyería, mueble, calzado, decoración, libro, accesorio, etc.):
+1. TIPO DE PRODUCTO: nombre exacto, categoría, función principal
+2. FORMA Y DIMENSIONES: silueta general, proporciones, si es grande/compacto/pequeño/delgado
+3. COLORES — CRÍTICO: color exacto de cada componente visible. Para colores oscuros, aclará que NO debe renderizarse más claro. Para metales, especificá tono (plateado frío, dorado cálido, bronce, etc.).
+4. MATERIALES Y ACABADOS: metales, plásticos, madera, cuero, vidrio, tela, etc. y su acabado (mate/brillante/satinado/texturado)
+5. DETALLES FUNCIONALES O CONSTRUCTIVOS: botones, pantallas, conectores, bisagras, cierres, patas, costuras, herrajes, etc.
+6. ELEMENTOS ÚNICOS: lo que diferencia este producto específico de uno genérico de la misma categoría
+
+CRÍTICO: NO menciones ninguna marca ni logo de terceros. Solo describí el producto en sí.`;
 
 const SLIDE_VISUAL_RULES_BASE: Record<string, string> = {
   hero: 'COMPOSITION: product centered, filling 80% of frame, pure white or solid brand-color background, studio lighting, NO text overlays, NO bullets — pure product focus.',
