@@ -315,7 +315,7 @@ export default function RedesPage() {
               <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-gray-700">¿Sobre qué querés hablar? <span className="font-normal text-gray-400">(opcional)</span></label>
-                  <p className="text-xs text-gray-400">Dejalo vacío y la IA sugiere temas basados en tu marca. O escribí una dirección y filtra las ideas.</p>
+                  <p className="text-xs text-gray-400">Si dejás todo vacío, la IA analiza tu marca, detecta tendencias del mercado y propone ideas orgánicas adaptadas a tu nicho. O escribí un tema y filtrá las ideas en esa dirección.</p>
                   <input
                     value={topicHint}
                     onChange={e => setTopicHint(e.target.value)}
