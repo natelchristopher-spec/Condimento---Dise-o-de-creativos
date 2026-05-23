@@ -527,15 +527,9 @@ export default function RedesPage() {
                       )}
 
                       {slide.role === 'cta' && (
-                        <div className="space-y-2">
-                          <div className="space-y-1">
-                            <p className="text-xs text-gray-400">Texto principal</p>
-                            <input value={slide.title || ''} onChange={e => updateSlideField(slide.index, 'title', e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-[#e42820]" />
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-xs text-gray-400">CTA</p>
-                            <input value={slide.cta || ''} onChange={e => updateSlideField(slide.index, 'cta', e.target.value)} placeholder="Ej: Seguinos, Ver más" className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-[#e42820]" />
-                          </div>
+                        <div className="space-y-1">
+                          <p className="text-xs text-gray-400">Texto de cierre</p>
+                          <input value={slide.title || ''} onChange={e => updateSlideField(slide.index, 'title', e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-[#e42820]" />
                         </div>
                       )}
                     </div>

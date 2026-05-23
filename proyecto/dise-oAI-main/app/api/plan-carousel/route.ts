@@ -61,9 +61,8 @@ Slide 2 (VALOR): entrega el contenido prometido en el hook.
 - items: exactamente 3 bullets o pasos numerados. Máximo 5 palabras cada uno.
 - image_direction: ídem
 
-Slide 3 (CIERRE): remata con la marca y un CTA suave.
-- title: máximo 8 palabras, conecta con el tema y cierra el relato
-- cta: máximo 3 palabras, acción de engagement para quien ya ve el contenido — NO usar "Seguinos" (ej: "Guardá este post", "Comentá abajo", "Compartilo ya", "Escribinos hoy")
+Slide 3 (CIERRE): slide de marca que cierra el relato — sin CTA explícito, solo branding.
+- title: máximo 8 palabras, frase de cierre que conecta con el tema y refuerza la marca
 - image_direction: ídem
 
 COPY DEL POST DE INSTAGRAM:
@@ -75,7 +74,7 @@ Respondé SOLO con JSON válido:
   "slides": [
     { "index": 1, "role": "hook", "title": "...", "subtitle": "..." | null, "image_direction": "..." },
     { "index": 2, "role": "value", "items": ["...", "...", "..."], "image_direction": "..." },
-    { "index": 3, "role": "cta", "title": "...", "cta": "...", "image_direction": "..." }
+    { "index": 3, "role": "cta", "title": "...", "image_direction": "..." }
   ],
   "post_copy": {
     "caption": "...",
