@@ -107,6 +107,99 @@ ONE short tagline in big bold text. NO bullet lists.`
   };
 }
 
+function buildFallbackPrompt(
+  item: PdpImageItem,
+  brandKit: BrandKit,
+  pdpMode: PdpMode,
+  hasPeople: boolean,
+): string {
+  const bg = brandKit.primary1 || '#000000';
+  const accent = brandKit.primary2 || '#ffffff';
+  const font = brandKit.typography || 'bold sans-serif';
+  const copy = item.display_copy;
+  const isFashion = pdpMode === 'fashion';
+
+  const base = [
+    `KEEP THE PRODUCT EXACTLY AS PHOTOGRAPHED — same color, shape, packaging, zero modifications.`,
+    `Brand: ${brandKit.name}. Background: ${bg}. Accent color: ${accent}. Font family: ${font}.`,
+    `Square 1:1 format. Professional e-commerce quality. ALL text in Spanish.`,
+    `No invented prices, discounts, trust badges, or button CTAs.`,
+  ].join(' ');
+
+  const items = copy?.items?.filter(Boolean) || [];
+
+  switch (item.type) {
+    case 'hero':
+      return [
+        base,
+        isFashion
+          ? `Place garment as the clear hero — editorial flat lay or worn look. Clean ${bg} or neutral background. Exact garment color and silhouette.`
+          : `Center the product on a clean ${bg} background, filling ~80% of the frame. Studio lighting, minimal composition.`,
+        copy?.tagline ? `Add tagline text: "${copy.tagline}" in large ${font} above or below the product.` : '',
+      ].filter(Boolean).join(' ');
+
+    case 'benefit':
+      return [
+        base,
+        isFashion
+          ? `Show the garment (worn or flat lay) on one side. Display these benefits as bold text on the other side:`
+          : `Product on the left half. Display these benefits on the right side with icons:`,
+        items.length
+          ? items.map((it, i) => `${i + 1}. "${it}"`).join(' | ')
+          : '',
+        `Clean, scannable layout. Bold ${font}.`,
+      ].filter(Boolean).join(' ');
+
+    case 'lifestyle':
+      return [
+        base,
+        hasPeople && !isFashion
+          ? `Product in natural use context with person. Product must stay in its original form — do not show consumption or application.`
+          : isFashion
+            ? `Garment in an aspirational lifestyle scene. Exact garment color and fit preserved.`
+            : `Product in its natural environment without people.`,
+        copy?.tagline ? `Add short tagline: "${copy.tagline}" in large bold text.` : '',
+      ].filter(Boolean).join(' ');
+
+    case 'authority':
+      return [
+        base,
+        isFashion
+          ? `Extreme closeup of fabric texture or construction detail. Clinical, precise feel.`
+          : `Product centered. Add technical callout arrows or lines pointing to product zones.`,
+        items.length
+          ? `Display these technical claims verbatim: ${items.map((it, i) => `${i + 1}. "${it}"`).join(' | ')}`
+          : '',
+        `${font} typography. Credible, premium look.`,
+      ].filter(Boolean).join(' ');
+
+    case 'howto':
+      return [
+        base,
+        isFashion
+          ? `Show 3 care/washing instructions as a numbered infographic. Flat lay — no person.`
+          : `3 numbered horizontal steps infographic. Product in original form in each step.`,
+        items.length
+          ? `Steps verbatim: ${items.map((it, i) => `${i + 1}. "${it}"`).join(' | ')}`
+          : '',
+        `Clear icon + text layout. Educational style.`,
+      ].filter(Boolean).join(' ');
+
+    case 'testimonial':
+      return [
+        base,
+        `Product small (30% of frame) on one side. Large quote text fills the rest.`,
+        copy?.quote ? `Quote verbatim: "${copy.quote}"` : '',
+        copy?.author ? `Author: — ${copy.author}` : '',
+        copy?.rating ? `Rating: ${copy.rating}` : '',
+        `Warm, trustworthy design. ${bg} background.`,
+      ].filter(Boolean).join(' ');
+
+    default:
+      return [base, item.image_prompt.slice(0, 400)].join(' ');
+  }
+}
+
 function buildCopyInjection(display_copy: SlideDisplayCopy | null | undefined, type: string): string {
   if (!display_copy) return '';
   const { items, tagline, quote, author, rating } = display_copy;
@@ -409,6 +502,7 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
             // Fallback: images.edit — accepts input photos, no org verification required
             // Only product photos are passed — person reference photos are NOT included because
             // images.edit treats all inputs as editable source material and would blend/misuse them.
+            // Uses a focused prompt optimized for images.edit (shorter, direct editing instructions).
             if (!base64) {
               try {
                 const fileResults = await Promise.allSettled(
@@ -422,13 +516,14 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
                   .filter((r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof toFile>>> => r.status === 'fulfilled')
                   .map(r => r.value);
                 if (imageFiles.length === 0) throw new Error('No se pudo procesar ninguna imagen de producto');
+                const fallbackPrompt = buildFallbackPrompt(item, brandKit, pdpMode, hasPeople);
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const editResult = await (openai.images.edit as any)({
                   model: 'gpt-image-2',
                   image: imageFiles.length === 1 ? imageFiles[0] : imageFiles,
-                  prompt: fullPrompt,
+                  prompt: fallbackPrompt,
                   size: '1024x1024',
-                  quality: 'medium',
+                  quality: 'high',
                   response_format: 'b64_json',
                   n: 1,
                 });
