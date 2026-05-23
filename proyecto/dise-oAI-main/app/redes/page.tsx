@@ -60,6 +60,9 @@ export default function RedesPage() {
   const [slides, setSlides] = useState<CarouselSlide[]>([]);
   const [generatedSlides, setGeneratedSlides] = useState<(GeneratedSlide | null)[]>([null, null, null]);
   const [generatedCount, setGeneratedCount] = useState(0);
+  const [postCopy, setPostCopy] = useState<{ caption: string; hashtags: string } | null>(null);
+  const [copiedCaption, setCopiedCaption] = useState(false);
+  const [copiedHashtags, setCopiedHashtags] = useState(false);
   const [error, setError] = useState('');
   const [loadingTopics, setLoadingTopics] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState(false);
@@ -155,6 +158,7 @@ export default function RedesPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error planificando carousel');
       setSlides(data.slides || []);
+      setPostCopy(data.post_copy || null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error planificando carousel');
       setStep('topics');
@@ -250,6 +254,9 @@ export default function RedesPage() {
     setSlides([]);
     setGeneratedSlides([null, null, null]);
     setGeneratedCount(0);
+    setPostCopy(null);
+    setCopiedCaption(false);
+    setCopiedHashtags(false);
     setError('');
   };
 
@@ -562,6 +569,45 @@ export default function RedesPage() {
                     Descargar los 3
                   </button>
                   <button onClick={reset} className="text-gray-500 hover:text-gray-700 border border-gray-200 hover:border-gray-300 px-5 py-3 rounded-xl text-sm transition-colors">Nuevo carrusel</button>
+                </div>
+              )}
+
+              {step === 'done' && postCopy && (
+                <div className="border border-gray-200 rounded-xl overflow-hidden mt-2">
+                  <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+                    <h3 className="text-sm font-semibold text-gray-700">Copy del post</h3>
+                    <p className="text-xs text-gray-400 mt-0.5">Listo para pegar en Instagram</p>
+                  </div>
+                  <div className="p-4 space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Caption</span>
+                        <button
+                          onClick={() => { navigator.clipboard.writeText(postCopy.caption); setCopiedCaption(true); setTimeout(() => setCopiedCaption(false), 2000); }}
+                          className="text-xs text-[#e42820] hover:text-[#c41f18] font-medium transition-colors"
+                        >
+                          {copiedCaption ? '¡Copiado!' : 'Copiar'}
+                        </button>
+                      </div>
+                      <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed bg-gray-50 rounded-lg p-3">{postCopy.caption}</p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Hashtags</span>
+                        <button
+                          onClick={() => { navigator.clipboard.writeText(postCopy.hashtags.split(' ').map(h => `#${h}`).join(' ')); setCopiedHashtags(true); setTimeout(() => setCopiedHashtags(false), 2000); }}
+                          className="text-xs text-[#e42820] hover:text-[#c41f18] font-medium transition-colors"
+                        >
+                          {copiedHashtags ? '¡Copiado!' : 'Copiar'}
+                        </button>
+                      </div>
+                      <p className="text-sm text-gray-500 leading-relaxed bg-gray-50 rounded-lg p-3">
+                        {postCopy.hashtags.split(' ').map((h, i) => (
+                          <span key={i} className="text-blue-500 mr-1">#{h}</span>
+                        ))}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

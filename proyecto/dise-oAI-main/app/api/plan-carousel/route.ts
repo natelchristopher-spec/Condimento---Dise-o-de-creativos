@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
 
   const prompt = `Sos un copywriter y director creativo para Instagram.
 
-Planificá un carrusel de EXACTAMENTE 3 slides para esta marca.
+Planificá un carrusel de EXACTAMENTE 3 slides para esta marca Y el copy del post que lo acompaña.
 
 MARCA:
 ${brandKitContext}
@@ -50,7 +50,7 @@ HOOK: ${hook}
 ETAPA DEL FUNNEL: ${funnel}
 REGLA DE CLAIMS: ${claimRule}
 
-ESTRUCTURA — seguila exactamente:
+ESTRUCTURA DE SLIDES — seguila exactamente:
 
 Slide 1 (HOOK): captura la atención, hace que la persona quiera ver más.
 - title: máximo 8 palabras, impactante, usa el hook provisto como base
@@ -66,13 +66,21 @@ Slide 3 (CIERRE): remata con la marca y un CTA suave.
 - cta: máximo 3 palabras, acción específica (ej: "Seguinos", "Escribinos hoy", "Ver colección")
 - image_direction: ídem
 
+COPY DEL POST DE INSTAGRAM:
+- caption: texto que acompaña el carrusel en el feed. Tono conversacional, primera línea gancho para que expandan. 2-3 párrafos cortos. Emojis estratégicos. En español. Adaptado a la etapa del funnel: TOFU=educativo sin vender, MOFU=comparativo/beneficios, BOFU=urgencia/prueba social. NO inventar precios, métricas ni descuentos que no estén en el brand kit.
+- hashtags: string con 12-15 hashtags relevantes al nicho y tema. Mezcla de alcance alto, medio y nicho. Sin el símbolo # en cada uno — solo las palabras separadas por espacios.
+
 Respondé SOLO con JSON válido:
 {
   "slides": [
     { "index": 1, "role": "hook", "title": "...", "subtitle": "..." | null, "image_direction": "..." },
     { "index": 2, "role": "value", "items": ["...", "...", "..."], "image_direction": "..." },
     { "index": 3, "role": "cta", "title": "...", "cta": "...", "image_direction": "..." }
-  ]
+  ],
+  "post_copy": {
+    "caption": "...",
+    "hashtags": "..."
+  }
 }`;
 
   try {
@@ -83,7 +91,10 @@ Respondé SOLO con JSON válido:
       max_tokens: 800,
     });
     const data = JSON.parse(response.choices[0].message.content || '{}');
-    return NextResponse.json({ slides: (data.slides || []) as CarouselSlide[] });
+    return NextResponse.json({
+      slides: (data.slides || []) as CarouselSlide[],
+      post_copy: data.post_copy || null,
+    });
   } catch {
     return NextResponse.json({ error: 'Error planificando carousel. Intentá de nuevo.' }, { status: 500 });
   }
