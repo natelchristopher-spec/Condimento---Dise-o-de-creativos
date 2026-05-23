@@ -226,6 +226,7 @@ export default function Home() {
         try {
           const data = JSON.parse(part.slice(6));
           if (data.image) onImage(data.image);
+          if (data.error) setGeneratingCount(c => Math.max(0, c - 1));
           if (data.done) { productDesc = data.productDescription || ''; personDesc = data.personDescription || ''; }
         } catch { /* ignore malformed chunk */ }
       }
