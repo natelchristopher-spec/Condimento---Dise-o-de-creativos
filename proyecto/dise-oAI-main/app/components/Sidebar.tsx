@@ -82,6 +82,13 @@ export default function Sidebar({ active, onLogout, userEmail }: SidebarProps) {
             PDP
           </NavItem>
           <NavItem
+            href="/calendario"
+            icon="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+            active={active === '/calendario'}
+          >
+            Calendario
+          </NavItem>
+          <NavItem
             href="/email"
             icon="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
             active={active === '/email'}
@@ -146,6 +153,7 @@ export default function Sidebar({ active, onLogout, userEmail }: SidebarProps) {
             { href: '/', label: 'Anuncios' },
             { href: '/redes', label: 'Redes' },
             { href: '/pdp', label: 'PDP' },
+            { href: '/calendario', label: 'Cal.' },
             { href: '/email', label: 'Email' },
             { href: '/crear-marca', label: 'Crear' },
             { href: '/config', label: 'Marca' },

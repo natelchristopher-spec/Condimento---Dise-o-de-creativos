@@ -545,7 +545,7 @@ export default function CrearMarcaPage() {
               <div className="flex gap-3 pt-2">
                 <button
                   onClick={save}
-                  disabled={saving || !eName.trim()}
+                  disabled={saving || logosLoading || !eName.trim()}
                   className="flex-1 bg-[#e42820] hover:bg-[#c41f18] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-6 py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2"
                 >
                   {saving ? (

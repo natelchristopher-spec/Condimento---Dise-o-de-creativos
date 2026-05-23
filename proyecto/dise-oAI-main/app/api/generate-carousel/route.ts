@@ -73,8 +73,8 @@ export async function POST(req: NextRequest) {
                   model: 'gpt-image-2',
                   image: productFile,
                   prompt: fullPrompt,
-                  size: '1024x1536',
-                  quality: 'low',
+                  size: '1024x1024',
+                  quality: 'medium',
                   response_format: 'b64_json',
                   n: 1,
                 });

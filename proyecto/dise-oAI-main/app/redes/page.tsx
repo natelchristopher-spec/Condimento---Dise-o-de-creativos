@@ -146,6 +146,7 @@ export default function RedesPage() {
 
   const selectTopic = async (topic: CarouselTopic) => {
     setSelectedTopic(topic);
+    setPostCopy(null);
     setLoadingPlan(true);
     setError('');
     setStep('plan');
@@ -158,7 +159,7 @@ export default function RedesPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error planificando carousel');
       setSlides(data.slides || []);
-      setPostCopy(data.post_copy || null);
+      setPostCopy(data.post_copy?.caption ? data.post_copy : null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error planificando carousel');
       setStep('topics');

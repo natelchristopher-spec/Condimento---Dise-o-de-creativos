@@ -72,7 +72,7 @@ async function editProductForConcept(
   editPrompt: string,
 ): Promise<string> {
   try {
-    const base64Data = productDataUrl.split(',')[1];
+    const base64Data = productDataUrl.includes(',') ? productDataUrl.split(',')[1] : productDataUrl;
     const buffer = Buffer.from(base64Data, 'base64');
     const imageFile = await toFile(buffer, 'product.jpg', { type: 'image/jpeg' });
     const response = await openai.images.edit({

@@ -74,5 +74,8 @@ Respondé SOLO con JSON válido: { "variations": [ { "variation_name": "...", "i
   const images = imageResults
     .filter((r): r is PromiseFulfilledResult<GeneratedImage> => r.status === 'fulfilled')
     .map(r => r.value);
+  if (images.length === 0) {
+    return NextResponse.json({ error: 'No se pudo generar ninguna variación. Intentá de nuevo.' }, { status: 500 });
+  }
   return NextResponse.json({ images });
 }
