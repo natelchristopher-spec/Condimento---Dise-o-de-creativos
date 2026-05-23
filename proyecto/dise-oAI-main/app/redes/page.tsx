@@ -401,7 +401,7 @@ export default function RedesPage() {
               </div>
 
               <button
-                onClick={suggestTopics}
+                onClick={() => suggestTopics()}
                 disabled={!canSuggest}
                 className="w-full bg-[#e42820] hover:bg-[#c41f18] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-6 py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2"
               >
