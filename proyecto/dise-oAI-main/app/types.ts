@@ -12,6 +12,8 @@ export interface BrandKit {
   // Typography & style
   typography: string;
   styleDescription: string;
+  // Business context
+  clientRequest?: string;
   // Previous pieces analysis
   referencePiecesStyle?: string;
   referencePiecesThumbnails?: string[];

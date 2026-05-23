@@ -9,9 +9,13 @@ export function buildBrandKitContext(brandKit: BrandKit): string {
     ? `\nLOGO — REGLA DE USO POR FONDO:\n- Fondo claro o blanco → usar logo color o logo oscuro\n- Fondo oscuro o imagen con producto → usar logo blanco (negativo)\n- NUNCA colocar el logo color sobre fondo oscuro — siempre la versión que garantice legibilidad`
     : '';
 
+  const businessSection = brandKit.clientRequest
+    ? `\nNEGOCIO — QUÉ VENDE Y A QUIÉN:\n${brandKit.clientRequest}`
+    : '';
+
   return `
 MARCA: ${brandKit.name}
-
+${businessSection}
 PALETA PRIMARIA:
 - Color 1: ${brandKit.primary1}
 - Color 2: ${brandKit.primary2}

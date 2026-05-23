@@ -288,6 +288,18 @@ export default function RedesPage() {
               Configurá tu marca en <a href="/config" className="font-semibold underline">Mi marca</a> antes de continuar.
             </div>
           )}
+          {brandKit && !brandKit.clientRequest && step === 'brief' && (
+            <div className="flex gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+              <svg className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-sm text-amber-700">
+                Tu marca no tiene descripción de negocio. Los temas sugeridos serán más genéricos.{' '}
+                <a href="/config" className="font-semibold underline">Completá "¿Qué vendés y a quién?"</a>{' '}
+                en Mi Marca para mejores resultados.
+              </p>
+            </div>
+          )}
           {hasApiKey === false && (
             <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-700">
               Configurá tu API key de OpenAI en <a href="/perfil" className="font-semibold underline">Perfil</a>.

@@ -32,6 +32,7 @@ const EMPTY_FORM: Omit<BrandKit, 'id'> = {
   secondary3: '#eeeeee',
   typography: '',
   styleDescription: '',
+  clientRequest: '',
   referencePiecesStyle: undefined,
   referencePiecesThumbnails: [],
   logoBase64: undefined,
@@ -295,6 +296,19 @@ export default function ConfigPage() {
               onChange={e => setForm(f => ({ ...f, typography: e.target.value }))}
               placeholder="Ej: Montserrat (principal), Playfair Display (acento)"
               className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] text-sm"
+            />
+          </div>
+
+          {/* Business context */}
+          <div className="space-y-2">
+            <label className="text-sm text-gray-600">¿Qué vendés y a quién?</label>
+            <p className="text-xs text-gray-400">Lo usan los módulos de RRSS y PDP para adaptar el contenido a tu negocio. Cuanto más específico, mejor.</p>
+            <textarea
+              value={form.clientRequest || ''}
+              onChange={e => setForm(f => ({ ...f, clientRequest: e.target.value }))}
+              placeholder="Ej: Vendemos proteínas y suplementos deportivos para hombres de 18-35 años que entrenan en gym. Nuestro diferencial es que somos nacionales, con sabores locales y sin sellos."
+              rows={3}
+              className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] resize-none text-sm leading-relaxed"
             />
           </div>
 

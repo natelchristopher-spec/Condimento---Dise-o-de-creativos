@@ -193,6 +193,7 @@ export default function CrearMarcaPage() {
       logoColorBase64: selected.logoColorBase64,
       logoWhiteBase64: selected.logoWhiteBase64,
       logoDarkBase64: selected.logoDarkBase64,
+      clientRequest: brief.trim() || undefined,
     };
     try {
       const res = await fetch('/api/brand-kits', {
