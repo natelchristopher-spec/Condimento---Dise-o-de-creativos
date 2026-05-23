@@ -68,6 +68,7 @@ export default function RedesPage() {
   const [loadingPlan, setLoadingPlan] = useState(false);
   const [msgIdx, setMsgIdx] = useState(0);
   const [planCache, setPlanCache] = useState<Record<string, { slides: CarouselSlide[]; post_copy: { caption: string; hashtags: string } | null }>>({});
+  const [usedTopics, setUsedTopics] = useState<string[]>([]);
 
   useEffect(() => {
     fetch('/api/brand-kits').then(r => r.json()).then(kit => {
@@ -132,7 +133,7 @@ export default function RedesPage() {
       const res = await fetch('/api/research-carousel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ brandKit, topicHint }),
+        body: JSON.stringify({ brandKit, topicHint, excludeTopics: usedTopics }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error generando temas');
@@ -245,6 +246,7 @@ export default function RedesPage() {
       }
       // Ensure we exit generating state even if server closed without sending done
       setStep('done');
+      if (selectedTopic) setUsedTopics(prev => prev.includes(selectedTopic.title) ? prev : [...prev, selectedTopic.title]);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error generando carousel');
       setStep('plan');
@@ -256,6 +258,18 @@ export default function RedesPage() {
     a.href = `data:image/png;base64,${slide.base64}`;
     a.download = `${brandKit?.name || 'carousel'}-slide-${slide.index}.png`;
     a.click();
+  };
+
+  const goBackToTopics = () => {
+    setStep('topics');
+    setSelectedTopic(null);
+    setSlides([]);
+    setGeneratedSlides([null, null, null]);
+    setGeneratedCount(0);
+    setPostCopy(null);
+    setCopiedCaption(false);
+    setCopiedHashtags(false);
+    setError('');
   };
 
   const reset = () => {
@@ -271,6 +285,7 @@ export default function RedesPage() {
     setCopiedHashtags(false);
     setError('');
     setPlanCache({});
+    setUsedTopics([]);
   };
 
   const canSuggest = !!brandKit && !!hasApiKey && !loadingTopics;
@@ -399,7 +414,16 @@ export default function RedesPage() {
                   <h2 className="text-lg font-bold text-gray-900">Elegí un tema</h2>
                   <p className="text-sm text-gray-500">9 ideas organizadas por etapa del funnel. Hacé clic para planificar el carousel.</p>
                 </div>
-                <button onClick={() => setStep('brief')} className="text-sm text-gray-500 hover:text-gray-700 border border-gray-200 hover:border-gray-300 px-4 py-2 rounded-xl transition-colors">Volver</button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={suggestTopics}
+                    disabled={loadingTopics}
+                    className="text-sm text-[#e42820] hover:text-[#c41f18] border border-[#e42820]/30 hover:border-[#e42820]/60 px-4 py-2 rounded-xl transition-colors flex items-center gap-1.5 disabled:opacity-40"
+                  >
+                    {loadingTopics ? <><div className="w-3.5 h-3.5 border-2 border-[#e42820]/30 border-t-[#e42820] rounded-full animate-spin" />Cargando...</> : 'Sugerir más'}
+                  </button>
+                  <button onClick={reset} className="text-sm text-gray-500 hover:text-gray-700 border border-gray-200 hover:border-gray-300 px-4 py-2 rounded-xl transition-colors">Volver</button>
+                </div>
               </div>
 
               {(['TOFU', 'MOFU', 'BOFU'] as FunnelStage[]).map(stage => {
@@ -412,23 +436,29 @@ export default function RedesPage() {
                       <span className="text-xs text-gray-500">{label} — {desc}</span>
                     </div>
                     <div className="space-y-2">
-                      {stageTopics.map((topic, i) => (
-                        <button
-                          key={i}
-                          onClick={() => selectTopic(topic)}
-                          disabled={loadingPlan}
-                          className="w-full text-left bg-white border border-gray-200 hover:border-[#e42820]/40 hover:bg-[#e42820]/[0.02] rounded-xl p-4 transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-gray-900 group-hover:text-[#e42820] transition-colors">{topic.title}</p>
-                              <p className="text-xs text-gray-500 mt-0.5 italic">&ldquo;{topic.hook}&rdquo;</p>
-                              <p className="text-xs text-gray-400 mt-1">{topic.why}</p>
-                            </div>
-                            <svg className="w-4 h-4 text-gray-300 group-hover:text-[#e42820] shrink-0 mt-0.5 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                          </div>
-                        </button>
-                      ))}
+                      {stageTopics.map((topic, i) => {
+                          const alreadyDone = usedTopics.includes(topic.title);
+                          return (
+                            <button
+                              key={i}
+                              onClick={() => selectTopic(topic)}
+                              disabled={loadingPlan}
+                              className={`w-full text-left border rounded-xl p-4 transition-all disabled:opacity-50 disabled:cursor-not-allowed group ${alreadyDone ? 'bg-gray-50 border-gray-200 opacity-60' : 'bg-white border-gray-200 hover:border-[#e42820]/40 hover:bg-[#e42820]/[0.02]'}`}
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <p className="text-sm font-semibold text-gray-900 group-hover:text-[#e42820] transition-colors">{topic.title}</p>
+                                    {alreadyDone && <span className="text-[10px] font-medium bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded-full">ya generado</span>}
+                                  </div>
+                                  <p className="text-xs text-gray-500 mt-0.5 italic">&ldquo;{topic.hook}&rdquo;</p>
+                                  <p className="text-xs text-gray-400 mt-1">{topic.why}</p>
+                                </div>
+                                <svg className="w-4 h-4 text-gray-300 group-hover:text-[#e42820] shrink-0 mt-0.5 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                              </div>
+                            </button>
+                          );
+                        })}
                     </div>
                   </div>
                 );
@@ -547,7 +577,7 @@ export default function RedesPage() {
                     <h2 className="text-lg font-bold text-gray-900">Carrusel generado</h2>
                     <p className="text-sm text-gray-500">3 slides · Formato 4:5 · Instagram feed</p>
                   </div>
-                  <button onClick={reset} className="text-sm text-gray-500 hover:text-gray-700 border border-gray-200 hover:border-gray-300 px-4 py-2 rounded-xl transition-colors">Nuevo carrusel</button>
+                  <button onClick={goBackToTopics} className="text-sm text-gray-500 hover:text-gray-700 border border-gray-200 hover:border-gray-300 px-4 py-2 rounded-xl transition-colors">Elegir otro tema</button>
                 </div>
               )}
 
@@ -593,7 +623,8 @@ export default function RedesPage() {
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                     Descargar los 3
                   </button>
-                  <button onClick={reset} className="text-gray-500 hover:text-gray-700 border border-gray-200 hover:border-gray-300 px-5 py-3 rounded-xl text-sm transition-colors">Nuevo carrusel</button>
+                  <button onClick={goBackToTopics} className="text-gray-500 hover:text-gray-700 border border-gray-200 hover:border-gray-300 px-5 py-3 rounded-xl text-sm transition-colors">Elegir otro tema</button>
+                  <button onClick={reset} className="text-gray-400 hover:text-gray-600 text-sm transition-colors px-2">Empezar de cero</button>
                 </div>
               )}
 

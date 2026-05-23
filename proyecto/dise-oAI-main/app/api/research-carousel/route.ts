@@ -10,10 +10,14 @@ export async function POST(req: NextRequest) {
   const ctx = await getUserContext();
   if (!ctx) return NextResponse.json({ error: 'Configurá tu API key de OpenAI en el perfil.' }, { status: 401 });
 
-  const { brandKit, topicHint = '' }: { brandKit: BrandKit; topicHint?: string } = await req.json();
+  const { brandKit, topicHint = '', excludeTopics = [] }: { brandKit: BrandKit; topicHint?: string; excludeTopics?: string[] } = await req.json();
 
   const openai = new OpenAI({ apiKey: ctx.openaiApiKey });
   const brandKitContext = buildBrandKitContext(brandKit);
+
+  const excludeSection = excludeTopics.length > 0
+    ? `TEMAS YA GENERADOS — NO repetir ni temas similares:\n${excludeTopics.map(t => `- ${t}`).join('\n')}\n\n`
+    : '';
 
   const prompt = `Sos un estratega de contenido para e-commerce en redes sociales.
 Generá exactamente 9 ideas de carruseles de Instagram para esta marca, 3 por cada etapa del funnel.
@@ -21,7 +25,7 @@ Generá exactamente 9 ideas de carruseles de Instagram para esta marca, 3 por ca
 MARCA:
 ${brandKitContext}
 
-${topicHint ? `DIRECCIÓN SUGERIDA POR EL CLIENTE: ${topicHint}\n` : ''}
+${excludeSection}${topicHint ? `DIRECCIÓN SUGERIDA POR EL CLIENTE: ${topicHint}\n` : ''}
 REGLAS:
 - Exactamente 3 ideas TOFU + 3 MOFU + 3 BOFU = 9 en total
 - Adaptadas al nicho específico de la marca, no genéricas

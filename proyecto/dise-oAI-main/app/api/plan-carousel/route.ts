@@ -63,7 +63,7 @@ Slide 2 (VALOR): entrega el contenido prometido en el hook.
 
 Slide 3 (CIERRE): remata con la marca y un CTA suave.
 - title: máximo 8 palabras, conecta con el tema y cierra el relato
-- cta: máximo 3 palabras, acción específica (ej: "Seguinos", "Escribinos hoy", "Ver colección")
+- cta: máximo 3 palabras, acción de engagement para quien ya ve el contenido — NO usar "Seguinos" (ej: "Guardá este post", "Comentá abajo", "Compartilo ya", "Escribinos hoy")
 - image_direction: ídem
 
 COPY DEL POST DE INSTAGRAM:
