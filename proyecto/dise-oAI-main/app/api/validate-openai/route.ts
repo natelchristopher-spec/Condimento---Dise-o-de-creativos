@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { getUserContext } from '@/app/lib/get-user-context';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
 export const maxDuration = 15;
 
 export async function POST(req: NextRequest) {
-  const ctx = await getUserContext();
-  if (!ctx) return NextResponse.json({ valid: false, error: 'No autenticado.' }, { status: 401 });
+  const cookieStore = await cookies();
+  const client = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } }
+  );
+  const { data: { user } } = await client.auth.getUser();
+  if (!user) return NextResponse.json({ valid: false, error: 'No autenticado.' }, { status: 401 });
 
   const { apiKey } = await req.json();
   if (!apiKey || !String(apiKey).startsWith('sk-')) {
