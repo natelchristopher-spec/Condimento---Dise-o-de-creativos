@@ -32,11 +32,13 @@ export async function POST(req: NextRequest) {
   const openai = new OpenAI({ apiKey: ctx.openaiApiKey });
   const brandKitContext = buildBrandKitContext(brandKit);
 
+  const antiHallucinationRule = 'PROHIBIDO INVENTAR — REGLA ABSOLUTA para todas las etapas: NO agregar ningún dato que no esté explícitamente en el brief o brand kit: teléfonos, URLs, redes sociales (@handles), QR codes, ratings ("4.8/5"), reseñas, número de clientes, certificaciones, claims de ingredientes o materiales, fechas límite, descuentos, mecánicas promocionales, premios o cualquier estadística. Solo datos del brief.';
+
   const claimRule = funnel === 'BOFU'
-    ? 'BOFU — PROHIBICIÓN ESTRICTA: no inventar precios, métricas, porcentajes, descuentos, resultados numéricos ni testimonios. Solo usar datos presentes en el brand kit o en el título del carousel.'
+    ? `BOFU — PROHIBICIÓN ESTRICTA: no inventar precios, métricas, porcentajes, descuentos, resultados numéricos ni testimonios. Solo usar datos presentes en el brand kit o en el título del carousel. ${antiHallucinationRule}`
     : funnel === 'MOFU'
-    ? 'MOFU — usar solo datos del brand kit. No inventar specs técnicas ni comparativas sin base en la información de la marca.'
-    : 'TOFU — contenido educativo genérico del nicho. No mencionar el producto directamente. Solo conocimiento general.';
+    ? `MOFU — usar solo datos del brand kit. No inventar specs técnicas ni comparativas sin base en la información de la marca. ${antiHallucinationRule}`
+    : `TOFU — contenido educativo genérico del nicho. No mencionar el producto directamente. Solo conocimiento general. ${antiHallucinationRule}`;
 
   const prompt = `Sos un copywriter y director creativo para Instagram.
 

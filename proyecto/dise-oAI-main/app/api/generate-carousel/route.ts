@@ -69,6 +69,7 @@ export async function POST(req: NextRequest) {
               `Premium graphic design for Instagram, portrait 4:5. Large bold legible typography. Clean, conversion-focused. Do NOT include funnel stage labels or internal tags as visible text.`,
               'IDIOMA — CRÍTICO: TODO el texto generado (beneficios, features, claims, CTAs, etiquetas) debe estar en ESPAÑOL. Solo se permite inglés si es parte del nombre de marca o nombre de producto. NUNCA generar copy descriptivo en inglés.',
               `CARRUSEL VISUAL COHERENTE: Esta es la slide ${slide.index} de 3. Las 3 slides DEBEN compartir idéntica paleta de colores, mismo peso tipográfico y mismo tratamiento visual general. Se ven como diseñadas por el mismo director creativo en la misma sesión de diseño.`,
+              'ANTI-HALLUCINATION — do NOT invent or add any data not in the brief: phone numbers, URLs, social handles, QR codes, star ratings, testimonials, customer counts, certifications, ingredient/material claims, deadlines, discounts, promotional mechanics, awards, or any statistics. Only use what is explicitly in the brief.',
             ].join(' ');
 
             let base64 = '';

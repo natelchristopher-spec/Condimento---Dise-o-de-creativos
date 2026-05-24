@@ -271,7 +271,7 @@ REGLAS:
 - Estilo PREMIUM, nunca genérico ni clipart
 - Fondos en colores del brand kit, tipografía precisa, máx 2-3 elementos por pieza
 - Si hay descripción de productos, los image_prompts deben referenciar esos productos específicos
-- PROHIBIDO inventar: precios, descuentos, porcentajes, cupones, promos, mecánicas. Solo lo que esté EXPLÍCITAMENTE en el brief.
+- PROHIBIDO INVENTAR — REGLA ABSOLUTA: NO agregar ningún dato que no esté explícitamente en el brief o brand kit: teléfonos, URLs, redes sociales (@handles), QR codes, ratings ("4.8/5"), reseñas, número de clientes, certificaciones, claims de ingredientes o materiales, fechas límite, descuentos, mecánicas promocionales, premios o cualquier estadística. Solo datos del brief.
 ${isProductEcommerce ? `
 MODO E-COMMERCE CON PRODUCTO: cada image_prompt es una INSTRUCCIÓN DE EDICIÓN para images.edit.
 El modelo recibe la foto del producto y la transforma. Describí:
@@ -293,7 +293,7 @@ ${conceptDirections}
 - Fondos en colores del brand kit, tipografía precisa, máx 2-3 elementos por pieza
 - Si hay descripción de productos, los image_prompts deben referenciar esos productos específicos
 - Si hay referencias visuales de marca, los image_prompts deben seguir ese estilo visual
-- PROHIBIDO inventar: precios, descuentos, porcentajes, cupones, promos, mecánicas. Solo lo que esté EXPLÍCITAMENTE en el brief.
+- PROHIBIDO INVENTAR — REGLA ABSOLUTA: NO agregar ningún dato que no esté explícitamente en el brief o brand kit: teléfonos, URLs, redes sociales (@handles), QR codes, ratings ("4.8/5"), reseñas, número de clientes, certificaciones, claims de ingredientes o materiales, fechas límite, descuentos, mecánicas promocionales, premios o cualquier estadística. Solo datos del brief.
 ${isProductEcommerce ? `
 MODO E-COMMERCE CON PRODUCTO: cada image_prompt es una INSTRUCCIÓN DE EDICIÓN para images.edit.
 El modelo recibe la foto del producto y la transforma. Describí:
@@ -381,7 +381,7 @@ El image_prompt debe mencionar colores hex exactos, disposición, estilo y eleme
               productHint,
               styleHint,
               'IDIOMA — CRÍTICO: TODO el texto visible en la imagen debe estar en ESPAÑOL. Solo se permite inglés para nombres de marca o producto. NUNCA generar copy descriptivo, beneficios, claims o CTAs en inglés.',
-              'do NOT include any invented text, prices, discounts, coupons, promo codes, or promotional copy that is not explicitly in the brief.',
+              'ANTI-HALLUCINATION — do NOT invent or add any data not in the brief: phone numbers, URLs, social handles, QR codes, star ratings, testimonials, customer counts, certifications, ingredient/material claims, deadlines, discounts, promotional mechanics, awards, or any statistics. Only use what is explicitly in the brief.',
               'do NOT include button-style CTA elements in the image (e.g. "Compra ahora", "Ver más", "Buy Now", "Shop Now" rendered as a visual button, pill, or badge) — those CTAs are configured in the ad platform (Meta, Google), not inside the creative image itself.',
             ].filter(Boolean).join(' ');
 
