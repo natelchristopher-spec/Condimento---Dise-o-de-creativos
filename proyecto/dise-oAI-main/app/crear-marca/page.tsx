@@ -194,7 +194,7 @@ export default function CrearMarcaPage() {
     }
   };
 
-  const fetchVariantLogos = async (logoPrompt: string, brandName: string) => {
+  const fetchVariantLogos = async (logoPrompt: string, brandName: string, sourceB64?: string) => {
     setLogoWhiteLoading(true);
     setLogoDarkLoading(true);
     setSelected(prev => prev ? { ...prev, logoWhiteBase64: undefined, logoDarkBase64: undefined } : prev);
@@ -202,7 +202,7 @@ export default function CrearMarcaPage() {
       const res = await fetch('/api/create-brand-logos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ logoPrompt, brandName }),
+        body: JSON.stringify({ logoPrompt, brandName, sourceB64 }),
       });
       if (!res.ok) throw new Error('error');
 
@@ -246,7 +246,7 @@ export default function CrearMarcaPage() {
     setES1(concept.secondary1); setES2(concept.secondary2); setES3(concept.secondary3);
     setETypo(concept.typography); setEStyle(concept.styleDescription);
     setStep('edit');
-    fetchVariantLogos(concept.logoPrompt, concept.name);
+    fetchVariantLogos(concept.logoPrompt, concept.name, concept.logoColorBase64);
   };
 
   const save = async () => {
@@ -558,7 +558,7 @@ export default function CrearMarcaPage() {
                   <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Versiones de logo</p>
                   {!logoWhiteLoading && !logoDarkLoading && (!selected.logoWhiteBase64 || !selected.logoDarkBase64) && (
                     <button
-                      onClick={() => selected && fetchVariantLogos(selected.logoPrompt, selected.name)}
+                      onClick={() => selected && fetchVariantLogos(selected.logoPrompt, selected.name, selected.logoColorBase64)}
                       className="text-xs text-[#e42820] hover:underline font-medium"
                     >
                       ↺ Reintentar
