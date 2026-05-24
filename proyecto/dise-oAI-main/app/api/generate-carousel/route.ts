@@ -6,6 +6,17 @@ import type { CarouselSlide } from '../plan-carousel/route';
 
 export const maxDuration = 300;
 
+function getOpenAIErrorMessage(e: unknown): string {
+  const msg = e instanceof Error ? e.message : String(e);
+  if (msg.includes('401') || msg.includes('Incorrect API key') || msg.includes('invalid_api_key'))
+    return 'API key de OpenAI inválida. Verificá la clave en tu perfil.';
+  if (msg.includes('429') || msg.includes('rate limit') || msg.includes('quota'))
+    return 'Límite de uso de OpenAI alcanzado. Esperá unos minutos o revisá tu plan.';
+  if (msg.includes('insufficient_quota'))
+    return 'Sin crédito en tu cuenta de OpenAI. Recargá saldo en platform.openai.com.';
+  return 'Error al conectar con OpenAI. Intentá de nuevo.';
+}
+
 export async function POST(req: NextRequest) {
   const ctx = await getUserContext();
   if (!ctx) {
@@ -56,7 +67,8 @@ export async function POST(req: NextRequest) {
               `Brand: ${brandKit.name}. Primary color: ${brandKit.primary1 || '#000000'}. Secondary: ${brandKit.primary2 || '#ffffff'}. Typography: ${brandKit.typography || 'bold sans-serif'}.`,
               `EXACT TEXT TO DISPLAY — use verbatim, do NOT modify or translate: ${copyText}`,
               `Premium graphic design for Instagram, portrait 4:5. Large bold legible typography. Clean, conversion-focused. Do NOT include funnel stage labels or internal tags as visible text.`,
-              'ALL TEXT IN THE IMAGE MUST BE IN SPANISH. No invented prices, discounts, or trust badges.',
+              'IDIOMA — CRÍTICO: TODO el texto generado (beneficios, features, claims, CTAs, etiquetas) debe estar en ESPAÑOL. Solo se permite inglés si es parte del nombre de marca o nombre de producto. NUNCA generar copy descriptivo en inglés.',
+              `CARRUSEL VISUAL COHERENTE: Esta es la slide ${slide.index} de 3. Las 3 slides DEBEN compartir idéntica paleta de colores, mismo peso tipográfico y mismo tratamiento visual general. Se ven como diseñadas por el mismo director creativo en la misma sesión de diseño.`,
             ].join(' ');
 
             let base64 = '';
@@ -101,11 +113,33 @@ export async function POST(req: NextRequest) {
               }
             }
 
+            if (!base64) {
+              try {
+                const primary1 = brandKit.primary1 || '#000000';
+                const primary2 = brandKit.primary2 || '#ffffff';
+                const simplifiedPrompt = `Premium advertising slide for ${brandKit.name}, slide ${slide.index} of 3. Brand colors: ${primary1}, ${primary2}. Clean typography, Spanish text only. Portrait 4:5, clean composition.`;
+                const result = await openai.images.generate({
+                  model: 'gpt-image-2',
+                  prompt: simplifiedPrompt,
+                  size: '1024x1536',
+                  quality: 'low',
+                  n: 1,
+                });
+                base64 = result.data?.[0]?.b64_json || '';
+              } catch (err) {
+                lastError = err instanceof Error ? err.message : String(err);
+                console.error(`Carousel slide ${slide.index} simplified retry failed:`, err);
+              }
+            }
+
             if (base64) {
               send(controller, { slide: { id: Math.random().toString(36).slice(2), index: slide.index, role: slide.role, base64 } });
             } else {
               console.error(`Carousel slide ${slide.index} final error:`, lastError);
-              send(controller, { error: `Slide ${slide.index}: no se pudo generar. Intentá de nuevo.` });
+              const errMsg = lastError
+                ? getOpenAIErrorMessage(new Error(lastError))
+                : `Slide ${slide.index}: no se pudo generar. Intentá de nuevo.`;
+              send(controller, { error: errMsg });
             }
           })
         );
