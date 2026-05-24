@@ -454,27 +454,36 @@ export default function Home() {
   const generateAdaptations = async () => {
     if (adaptFormats.length === 0 || selectedConcepts.length === 0) return;
     setGeneratingAdaptations(true);
+    const FORMAT_LABELS: Record<string, string> = {
+      story: 'Story 9:16', feed45: 'Feed 4:5', square: 'Cuadrado 1:1', landscape: 'Landscape 16:9',
+      pmax_square: 'PMax 1:1', pmax_landscape: 'PMax 1.91:1', pmax_portrait: 'PMax 4:5',
+      banner_desktop: 'Banner Desktop', banner_mobile: 'Banner Mobile', webpush: 'Webpush', mailing: 'Mailing',
+    };
+    const allResults: { format: string; label: string; conceptId: string; base64: string }[] = [];
     try {
-      const results = await Promise.all(
-        selectedConcepts.flatMap(concept =>
+      // Process concepts sequentially to avoid rate-limiting OpenAI with too many parallel calls.
+      // Formats within each concept still run in parallel (same base image, manageable load).
+      for (const concept of selectedConcepts) {
+        const results = await Promise.all(
           adaptFormats.map(async format => {
-            const res = await fetch('/api/adapt-size', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ imageBase64: concept.base64, format }),
-            });
-            if (!res.ok) return null;
-            const data = await res.json();
-            const FORMAT_LABELS: Record<string, string> = {
-              story: 'Story 9:16', feed45: 'Feed 4:5', square: 'Cuadrado 1:1', landscape: 'Landscape 16:9',
-              pmax_square: 'PMax 1:1', pmax_landscape: 'PMax 1.91:1', pmax_portrait: 'PMax 4:5',
-              banner_desktop: 'Banner Desktop', banner_mobile: 'Banner Mobile', webpush: 'Webpush', mailing: 'Mailing',
-            };
-            return { format, label: FORMAT_LABELS[format] || format, conceptId: concept.id, base64: data.base64 };
+            for (let attempt = 0; attempt < 2; attempt++) {
+              const res = await fetch('/api/adapt-size', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imageBase64: concept.base64, format }),
+              });
+              if (res.ok) {
+                const data = await res.json();
+                return { format, label: FORMAT_LABELS[format] || format, conceptId: concept.id, base64: data.base64 };
+              }
+              if (attempt === 0) await new Promise(r => setTimeout(r, 1500));
+            }
+            return null;
           })
-        )
-      );
-      setAdaptedImages(results.filter(Boolean) as { format: string; label: string; conceptId: string; base64: string }[]);
+        );
+        allResults.push(...(results.filter(Boolean) as { format: string; label: string; conceptId: string; base64: string }[]));
+      }
+      setAdaptedImages(allResults);
     } finally {
       setGeneratingAdaptations(false);
     }

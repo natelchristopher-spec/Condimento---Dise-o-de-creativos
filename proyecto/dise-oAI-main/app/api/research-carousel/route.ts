@@ -32,14 +32,16 @@ export async function POST(req: NextRequest) {
 
   const prompt = `Sos un estratega de contenido para e-commerce en redes sociales.
 Generá exactamente 9 ideas de carruseles de Instagram para esta marca, 3 por cada etapa del funnel.
-
+${topicHint ? `
+TEMA PRINCIPAL — PRIORITARIO: "${topicHint}"
+TODAS las ideas deben girar en torno a este tema. El brand kit da el contexto de marca, pero el tema del usuario es la restricción principal.
+` : ''}
 MARCA:
 ${brandKitContext}
 
-${excludeSection}${topicHint ? `DIRECCIÓN SUGERIDA POR EL CLIENTE: ${topicHint}\n` : ''}
-REGLAS:
+${excludeSection}REGLAS:
 - Exactamente 3 ideas TOFU + 3 MOFU + 3 BOFU = 9 en total
-- Adaptadas al nicho específico de la marca, no genéricas
+- Adaptadas al nicho específico de la marca, no genéricas${topicHint ? `\n- OBLIGATORIO: todas las ideas deben desarrollar el tema "${topicHint}" desde distintos ángulos del funnel` : ''}
 - TOFU: educativo, entretenimiento o awareness — sin vender directamente
 - MOFU: el producto/servicio entra en consideración — how-to, comparativas, spotlights
 - BOFU: conversión — oferta, prueba social, objeciones resueltas, urgencia
