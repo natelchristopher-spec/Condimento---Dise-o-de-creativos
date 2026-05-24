@@ -92,6 +92,7 @@ export async function POST(req: NextRequest) {
   const {
     brief, brandKit, pdpMode = 'product', peopleMode = 'none',
     productImages = [], referenceImages = [],
+    personDescription = '',
   }: {
     brief: string;
     brandKit: BrandKit;
@@ -99,6 +100,7 @@ export async function POST(req: NextRequest) {
     peopleMode: PeopleMode;
     productImages: string[];
     referenceImages: string[];
+    personDescription?: string;
   } = await req.json();
 
   const descriptionPrompt = pdpMode === 'fashion'
@@ -185,13 +187,19 @@ SOLO CONTEXTO — NO mostrar acción de consumo/aplicación:
 - Comida / suplemento para mascotas → producto en contexto, mascota cerca pero NO comiendo
 - Pintura / barniz / adhesivo / sellador → envase solo o en mano cerrado`;
 
+  const personGuide = hasPeople && personDescription
+    ? referenceDataUrls.length > 0
+      ? `NOTA — descripción adicional de la persona: "${personDescription}". La foto de referencia es la guía visual principal; esta descripción complementa detalles que no se ven claramente en la foto.`
+      : `PERSONA A GENERAR: "${personDescription}". En los slides que incluyan personas, generá una persona que coincida con esta descripción.`
+    : '';
+
   const systemPrompt = `Sos un director creativo senior especializado en PDPs de e-commerce.
 Generá exactamente 6 planes de imagen para el carrusel de producto, formato cuadrado 1:1.
 
 PRODUCTO (el mismo en TODAS las imágenes):
 ${productDescription}
 
-ANTES DE PLANEAR: determiná la categoría del producto (suplemento, electrónico, cosmético, calzado, joyería, alimento, hogar, decoración, libro, mascota, etc.) y adaptá el tono, el copy y el contenido de cada slide a ese nicho. Los slides deben tener sentido para ESTE producto específico — no para suplementos ni indumentaria si el producto es otro.
+${personGuide ? `${personGuide}\n\n` : ''}ANTES DE PLANEAR: determiná la categoría del producto (suplemento, electrónico, cosmético, calzado, joyería, alimento, hogar, decoración, libro, mascota, etc.) y adaptá el tono, el copy y el contenido de cada slide a ese nicho. Los slides deben tener sentido para ESTE producto específico — no para suplementos ni indumentaria si el producto es otro.
 
 TIPOS (en este orden exacto):
 
