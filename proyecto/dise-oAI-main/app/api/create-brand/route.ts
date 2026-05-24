@@ -15,11 +15,11 @@ interface RawConcept {
   logo_prompt: string;
 }
 
-async function generateColorLogo(openai: OpenAI, prompt: string): Promise<string> {
+async function generateColorLogo(openai: OpenAI, name: string, prompt: string): Promise<string> {
   try {
     const result = await openai.images.generate({
       model: 'gpt-image-2',
-      prompt: `${prompt} Pure white background. Flat minimal vector logo design, professional brand identity, clean lines, scalable, no photorealism, no shadows, no 3D effects.`,
+      prompt: `BRAND NAME — render this text EXACTLY as written, letter by letter, with zero modifications: "${name}". Do NOT add letters, remove letters, merge letters, or change capitalization. The word "${name}" must appear in the logo exactly as spelled. ${prompt} Pure white background. Flat minimal vector logo design, professional brand identity, clean lines, scalable, no photorealism, no shadows, no 3D effects.`,
       size: '1024x1024',
       quality: 'medium',
       n: 1,
@@ -88,10 +88,10 @@ Respondé SOLO con JSON: { "concepts": [ {...}, {...}, {...} ] }`;
 
   // Generate color logos for all 3 concepts in parallel
   const logoResults = await Promise.allSettled(
-    rawConcepts.map(c => generateColorLogo(openai, c.logo_prompt))
+    rawConcepts.map((c: RawConcept) => generateColorLogo(openai, c.name, c.logo_prompt))
   );
 
-  const concepts = rawConcepts.map((c, i) => ({
+  const concepts = rawConcepts.map((c: RawConcept, i) => ({
     name: c.name,
     nameRationale: c.name_rationale,
     tagline: c.tagline,

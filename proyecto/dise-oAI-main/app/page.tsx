@@ -41,6 +41,7 @@ export default function HomePage() {
   useRequireAuth();
   const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
   const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
+  const [kitLoading, setKitLoading] = useState(true);
   const [email, setEmail] = useState('');
   const supabase = createSupabaseBrowser();
 
@@ -49,7 +50,7 @@ export default function HomePage() {
       if (data.user) setEmail(data.user.email || '');
     });
     fetch('/api/profile').then(r => r.json()).then(d => setHasApiKey(!!d.openai_api_key)).catch(() => setHasApiKey(false));
-    fetch('/api/brand-kits').then(r => r.json()).then(d => { if (d && !d.error) setBrandKit(d); }).catch(console.error);
+    fetch('/api/brand-kits').then(r => r.json()).then(d => { if (d && !d.error) setBrandKit(d); }).catch(console.error).finally(() => setKitLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -58,7 +59,7 @@ export default function HomePage() {
     window.location.href = '/login';
   };
 
-  const ready = !!(hasApiKey && brandKit);
+  const ready = !!(hasApiKey && brandKit && !kitLoading);
 
   return (
     <div className="min-h-screen flex bg-gray-50">
@@ -77,7 +78,7 @@ export default function HomePage() {
           </div>
 
           {/* Setup checklist — only shown when incomplete */}
-          {hasApiKey !== null && !ready && (
+          {!kitLoading && hasApiKey !== null && !ready && (
             <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
               <p className="text-xs font-bold text-gray-700 uppercase tracking-wider">Configuración</p>
 

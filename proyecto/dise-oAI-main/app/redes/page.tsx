@@ -52,6 +52,7 @@ export default function RedesPage() {
 
   const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
   const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
+  const [kitLoading, setKitLoading] = useState(true);
   const [step, setStep] = useState<CarouselStep>('brief');
   const [topicHint, setTopicHint] = useState('');
   const [productImages, setProductImages] = useState<string[]>([]);
@@ -73,7 +74,7 @@ export default function RedesPage() {
   useEffect(() => {
     fetch('/api/brand-kits').then(r => r.json()).then(kit => {
       if (kit && !kit.error) setBrandKit(kit);
-    }).catch(console.error);
+    }).catch(console.error).finally(() => setKitLoading(false));
     fetch('/api/profile').then(r => r.json()).then(data => {
       setHasApiKey(!!data.openai_api_key);
     }).catch(() => setHasApiKey(false));
@@ -328,7 +329,7 @@ export default function RedesPage() {
           </div>
 
           {/* Warnings */}
-          {!brandKit && (
+          {!kitLoading && !brandKit && (
             <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-700">
               Configurá tu marca en <a href="/config" className="font-semibold underline">Mi marca</a> antes de continuar.
             </div>

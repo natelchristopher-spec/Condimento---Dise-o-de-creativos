@@ -156,7 +156,7 @@ export default function CrearMarcaPage() {
       const res = await fetch('/api/create-brand-logos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ logoPrompt }),
+        body: JSON.stringify({ logoPrompt, brandName: selected?.name || '' }),
       });
       if (!res.ok) throw new Error('error');
       const data = await res.json();
@@ -182,6 +182,9 @@ export default function CrearMarcaPage() {
     if (!selected) return;
     setSaving(true);
     setError('');
+    const toDataUrl = (b64: string | undefined) =>
+      b64 ? (b64.startsWith('data:') ? b64 : `data:image/png;base64,${b64}`) : undefined;
+
     const kit: BrandKit = {
       id: '',
       name: eName,
@@ -189,10 +192,10 @@ export default function CrearMarcaPage() {
       secondary1: eS1, secondary2: eS2, secondary3: eS3,
       typography: eTypo,
       styleDescription: eStyle,
-      logoBase64: selected.logoColorBase64,
-      logoColorBase64: selected.logoColorBase64,
-      logoWhiteBase64: selected.logoWhiteBase64,
-      logoDarkBase64: selected.logoDarkBase64,
+      logoBase64: toDataUrl(selected.logoColorBase64),
+      logoColorBase64: toDataUrl(selected.logoColorBase64),
+      logoWhiteBase64: toDataUrl(selected.logoWhiteBase64),
+      logoDarkBase64: toDataUrl(selected.logoDarkBase64),
       clientRequest: brief.trim() || undefined,
     };
     try {
