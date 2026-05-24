@@ -338,7 +338,7 @@ export default function PdpPage() {
     <div className="min-h-screen flex bg-gray-50">
       <Sidebar active="/pdp" onLogout={handleLogout} />
       <div className="flex-1 md:ml-56 min-h-screen pt-12 md:pt-0">
-        <main className="max-w-3xl mx-auto px-6 py-10 space-y-8">
+        <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-10 space-y-8">
 
           {/* Header */}
           <div className="flex items-center justify-between">
@@ -518,7 +518,7 @@ export default function PdpPage() {
                   Importar desde URL
                   <span className="font-normal text-gray-400 ml-1">(opcional)</span>
                 </label>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     type="url"
                     value={productUrl}
@@ -530,7 +530,7 @@ export default function PdpPage() {
                   <button
                     onClick={scrapeProduct}
                     disabled={!productUrl.trim() || scrapingUrl}
-                    className="bg-gray-900 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors flex items-center gap-2 shrink-0"
+                    className="bg-gray-900 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2 sm:shrink-0"
                   >
                     {scrapingUrl ? (
                       <>
@@ -684,7 +684,7 @@ export default function PdpPage() {
                               className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] resize-none"
                             />
                           </div>
-                          <div className="grid grid-cols-2 gap-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             <div className="space-y-1">
                               <p className="text-xs text-gray-400">Autor</p>
                               <input
