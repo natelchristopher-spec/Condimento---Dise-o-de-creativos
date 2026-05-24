@@ -85,8 +85,8 @@ export default function CrearMarcaPage() {
   const [msgIdx, setMsgIdx] = useState(0);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
-  const [logosLoading, setLogosLoading] = useState(false);
-  const [logosFailed, setLogosFailed] = useState(false);
+  const [logoWhiteLoading, setLogoWhiteLoading] = useState(false);
+  const [logoDarkLoading, setLogoDarkLoading] = useState(false);
 
   // Edit fields
   const [eName, setEName] = useState('');
@@ -186,22 +186,48 @@ export default function CrearMarcaPage() {
     }
   };
 
-  const fetchVariantLogos = async (logoPrompt: string) => {
-    setLogosLoading(true);
-    setLogosFailed(false);
+  const fetchVariantLogos = async (logoPrompt: string, brandName: string) => {
+    setLogoWhiteLoading(true);
+    setLogoDarkLoading(true);
+    setSelected(prev => prev ? { ...prev, logoWhiteBase64: undefined, logoDarkBase64: undefined } : prev);
     try {
       const res = await fetch('/api/create-brand-logos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ logoPrompt, brandName: selected?.name || '' }),
+        body: JSON.stringify({ logoPrompt, brandName }),
       });
       if (!res.ok) throw new Error('error');
-      const data = await res.json();
-      setSelected(prev => prev ? { ...prev, logoWhiteBase64: data.logoWhiteBase64, logoDarkBase64: data.logoDarkBase64 } : prev);
+
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const parts = buf.split('\n\n');
+        buf = parts.pop() || '';
+        for (const part of parts) {
+          if (!part.startsWith('data: ')) continue;
+          try {
+            const data = JSON.parse(part.slice(6));
+            if (data.variant === 'white') {
+              setSelected(prev => prev ? { ...prev, logoWhiteBase64: data.b64 } : prev);
+              setLogoWhiteLoading(false);
+            }
+            if (data.variant === 'dark') {
+              setSelected(prev => prev ? { ...prev, logoDarkBase64: data.b64 } : prev);
+              setLogoDarkLoading(false);
+            }
+          } catch { /* ignore */ }
+        }
+      }
     } catch {
-      setLogosFailed(true);
+      // leave spinners gone so "No generado" shows with retry button
     } finally {
-      setLogosLoading(false);
+      setLogoWhiteLoading(false);
+      setLogoDarkLoading(false);
     }
   };
 
@@ -212,7 +238,7 @@ export default function CrearMarcaPage() {
     setES1(concept.secondary1); setES2(concept.secondary2); setES3(concept.secondary3);
     setETypo(concept.typography); setEStyle(concept.styleDescription);
     setStep('edit');
-    fetchVariantLogos(concept.logoPrompt);
+    fetchVariantLogos(concept.logoPrompt, concept.name);
   };
 
   const save = async () => {
@@ -507,9 +533,9 @@ export default function CrearMarcaPage() {
               <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-4">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Versiones de logo</p>
-                  {!logosLoading && (!selected.logoWhiteBase64 || !selected.logoDarkBase64) && (
+                  {!logoWhiteLoading && !logoDarkLoading && (!selected.logoWhiteBase64 || !selected.logoDarkBase64) && (
                     <button
-                      onClick={() => selected && fetchVariantLogos(selected.logoPrompt)}
+                      onClick={() => selected && fetchVariantLogos(selected.logoPrompt, selected.name)}
                       className="text-xs text-[#e42820] hover:underline font-medium"
                     >
                       ↺ Reintentar
@@ -518,9 +544,9 @@ export default function CrearMarcaPage() {
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                   {[
-                    { label: 'Color', bg: 'bg-white border border-gray-200', b64: selected.logoColorBase64, alwaysReady: true },
-                    { label: 'Blanco', bg: 'bg-black', b64: selected.logoWhiteBase64, alwaysReady: false },
-                    { label: 'Oscuro', bg: 'bg-white border border-gray-200', b64: selected.logoDarkBase64, alwaysReady: false },
+                    { label: 'Color', bg: 'bg-white border border-gray-200', b64: selected.logoColorBase64, loading: false, alwaysReady: true },
+                    { label: 'Blanco', bg: 'bg-black', b64: selected.logoWhiteBase64, loading: logoWhiteLoading, alwaysReady: false },
+                    { label: 'Oscuro', bg: 'bg-white border border-gray-200', b64: selected.logoDarkBase64, loading: logoDarkLoading, alwaysReady: false },
                   ].map(v => (
                     <div key={v.label} className="space-y-2">
                       <div className={`aspect-square rounded-xl overflow-hidden flex items-center justify-center ${v.bg}`}>
@@ -528,10 +554,10 @@ export default function CrearMarcaPage() {
                           <img src={`data:image/png;base64,${v.b64}`} alt={v.label} className="w-full h-full object-contain p-3" />
                         ) : v.alwaysReady ? (
                           <LogoPlaceholder name={selected.name} />
-                        ) : logosLoading ? (
-                          <div className="flex flex-col items-center gap-1">
-                            <div className="w-4 h-4 border-2 border-gray-200 border-t-[#e42820] rounded-full animate-spin" />
-                            <p className="text-[10px] text-gray-400">Generando...</p>
+                        ) : v.loading ? (
+                          <div className="flex flex-col items-center gap-1.5">
+                            <div className="w-4 h-4 border-2 border-gray-300 border-t-[#e42820] rounded-full animate-spin" />
+                            <p className="text-[10px] text-gray-400">Generando {v.label.toLowerCase()}...</p>
                           </div>
                         ) : (
                           <p className="text-[10px] text-gray-400 text-center px-2">No generado</p>

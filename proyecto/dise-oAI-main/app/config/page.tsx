@@ -427,11 +427,14 @@ export default function ConfigPage() {
           </div>
 
           {/* Logo */}
-          <div className="space-y-2">
-            <label className="text-sm text-gray-600">Logo (opcional)</label>
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm text-gray-600">Logo (opcional)</label>
+              <p className="text-xs text-gray-400 mt-0.5">Logo principal en color — se usa como referencia visual en todas las piezas.</p>
+            </div>
             <div className="flex items-center gap-4">
               {form.logoBase64 && (
-                <img src={form.logoBase64} alt="Logo" className="w-16 h-16 rounded-xl object-contain bg-gray-100 p-2" />
+                <img src={form.logoBase64} alt="Logo" className="w-16 h-16 rounded-xl object-contain bg-gray-50 border border-gray-200 p-2" />
               )}
               <label className="cursor-pointer bg-white/5 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-600 hover:text-gray-900 transition-colors flex items-center gap-2">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -446,6 +449,31 @@ export default function ConfigPage() {
                 </button>
               )}
             </div>
+
+            {/* Logo variants from crear-marca */}
+            {(form.logoWhiteBase64 || form.logoDarkBase64) && (
+              <div className="space-y-2">
+                <p className="text-xs text-gray-400">Versiones generadas con IA</p>
+                <div className="flex gap-3">
+                  {form.logoWhiteBase64 && (
+                    <div className="space-y-1">
+                      <div className="w-20 h-20 rounded-xl bg-black flex items-center justify-center border border-gray-200 overflow-hidden">
+                        <img src={form.logoWhiteBase64} alt="Logo blanco" className="w-full h-full object-contain p-2" />
+                      </div>
+                      <p className="text-[10px] text-gray-400 text-center">Blanco</p>
+                    </div>
+                  )}
+                  {form.logoDarkBase64 && (
+                    <div className="space-y-1">
+                      <div className="w-20 h-20 rounded-xl bg-white flex items-center justify-center border border-gray-200 overflow-hidden">
+                        <img src={form.logoDarkBase64} alt="Logo oscuro" className="w-full h-full object-contain p-2" />
+                      </div>
+                      <p className="text-[10px] text-gray-400 text-center">Oscuro</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Save */}
