@@ -196,9 +196,14 @@ export default function ConfigPage() {
         body: JSON.stringify(kit),
       });
       if (!res.ok) throw new Error('Error guardando la marca. Intentá de nuevo.');
+      const isFirstKit = !hasKit;
       setHasKit(true);
       setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      if (isFirstKit) {
+        setTimeout(() => { window.location.href = '/'; }, 1500);
+      } else {
+        setTimeout(() => setSaved(false), 2000);
+      }
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : 'Error guardando');
     } finally {
