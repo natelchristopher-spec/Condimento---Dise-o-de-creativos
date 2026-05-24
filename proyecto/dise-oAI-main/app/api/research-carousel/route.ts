@@ -42,9 +42,9 @@ ${brandKitContext}
 ${excludeSection}REGLAS:
 - Exactamente 3 ideas TOFU + 3 MOFU + 3 BOFU = 9 en total
 - Adaptadas al nicho específico de la marca, no genéricas${topicHint ? `\n- OBLIGATORIO: todas las ideas deben desarrollar el tema "${topicHint}" desde distintos ángulos del funnel` : ''}
-- TOFU: educativo, entretenimiento o awareness — sin vender directamente
-- MOFU: el producto/servicio entra en consideración — how-to, comparativas, spotlights
-- BOFU: conversión — oferta, prueba social, objeciones resueltas, urgencia
+- TOFU (Prospección): educativo, entretenimiento o awareness — sin vender directamente, para personas que no conocen la marca
+- MOFU (Evaluación): el producto/servicio entra en consideración — how-to, comparativas, spotlights, para quien ya te vio
+- BOFU (Conversión): cerrar la venta — prueba social, objeciones resueltas, urgencia, para quien está listo para comprar
 - PROHIBIDO inventar precios, métricas, descuentos o resultados específicos
 - Títulos concretos y atractivos, que generen curiosidad o urgencia en el target
 
