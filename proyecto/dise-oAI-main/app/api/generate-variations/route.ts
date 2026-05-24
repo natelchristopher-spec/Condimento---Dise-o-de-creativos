@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
         content: `Sos un director creativo senior. Dado un concepto visual seleccionado y su prompt, generá 4 variaciones de ese concepto.
 Las variaciones deben mantener la misma dirección visual pero explorar diferentes composiciones, énfasis de color, o diferencias estilísticas menores.
 Es CRÍTICO que uses los colores exactos del brand kit y respetes todas las reglas de marca.
+IDIOMA — CRÍTICO: TODO el texto generado (beneficios, features, claims, labels) debe estar en ESPAÑOL. Solo se permite inglés si es parte del nombre de marca o nombre de producto.
 Respondé SOLO con JSON válido: { "variations": [ { "variation_name": "...", "image_prompt": "..." }, ... ] }`,
       },
       {
@@ -52,19 +53,45 @@ Respondé SOLO con JSON válido: { "variations": [ { "variation_name": "...", "i
   }
   const variations: VariationItem[] = (parsed.variations as VariationItem[]) || [];
 
+  const languageRule = 'IDIOMA — CRÍTICO: TODO el texto generado (beneficios, features, claims, labels) debe estar en ESPAÑOL. Solo se permite inglés si es parte del nombre de marca o nombre de producto.';
+
   const imageResults = await Promise.allSettled(
     variations.map(async (variation: VariationItem) => {
-      const prompt = `${variation.image_prompt} ${fashionSuffix}`.trim();
-      const imageResponse = await openai.images.generate({
-        model: 'gpt-image-2',
-        prompt,
-        size: '1024x1536',
-        quality: 'high',
-        n: 1,
-      });
+      const prompt = `${variation.image_prompt} ${fashionSuffix} ${languageRule}`.trim();
+
+      // First attempt with full prompt
+      let b64: string | null | undefined;
+      try {
+        const imageResponse = await openai.images.generate({
+          model: 'gpt-image-2',
+          prompt,
+          size: '1024x1536',
+          quality: 'high',
+          n: 1,
+        });
+        b64 = imageResponse.data?.[0]?.b64_json;
+      } catch {
+        b64 = undefined;
+      }
+
+      // Fix A + Fix C: if empty or failed, retry with simplified prompt
+      if (!b64) {
+        const brandColors = [brandKit.primary1, brandKit.primary2, brandKit.primary3].filter((c): c is string => Boolean(c)).join(', ');
+        const simplifiedPrompt = `${brandKit.name || 'brand'} — colores: ${brandColors} — estilo: ${brandKit.styleDescription || ''} — ${fashionSuffix} ${languageRule}`.trim();
+        const retryResponse = await openai.images.generate({
+          model: 'gpt-image-2',
+          prompt: simplifiedPrompt,
+          size: '1024x1536',
+          quality: 'high',
+          n: 1,
+        });
+        b64 = retryResponse.data?.[0]?.b64_json;
+        if (!b64) throw new Error(`Variation returned empty image`);
+      }
+
       return {
         id: Math.random().toString(36).slice(2),
-        base64: imageResponse.data?.[0]?.b64_json || '',
+        base64: b64,
         prompt: variation.image_prompt,
         conceptName: variation.variation_name,
       };

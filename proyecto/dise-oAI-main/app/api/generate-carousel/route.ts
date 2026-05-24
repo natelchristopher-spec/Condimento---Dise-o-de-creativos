@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
               `Brand: ${brandKit.name}. Primary color: ${brandKit.primary1 || '#000000'}. Secondary: ${brandKit.primary2 || '#ffffff'}. Typography: ${brandKit.typography || 'bold sans-serif'}.`,
               `EXACT TEXT TO DISPLAY — use verbatim, do NOT modify or translate: ${copyText}`,
               `Premium graphic design for Instagram, portrait 4:5. Large bold legible typography. Clean, conversion-focused. Do NOT include funnel stage labels or internal tags as visible text.`,
-              'ALL TEXT IN THE IMAGE MUST BE IN SPANISH. No invented prices, discounts, or trust badges.',
+              'IDIOMA — CRÍTICO: TODO el texto generado (beneficios, features, claims, CTAs, etiquetas) debe estar en ESPAÑOL. Solo se permite inglés si es parte del nombre de marca o nombre de producto. NUNCA generar copy descriptivo en inglés.',
             ].join(' ');
 
             let base64 = '';
@@ -109,6 +109,26 @@ export async function POST(req: NextRequest) {
               } catch (err) {
                 lastError = err instanceof Error ? err.message : String(err);
                 console.error(`Carousel slide ${slide.index} generate failed:`, err);
+              }
+            }
+
+            if (!base64) {
+              try {
+                const primary1 = brandKit.primary1 || '#000000';
+                const primary2 = brandKit.primary2 || '#ffffff';
+                const styleSuffix = `Premium advertising slide, portrait 4:5, clean composition.`;
+                const simplifiedPrompt = `Premium advertising slide for ${brandKit.name}, slide ${slide.index}. Brand colors: ${primary1}, ${primary2}. Clean typography, Spanish text only. ${styleSuffix}`;
+                const result = await openai.images.generate({
+                  model: 'gpt-image-2',
+                  prompt: simplifiedPrompt,
+                  size: '1024x1536',
+                  quality: 'low',
+                  n: 1,
+                });
+                base64 = result.data?.[0]?.b64_json || '';
+              } catch (err) {
+                lastError = err instanceof Error ? err.message : String(err);
+                console.error(`Carousel slide ${slide.index} simplified retry failed:`, err);
               }
             }
 

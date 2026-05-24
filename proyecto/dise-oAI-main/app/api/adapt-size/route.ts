@@ -86,6 +86,7 @@ export async function POST(req: NextRequest) {
 
   const openai = new OpenAI({ apiKey: ctx.openaiApiKey });
 
+  // Primary: images.edit
   try {
     const buffer = Buffer.from(imageBase64, 'base64');
     const imageFile = await toFile(buffer, 'image.png', { type: 'image/png' });
@@ -98,9 +99,40 @@ export async function POST(req: NextRequest) {
     });
     const base64 = response.data?.[0]?.b64_json || '';
     if (base64) return NextResponse.json({ base64 });
-    return NextResponse.json({ error: 'No image returned' }, { status: 500 });
+    console.error('adapt-size: images.edit returned empty, trying Responses API fallback');
   } catch (err) {
-    console.error('adapt-size failed:', err);
+    console.error('adapt-size images.edit failed, trying Responses API fallback:', err);
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes('401') || msg.includes('429') || msg.includes('insufficient_quota') || msg.includes('invalid_api_key')) {
+      return NextResponse.json({ error: getOpenAIErrorMessage(err) }, { status: 500 });
+    }
+  }
+
+  // Fallback: Responses API
+  try {
+    const imageDataUrl = `data:image/png;base64,${imageBase64}`;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await (openai.responses.create as any)({
+      model: 'gpt-4o',
+      input: [{
+        role: 'user',
+        content: [
+          { type: 'input_image', image_url: imageDataUrl, detail: 'high' },
+          { type: 'input_text', text: config.prompt },
+        ],
+      }],
+      tools: [{ type: 'image_generation', model: 'gpt-image-2', quality: 'medium', size: config.size }],
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for (const block of (response.output || [])) {
+      if (block.type === 'image_generation_call' && block.result) {
+        return NextResponse.json({ base64: block.result });
+      }
+    }
+  } catch (err) {
+    console.error('adapt-size Responses API fallback failed:', err);
     return NextResponse.json({ error: getOpenAIErrorMessage(err) }, { status: 500 });
   }
+
+  return NextResponse.json({ error: 'No image returned from API' }, { status: 500 });
 }

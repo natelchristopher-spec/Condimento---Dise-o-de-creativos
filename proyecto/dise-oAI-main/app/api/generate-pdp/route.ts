@@ -466,7 +466,7 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
               'COLOR ACCURACY — CRITICAL: replicate the product color with pixel-level accuracy from the reference photos. Do NOT shift, lighten, darken, or desaturate.',
               'Do NOT reproduce any brand logos or marks from the reference photos.',
               'Do NOT include invented trust badges, button-style CTAs, prices, discounts, or false metrics.',
-              'ALL TEXT IN THE IMAGE MUST BE IN SPANISH.',
+              'IDIOMA — CRÍTICO: TODO el texto generado (títulos, beneficios, pasos, callouts, labels) debe estar en ESPAÑOL. Solo se permite inglés si es parte del nombre de marca o producto.',
             ].filter(Boolean).join(' ');
 
             let base64 = '';
@@ -544,6 +544,28 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
               } catch (err) {
                 lastError = err instanceof Error ? err.message : String(err);
                 console.error(`PDP images.edit fallback "${item.label}" failed:`, err);
+              }
+            }
+
+            // Second fallback: simplified generate prompt if images.edit also returned nothing
+            if (!base64) {
+              try {
+                const simplifiedPrompt = `${brandKit.name} — ${item.label}. Brand colors: ${brandKit.primary1 || '#000000'}, ${brandKit.primary2 || '#ffffff'}. Square 1:1 e-commerce format, premium quality. Spanish text only.`;
+                const genResult = await openai.images.generate({
+                  model: 'gpt-image-2',
+                  prompt: simplifiedPrompt,
+                  size: '1024x1024',
+                  quality: 'low',
+                  n: 1,
+                });
+                base64 = genResult.data?.[0]?.b64_json || '';
+                if (!base64) {
+                  lastError = 'simplified generate returned no image data';
+                  console.warn(`PDP simplified retry "${item.label}": no b64_json`);
+                }
+              } catch (err) {
+                lastError = err instanceof Error ? err.message : String(err);
+                console.error(`PDP simplified retry "${item.label}" failed:`, err);
               }
             }
 

@@ -24,7 +24,9 @@ CRITICAL — preserve EXACTLY as-is:
 - The overall layout and composition structure
 - Brand logos and typography style
 
-Change ONLY what the instruction explicitly requests (e.g. if it says "change background", change ONLY the background). Do not remove, rewrite, or reposition anything else. This is a targeted edit, not a full regeneration.`;
+Change ONLY what the instruction explicitly requests (e.g. if it says "change background", change ONLY the background). Do not remove, rewrite, or reposition anything else. This is a targeted edit, not a full regeneration.
+
+Preserve all existing text in the image exactly as-is, including Spanish language. Do NOT translate, modify, or replace any text.`;
 
 export async function POST(req: NextRequest) {
   const ctx = await getUserContext();
