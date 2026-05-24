@@ -190,9 +190,32 @@ export async function POST(req: NextRequest) {
   let personDescription = '';
 
   const CLOTHING_TERMS = /\b(prenda|vestido|pantalón|remera|camiseta|camisa|campera|buzo|short|pollera|falda|indumentaria|calzado|zapatilla|zapato|tela|tejido|outfit|jean|jogger|bikini|traje|garment|clothing|apparel|fabric|dress|shirt|pants|jacket|hoodie|sneaker|shoe|top|blouse|skirt|coat|sleeve|collar|hem|knit|denim|cotton|polyester)\b/i;
-  // Use fashion prompt only for actual clothing — detected from brief + brand style before vision runs
   const isFashionBrief = CLOTHING_TERMS.test(brief + ' ' + (brandKit.styleDescription || ''));
-  const descriptionPrompt = (peopleMode !== 'none' && isFashionBrief)
+
+  // Vision-based classification: when a product image is available, ask GPT-4o-mini
+  // whether it's actually clothing. Overrides text-based detection — detail:low keeps it fast and cheap.
+  let isFashionProduct = isFashionBrief;
+  if (productRef && peopleMode !== 'none') {
+    try {
+      const classifyRes = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Is this product a clothing item, garment, shoe, or wearable fashion accessory (worn on the body)? Answer only YES or NO.' },
+            { type: 'image_url', image_url: { url: productRef, detail: 'low' } },
+          ],
+        }],
+        max_tokens: 5,
+      });
+      const answer = (classifyRes.choices[0].message.content || '').trim().toUpperCase();
+      isFashionProduct = answer.startsWith('YES');
+    } catch {
+      // Vision classify failed — fall back to text-based detection
+    }
+  }
+
+  const descriptionPrompt = (peopleMode !== 'none' && isFashionProduct)
     ? PRODUCT_DESCRIPTION_PROMPT_FASHION
     : PRODUCT_DESCRIPTION_PROMPT_GENERIC;
 
@@ -237,7 +260,7 @@ export async function POST(req: NextRequest) {
     ? 'NO incluir productos específicos ni personas. El foco es la identidad de marca, el mensaje y la composición gráfica pura.'
     : peopleMode === 'none'
       ? 'NO incluir personas. Enfocarse en producto, composición, elementos gráficos y copy.'
-      : isFashionBrief
+      : isFashionProduct
         ? 'Incluir una persona usando la prenda del brief. Actitud aspiracional, editorial.'
         : 'Incluir una persona usando o interactuando con el producto del brief de forma natural. Actitud aspiracional. El producto aparece en su forma original — no mostrar consumo ni aplicación directa en piel o cuerpo.';
 
@@ -383,7 +406,7 @@ El image_prompt debe mencionar colores hex exactos, disposición, estilo y eleme
 
   const hasPeople = peopleMode === 'real';
   const styleSuffix = hasPeople
-    ? isFashionBrief
+    ? isFashionProduct
       ? 'Fashion editorial photography, natural skin tones, soft studio lighting, 85mm lens, high-end fashion campaign, photorealistic.'
       : 'Lifestyle photography, person interacting naturally with the product in context. The product must appear in its exact original form — do NOT reimagine its shape, color or packaging. Photorealistic, natural lighting, authentic mood.'
     : isProductEcommerce
@@ -392,7 +415,7 @@ El image_prompt debe mencionar colores hex exactos, disposición, estilo y eleme
   const productHint = productDetailImages.length > 0
     ? isProductEcommerce
       ? 'IMPORTANT: The provided reference images show the exact products — feature those specific products in the composition, replicating their appearance faithfully.'
-      : isFashionBrief
+      : isFashionProduct
         ? 'PRODUCT COLOR ACCURACY — CRITICAL: The reference images show the exact garment. Replicate its color with pixel-level accuracy — do NOT shift, lighten, darken, or desaturate. For warm neutrals (beige, sand, stone, khaki): preserve the warm undertone exactly, never render as white or gray. For solid-color garments, the color must match the reference photo precisely.'
         : 'PRODUCT ACCURACY — CRITICAL: The reference images show the exact product/packaging. Reproduce it with zero modifications: same shape, same colors, same label design, same proportions. Do NOT reimagine, stylize, or alter the product in any way. If the packaging is dark, keep it dark. If it has a specific label color, replicate it exactly.'
     : '';
