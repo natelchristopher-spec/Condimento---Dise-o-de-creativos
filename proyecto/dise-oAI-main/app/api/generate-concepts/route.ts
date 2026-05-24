@@ -383,14 +383,18 @@ El image_prompt debe mencionar colores hex exactos, disposición, estilo y eleme
 
   const hasPeople = peopleMode === 'real';
   const styleSuffix = hasPeople
-    ? 'Fashion editorial photography, natural skin tones, soft studio lighting, 85mm lens, high-end fashion campaign, photorealistic.'
+    ? isFashionBrief
+      ? 'Fashion editorial photography, natural skin tones, soft studio lighting, 85mm lens, high-end fashion campaign, photorealistic.'
+      : 'Lifestyle photography, person interacting naturally with the product in context. The product must appear in its exact original form — do NOT reimagine its shape, color or packaging. Photorealistic, natural lighting, authentic mood.'
     : isProductEcommerce
       ? 'Professional product photography or high-end retail graphic design, agency quality, photorealistic where applicable.'
       : 'Premium graphic design, bold typography, brand identity, agency quality, NOT generic AI art, portrait 4:5.';
   const productHint = productDetailImages.length > 0
     ? isProductEcommerce
       ? 'IMPORTANT: The provided reference images show the exact products — feature those specific products in the composition, replicating their appearance faithfully.'
-      : 'PRODUCT COLOR ACCURACY — CRITICAL: The reference images show the exact garment/product. Replicate its color with pixel-level accuracy — do NOT shift, lighten, darken, or desaturate. For warm neutrals (beige, sand, stone, khaki): preserve the warm undertone exactly, never render as white or gray. For solid-color garments, the color must match the reference photo precisely.'
+      : isFashionBrief
+        ? 'PRODUCT COLOR ACCURACY — CRITICAL: The reference images show the exact garment. Replicate its color with pixel-level accuracy — do NOT shift, lighten, darken, or desaturate. For warm neutrals (beige, sand, stone, khaki): preserve the warm undertone exactly, never render as white or gray. For solid-color garments, the color must match the reference photo precisely.'
+        : 'PRODUCT ACCURACY — CRITICAL: The reference images show the exact product/packaging. Reproduce it with zero modifications: same shape, same colors, same label design, same proportions. Do NOT reimagine, stylize, or alter the product in any way. If the packaging is dark, keep it dark. If it has a specific label color, replicate it exactly.'
     : '';
   const styleHint = visualRefs.length > 0
     ? 'Match the visual style, typography treatment and composition quality of the provided brand reference pieces.'
