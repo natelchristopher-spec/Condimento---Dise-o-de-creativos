@@ -14,6 +14,7 @@ export default function PerfilPage() {
   const [saved, setSaved] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
   const [error, setError] = useState('');
+  const [warning, setWarning] = useState('');
   const [email, setEmail] = useState('');
   const [showKey, setShowKey] = useState(false);
 
@@ -33,10 +34,12 @@ export default function PerfilPage() {
   const handleSave = async () => {
     if (!apiKey.trim()) return;
     setError('');
+    setWarning('');
     const isFirstTime = !savedKey;
 
     // Validate key before saving
     setValidating(true);
+    let saveWarning = '';
     try {
       const validateRes = await fetch('/api/validate-openai', {
         method: 'POST',
@@ -48,6 +51,7 @@ export default function PerfilPage() {
         setError(validateData.error || 'API key inválida.');
         return;
       }
+      if (validateData.warning) saveWarning = validateData.warning;
     } catch {
       setError('No se pudo verificar la API key. Revisá tu conexión.');
       return;
@@ -65,7 +69,8 @@ export default function PerfilPage() {
       if (!res.ok) throw new Error('Error guardando la API key');
       setSavedKey(apiKey.trim());
       setSaved(true);
-      if (isFirstTime) {
+      if (saveWarning) setWarning(saveWarning);
+      if (isFirstTime && !saveWarning) {
         setRedirecting(true);
         setTimeout(() => { window.location.href = '/config'; }, 1500);
       } else {
@@ -154,6 +159,11 @@ export default function PerfilPage() {
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-700 text-sm">
               {error}
+            </div>
+          )}
+          {warning && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-amber-700 text-sm">
+              ⚠ {warning}
             </div>
           )}
 

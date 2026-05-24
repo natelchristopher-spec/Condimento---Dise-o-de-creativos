@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ valid: false, error: 'API key inválida. Verificá que la copiaste correctamente desde platform.openai.com → API Keys.' });
     }
     if (msg.includes('insufficient_quota')) {
-      return NextResponse.json({ valid: false, error: 'Sin crédito en tu cuenta de OpenAI. Cargá al menos $5 en platform.openai.com → Settings → Billing.' });
+      return NextResponse.json({ valid: true, warning: 'Tu API key es válida pero no tiene crédito. Cargá al menos $5 en platform.openai.com → Settings → Billing antes de generar.' });
     }
     // Rate limit = key válida con cuota
     if (msg.includes('429') || msg.includes('rate_limit')) {
