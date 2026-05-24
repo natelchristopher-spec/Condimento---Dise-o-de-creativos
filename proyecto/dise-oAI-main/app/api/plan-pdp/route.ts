@@ -199,7 +199,12 @@ Generá exactamente 6 planes de imagen para el carrusel de producto, formato cua
 PRODUCTO (el mismo en TODAS las imágenes):
 ${productDescription}
 
-${personGuide ? `${personGuide}\n\n` : ''}ANTES DE PLANEAR: determiná la categoría del producto (suplemento, electrónico, cosmético, calzado, joyería, alimento, hogar, decoración, libro, mascota, etc.) y adaptá el tono, el copy y el contenido de cada slide a ese nicho. Los slides deben tener sentido para ESTE producto específico — no para suplementos ni indumentaria si el producto es otro.
+${personGuide ? `${personGuide}\n\n` : ''}PSICOLOGÍA DEL COMPRADOR — el carrusel debe convencer a los 3 perfiles simultáneamente:
+- COMPRADOR IMPULSIVO (20% de visitas): decide al primer vistazo. El HERO debe ser instantáneamente claro. El BENEFIT debe tener bullets directos y concretos que se lean en 3 segundos.
+- COMPRADOR RACIONAL (50% de visitas): necesita justificar la compra. BENEFIT, AUTHORITY y HOW TO USE le hablan a él — priorizá datos verificables, especificaciones reales y pasos de uso que eliminen objeciones de "¿cómo funciona?" o "¿vale lo que cuesta?".
+- COMPRADOR POR VALIDACIÓN SOCIAL (30% de visitas): no compra hasta que otros lo hicieron. TESTIMONIAL es su slide clave — el copy debe incluir señales de validación cuantitativas o específicas (nombre real, resultado concreto), no reseñas genéricas. LIFESTYLE con persona también lo convence.
+
+ANTES DE PLANEAR: determiná la categoría del producto (suplemento, electrónico, cosmético, calzado, joyería, alimento, hogar, decoración, libro, mascota, etc.) y adaptá el tono, el copy y el contenido de cada slide a ese nicho. Los slides deben tener sentido para ESTE producto específico — no para suplementos ni indumentaria si el producto es otro.
 
 TIPOS (en este orden exacto):
 
