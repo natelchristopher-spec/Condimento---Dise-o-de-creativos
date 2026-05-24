@@ -532,7 +532,7 @@ export default function Home() {
 
                 {/* Setup checklist */}
                 <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
-                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Configuración</p>
+                  <p className="text-xs font-bold text-gray-700 uppercase tracking-wider">Configuración</p>
                   {/* API Key */}
                   <div className={`flex items-center gap-3 p-3.5 rounded-xl border ${hasApiKey ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${hasApiKey ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-700'}`}>
@@ -565,7 +565,7 @@ export default function Home() {
 
                 {/* Module cards */}
                 <div>
-                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Módulos</p>
+                  <p className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-3">Módulos</p>
                   <div className="grid grid-cols-3 gap-3">
                     {([
                       { href: '/', label: 'Anuncios', desc: 'Conceptos para redes y ads', current: true },
