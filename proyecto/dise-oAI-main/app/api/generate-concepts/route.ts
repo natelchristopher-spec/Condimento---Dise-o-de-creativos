@@ -178,7 +178,9 @@ export async function POST(req: NextRequest) {
   let productDescription = '';
   let personDescription = '';
 
-  const isFashionBrief = /\b(ropa|prenda|vestido|pantalón|remera|camiseta|camisa|campera|buzo|short|pollera|falda|moda|indumentaria|calzado|zapatilla|zapato|tela|tejido|corte|outfit|jean|jogger|bikini|traje)\b/i.test(brief + ' ' + (brandKit.styleDescription || ''));
+  const CLOTHING_TERMS = /\b(prenda|vestido|pantalón|remera|camiseta|camisa|campera|buzo|short|pollera|falda|indumentaria|calzado|zapatilla|zapato|tela|tejido|outfit|jean|jogger|bikini|traje|garment|clothing|apparel|fabric|dress|shirt|pants|jacket|hoodie|sneaker|shoe|top|blouse|skirt|coat|sleeve|collar|hem|knit|denim|cotton|polyester)\b/i;
+  // Use fashion prompt only for actual clothing — detected from brief + brand style before vision runs
+  const isFashionBrief = CLOTHING_TERMS.test(brief + ' ' + (brandKit.styleDescription || ''));
   const descriptionPrompt = (peopleMode !== 'none' && isFashionBrief)
     ? PRODUCT_DESCRIPTION_PROMPT_FASHION
     : PRODUCT_DESCRIPTION_PROMPT_GENERIC;
