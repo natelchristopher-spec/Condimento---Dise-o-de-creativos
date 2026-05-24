@@ -350,7 +350,7 @@ export default function CrearMarcaPage() {
               {/* Category */}
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-gray-700">Categoría del negocio</label>
-                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
                   {CATEGORIES.map(cat => (
                     <button
                       key={cat.id}
