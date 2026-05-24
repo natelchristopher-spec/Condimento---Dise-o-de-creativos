@@ -76,6 +76,13 @@ export default function Home() {
     }
   }, [applyStatuses]);
 
+  useEffect(() => {
+    return () => {
+      if (loadingStartRef.current) clearInterval(loadingStartRef.current);
+      if (applyTimerRef.current) clearInterval(applyTimerRef.current);
+    };
+  }, []);
+
   const startLoading = (msg: string) => {
     setLoading(true);
     setLoadingMsg(msg);
@@ -264,6 +271,7 @@ export default function Home() {
       setProductDescription(pd);
       setPersonDescription(prd);
     } catch (e) {
+      setConcepts([]);
       setError(e instanceof Error ? e.message : 'Error generando conceptos');
       setStep('brief');
     } finally {
@@ -499,6 +507,13 @@ export default function Home() {
   const regenerateConcepts = async () => {
     setSelectedConcepts([]);
     setRefineIndex(0);
+    setAdaptFormats([]);
+    setAdaptedImages([]);
+    setApplyStatuses([]);
+    setRefineInputs([]);
+    setRefineHistories([]);
+    setRefineImageHistories([]);
+    setRefiningIndex(null);
     await generateConcepts();
   };
 

@@ -230,6 +230,7 @@ export default function RedesPage() {
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
       let buf = '';
+      let receivedDone = false;
       const generated: (GeneratedSlide | null)[] = [null, null, null];
 
       while (true) {
@@ -251,12 +252,12 @@ export default function RedesPage() {
               }
             }
             if (data.error) setError(prev => prev ? `${prev} · ${data.error}` : data.error);
-            if (data.done) setStep('done');
+            if (data.done) { receivedDone = true; setStep('done'); }
           } catch { /* ignore malformed chunk */ }
         }
       }
-      // Ensure we exit generating state even if server closed without sending done
-      setStep('done');
+      // Only advance to done if server confirmed — avoids showing empty results on abrupt close
+      if (!receivedDone && generated.some(Boolean)) setStep('done');
       if (selectedTopic) setUsedTopics(prev => prev.includes(selectedTopic.title) ? prev : [...prev, selectedTopic.title]);
     } catch (e) {
       if (e instanceof Error && e.name === 'AbortError') {

@@ -64,6 +64,9 @@ export default function ConfigPage() {
       if (kit && !kit.error) {
         setForm({ ...EMPTY_FORM, ...kit });
         setHasKit(true);
+      } else {
+        localStorage.removeItem('condimento_config_choice');
+        setChoiceMade(false);
       }
     }).catch(console.error).finally(() => setKitLoading(false));
     fetch('/api/profile').then(r => r.json()).then(data => {

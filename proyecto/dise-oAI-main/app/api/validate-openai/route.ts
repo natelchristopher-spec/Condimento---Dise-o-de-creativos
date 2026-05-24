@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { getUserContext } from '@/app/lib/get-user-context';
 
 export const maxDuration = 15;
 
 export async function POST(req: NextRequest) {
+  const ctx = await getUserContext();
+  if (!ctx) return NextResponse.json({ valid: false, error: 'No autenticado.' }, { status: 401 });
+
   const { apiKey } = await req.json();
   if (!apiKey || !String(apiKey).startsWith('sk-')) {
     return NextResponse.json({ valid: false, error: 'La API key debe comenzar con sk-' });
