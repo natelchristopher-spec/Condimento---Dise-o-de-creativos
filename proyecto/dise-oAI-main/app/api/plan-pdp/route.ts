@@ -276,6 +276,7 @@ Respondé SOLO con JSON:
       { role: 'user', content: userContent },
     ],
     response_format: { type: 'json_object' },
+    max_tokens: 2500,
   });
 
   let parsed: Record<string, unknown>;
@@ -284,7 +285,50 @@ Respondé SOLO con JSON:
   } catch {
     return NextResponse.json({ error: 'Error al procesar el plan. Intentá de nuevo.' }, { status: 500 });
   }
-  const pdpItems: PdpPlan[] = (parsed.pdp_images as PdpPlan[]) || [];
+  let pdpItems: PdpPlan[] = (parsed.pdp_images as PdpPlan[]) || [];
+
+  // Check if any slides with required items came back empty — retry once for those
+  const needsRetry = (['benefit', 'authority', 'howto'] as const).filter(type => {
+    const slide = pdpItems.find(p => p.type === type);
+    return !slide?.display_copy?.items?.length;
+  });
+
+  if (needsRetry.length > 0) {
+    const retryLabels: Record<string, string> = {
+      benefit: 'BENEFIT IMAGE — 3 beneficios clave del producto (máx 5 palabras cada uno)',
+      authority: 'AUTHORITY IMAGE — 3-4 specs técnicas o credenciales del producto',
+      howto: 'HOW TO USE — 3 pasos de uso del producto (verbo + instrucción)',
+    };
+    try {
+      const retryResponse = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [{
+          role: 'user',
+          content: `Producto: ${productDescription}\n\nGenerá el copy en español para estos slides de PDP. Respondé SOLO con JSON:\n{"slides":[${needsRetry.map(t => `{"type":"${t}","items":["...","...","..."]}`).join(',')}]}\n\n${needsRetry.map(t => retryLabels[t]).join('\n')}`,
+        }],
+        response_format: { type: 'json_object' },
+        max_tokens: 600,
+      });
+      const retryParsed = JSON.parse(retryResponse.choices[0].message.content || '{}');
+      const retrySlides: Array<{ type: string; items: string[] }> = retryParsed.slides || [];
+      pdpItems = pdpItems.map(p => {
+        const retried = retrySlides.find(r => r.type === p.type);
+        if (retried?.items?.length) {
+          return { ...p, display_copy: { ...p.display_copy, items: retried.items } };
+        }
+        return p;
+      });
+      // Also add any type that was completely missing from original
+      for (const type of needsRetry) {
+        if (!pdpItems.find(p => p.type === type)) {
+          const retried = retrySlides.find(r => r.type === type);
+          if (retried?.items?.length) {
+            pdpItems.push({ type, label: type, display_copy: { items: retried.items }, image_prompt: '' });
+          }
+        }
+      }
+    } catch { /* retry failed — use what we have */ }
+  }
 
   // Ensure all 6 types present with fixed labels
   const plans: PdpPlan[] = PDP_TYPES.map(t => {
