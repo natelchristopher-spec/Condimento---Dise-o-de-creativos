@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { createSupabaseBrowser } from '@/app/lib/supabase-browser';
+import { useRequireAuth } from '@/app/lib/use-auth';
 import Sidebar from '@/app/components/Sidebar';
 import { BrandKit } from '@/app/types';
 
@@ -37,6 +38,7 @@ const MODULES = [
 ];
 
 export default function HomePage() {
+  useRequireAuth();
   const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
   const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
   const [email, setEmail] = useState('');

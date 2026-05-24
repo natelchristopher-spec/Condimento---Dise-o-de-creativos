@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
+export const maxDuration = 15;
+
 export async function POST(req: NextRequest) {
   const { apiKey } = await req.json();
   if (!apiKey || !String(apiKey).startsWith('sk-')) {
     return NextResponse.json({ valid: false, error: 'La API key debe comenzar con sk-' });
   }
 
-  const openai = new OpenAI({ apiKey });
+  const openai = new OpenAI({ apiKey, timeout: 10000 });
 
   try {
     await openai.chat.completions.create({
@@ -27,6 +29,10 @@ export async function POST(req: NextRequest) {
     // Rate limit = key válida con cuota
     if (msg.includes('429') || msg.includes('rate_limit')) {
       return NextResponse.json({ valid: true });
+    }
+    // Timeout or OpenAI down — don't block the save
+    if (msg.includes('timeout') || msg.includes('ECONNRESET') || msg.includes('ETIMEDOUT') || msg.includes('fetch failed')) {
+      return NextResponse.json({ valid: true, warning: 'No se pudo verificar el crédito (OpenAI lento), pero se guardó la key.' });
     }
     return NextResponse.json({ valid: false, error: 'No se pudo verificar la API key. Intentá de nuevo.' });
   }

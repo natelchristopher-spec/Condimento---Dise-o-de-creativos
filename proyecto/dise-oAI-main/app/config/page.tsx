@@ -53,7 +53,10 @@ export default function ConfigPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState('');
-  const [choiceMade, setChoiceMade] = useState(false);
+  const [choiceMade, setChoiceMade] = useState(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem('condimento_config_choice') === 'manual';
+    return false;
+  });
 
   useEffect(() => {
     fetch('/api/brand-kits').then(r => r.json()).then(kit => {
@@ -248,7 +251,7 @@ export default function ConfigPage() {
                 <span className="text-xs text-[#e42820] font-medium group-hover:underline">Empezar →</span>
               </button>
               <button
-                onClick={() => setChoiceMade(true)}
+                onClick={() => { setChoiceMade(true); localStorage.setItem('condimento_config_choice', 'manual'); }}
                 className="group flex flex-col gap-3 bg-white border-2 border-gray-200 hover:border-gray-400 rounded-2xl p-5 text-left transition-all hover:shadow-md"
               >
                 <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-xl">📋</div>
