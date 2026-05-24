@@ -344,7 +344,7 @@ export default function PdpPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl font-bold text-gray-900">Imágenes PDP</h1>
-              <p className="text-sm text-gray-500">6 imágenes para el carrusel de tu página de producto · Shopify / Tienda Nube</p>
+              <p className="text-sm text-gray-500">6 imágenes para el carrusel de tu página de producto</p>
             </div>
             {step !== 'brief' && step !== 'review' && (
               <div className="flex items-center gap-2 text-sm text-gray-400">
@@ -756,7 +756,7 @@ export default function PdpPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-lg font-bold text-gray-900">¡Listo! 6 imágenes PDP generadas</h2>
-                    <p className="text-sm text-gray-500">Formato cuadrado 1:1 · Shopify / Tienda Nube</p>
+                    <p className="text-sm text-gray-500">Formato cuadrado 1:1</p>
                   </div>
                   <button
                     onClick={reset}

@@ -555,7 +555,7 @@ export default function Home() {
 
             {/* URL scraper */}
             <div className="space-y-2">
-              <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Importar desde URL de producto</label>
+              <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Importar info desde URL <span className="normal-case font-normal text-gray-400">(solo extrae texto — las imágenes subílas abajo)</span></label>
               <div className="flex flex-col sm:flex-row gap-2">
                 <input
                   type="url"
