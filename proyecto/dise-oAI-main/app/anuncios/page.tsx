@@ -532,7 +532,7 @@ export default function Home() {
             </button>
           </div>
         )}
-      <main className="max-w-5xl mx-auto w-full px-6 py-10 space-y-10">
+      <main className="max-w-5xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-10 space-y-10">
 
         {/* Error */}
         {error && (
@@ -556,7 +556,7 @@ export default function Home() {
             {/* URL scraper */}
             <div className="space-y-2">
               <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Importar desde URL de producto</label>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <input
                   type="url"
                   value={productUrl}
@@ -568,7 +568,7 @@ export default function Home() {
                 <button
                   onClick={scrapeProduct}
                   disabled={!productUrl.trim() || scrapingUrl}
-                  className="shrink-0 bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed border border-gray-200 hover:border-gray-300 text-gray-600 hover:text-gray-900 text-sm font-medium px-4 py-2.5 rounded-xl transition-all flex items-center gap-2"
+                  className="sm:shrink-0 bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed border border-gray-200 hover:border-gray-300 text-gray-600 hover:text-gray-900 text-sm font-medium px-4 py-2.5 rounded-xl transition-all flex items-center justify-center gap-2"
                 >
                   {scrapingUrl ? (
                     <><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />Leyendo...</>
@@ -591,18 +591,18 @@ export default function Home() {
                 <label className="text-sm font-semibold text-gray-700">¿Dime que quieres que diseñe para ti?</label>
                 <p className="text-xs text-gray-900/35 mt-1">Sé específico: ¿hay descuentos? ¿Es un lanzamiento, una sale o una campaña de marca? Incluí fechas, productos destacados, mecánicas (cuotas, envío gratis) y cualquier detalle relevante.</p>
               </div>
-              <div className="flex gap-2 items-start">
+              <div className="flex flex-col sm:flex-row sm:items-start gap-2">
                 <textarea
                   value={clientRequest}
                   onChange={e => setClientRequest(e.target.value)}
                   placeholder="Ej: 'Quiero lanzar la campaña de verano con 30% OFF en toda la colección. Los productos estrella son vestidos y trajes de baño. Público: mujeres 25-40. Paleta cálida, colores coral y turquesa. Termina el 31 de enero.'"
                   rows={4}
-                  className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] resize-none text-sm leading-relaxed"
+                  className="flex-1 w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] resize-none text-sm leading-relaxed"
                 />
                 <button
                   onClick={generateBrief}
                   disabled={!clientRequest.trim() || generatingBrief}
-                  className="shrink-0 bg-[#e42820]/80 hover:bg-[#e42820] disabled:opacity-40 disabled:cursor-not-allowed text-gray-900 text-sm font-medium px-4 py-3 rounded-xl transition-colors flex items-center gap-2 whitespace-nowrap"
+                  className="sm:shrink-0 bg-[#e42820]/80 hover:bg-[#e42820] disabled:opacity-40 disabled:cursor-not-allowed text-gray-900 text-sm font-medium px-4 py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
                 >
                   {generatingBrief ? (
                     <><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />Generando...</>
@@ -1054,7 +1054,7 @@ export default function Home() {
                           </div>
                         </div>
 
-                        <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2">
                           <input
                             type="text"
                             value={input}
@@ -1064,25 +1064,27 @@ export default function Home() {
                             disabled={busy}
                             className="flex-1 bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] text-sm disabled:opacity-50"
                           />
-                          <button
-                            onClick={() => applyRefinement(i)}
-                            disabled={!input.trim() || busy}
-                            className="bg-[#e42820] hover:bg-[#c41f18] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-4 py-2.5 rounded-xl transition-colors text-sm whitespace-nowrap"
-                          >
-                            {isRefining ? 'Aplicando...' : 'Aplicar'}
-                          </button>
-                          {imageHistory.length > 0 && (
+                          <div className="flex gap-2">
                             <button
-                              onClick={() => undoRefinement(i)}
-                              disabled={busy}
-                              className="bg-white hover:bg-gray-100 border border-gray-200 disabled:opacity-40 text-gray-500 hover:text-gray-900 px-3 py-2.5 rounded-xl transition-colors"
-                              title="Deshacer"
+                              onClick={() => applyRefinement(i)}
+                              disabled={!input.trim() || busy}
+                              className="flex-1 sm:flex-none bg-[#e42820] hover:bg-[#c41f18] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-4 py-2.5 rounded-xl transition-colors text-sm"
                             >
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                              </svg>
+                              {isRefining ? 'Aplicando...' : 'Aplicar'}
                             </button>
-                          )}
+                            {imageHistory.length > 0 && (
+                              <button
+                                onClick={() => undoRefinement(i)}
+                                disabled={busy}
+                                className="bg-white hover:bg-gray-100 border border-gray-200 disabled:opacity-40 text-gray-500 hover:text-gray-900 px-3 py-2.5 rounded-xl transition-colors"
+                                title="Deshacer"
+                              >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
