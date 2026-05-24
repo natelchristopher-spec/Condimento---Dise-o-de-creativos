@@ -135,37 +135,33 @@ export default function Home() {
 
   const readAsPng = (file: File): Promise<string> =>
     new Promise(resolve => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result as string;
-        const img = new Image();
-        img.onload = () => {
-          const tryAt = (maxDim: number, quality: number): string | null => {
-            try {
-              let { naturalWidth: w, naturalHeight: h } = img;
-              if (!w || !h) return null;
-              if (w > maxDim || h > maxDim) {
-                if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
-                else { w = Math.round(w * maxDim / h); h = maxDim; }
-              }
-              const canvas = document.createElement('canvas');
-              canvas.width = w; canvas.height = h;
-              const ctx = canvas.getContext('2d')!;
-              ctx.fillStyle = '#ffffff';
-              ctx.fillRect(0, 0, w, h);
-              ctx.drawImage(img, 0, 0, w, h);
-              const out = canvas.toDataURL('image/jpeg', quality);
-              return out.length > 100 ? out : null;
-            } catch { return null; }
-          };
-          // Try progressively smaller/lower quality; never fall back to original
-          resolve(tryAt(1024, 0.82) || tryAt(768, 0.75) || tryAt(512, 0.65) || '');
+      // blob URL avoids loading the entire file as base64 in memory before touching canvas
+      const blobUrl = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(blobUrl);
+        const tryAt = (maxDim: number, quality: number): string | null => {
+          try {
+            let { naturalWidth: w, naturalHeight: h } = img;
+            if (!w || !h) return null;
+            if (w > maxDim || h > maxDim) {
+              if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+              else { w = Math.round(w * maxDim / h); h = maxDim; }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            const ctx = canvas.getContext('2d')!;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, w, h);
+            ctx.drawImage(img, 0, 0, w, h);
+            const out = canvas.toDataURL('image/jpeg', quality);
+            return out.length > 100 ? out : null;
+          } catch { return null; }
         };
-        img.onerror = () => resolve('');
-        img.src = dataUrl;
+        resolve(tryAt(1024, 0.82) || tryAt(768, 0.75) || tryAt(512, 0.65) || '');
       };
-      reader.onerror = () => resolve('');
-      reader.readAsDataURL(file);
+      img.onerror = () => { URL.revokeObjectURL(blobUrl); resolve(''); };
+      img.src = blobUrl;
     });
 
   const handleProductDetailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
