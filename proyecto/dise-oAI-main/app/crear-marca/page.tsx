@@ -74,6 +74,7 @@ export default function CrearMarcaPage() {
   const supabase = createSupabaseBrowser();
 
   const [step, setStep] = useState<Step>('input');
+  const [creditsOk, setCreditsOk] = useState<boolean | null>(null);
   const [storeUrl, setStoreUrl] = useState('');
   const [scrapingUrl, setScrapingUrl] = useState(false);
   const [businessName, setBusinessName] = useState('');
@@ -95,6 +96,13 @@ export default function CrearMarcaPage() {
   const [eS1, setES1] = useState(''); const [eS2, setES2] = useState(''); const [eS3, setES3] = useState('');
   const [eTypo, setETypo] = useState('');
   const [eStyle, setEStyle] = useState('');
+
+  useEffect(() => {
+    fetch('/api/check-credits')
+      .then(r => r.json())
+      .then(data => setCreditsOk(data.hasCredits))
+      .catch(() => setCreditsOk(true));
+  }, []);
 
   useEffect(() => {
     if (step !== 'generating') return;
@@ -383,15 +391,30 @@ export default function CrearMarcaPage() {
                 />
               </div>
 
+              {creditsOk === false && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+                  <p className="font-semibold mb-1">⚠ Tu cuenta de OpenAI no tiene crédito</p>
+                  <p className="text-amber-700">Esta función necesita saldo en tu cuenta. Cargá al menos $5 en{' '}
+                    <a href="https://platform.openai.com/settings/billing/overview" target="_blank" rel="noopener noreferrer" className="underline font-medium">platform.openai.com → Billing</a>
+                    {' '}y volvé acá.
+                  </p>
+                </div>
+              )}
               <button
                 onClick={generate}
-                disabled={!canGenerate}
+                disabled={!canGenerate || creditsOk === false || creditsOk === null}
                 className="w-full bg-[#e42820] hover:bg-[#c41f18] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-6 py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2"
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                </svg>
-                Crear 3 propuestas de marca
+                {creditsOk === null ? (
+                  <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Verificando crédito...</>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                    Crear 3 propuestas de marca
+                  </>
+                )}
               </button>
             </div>
           )}
