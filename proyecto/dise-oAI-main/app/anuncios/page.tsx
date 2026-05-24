@@ -140,24 +140,28 @@ export default function Home() {
         const dataUrl = reader.result as string;
         const img = new Image();
         img.onload = () => {
-          const MAX = 1024;
-          let { naturalWidth: w, naturalHeight: h } = img;
-          if (!w || !h) { resolve(dataUrl); return; }
-          if (w > MAX || h > MAX) {
-            if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-            else { w = Math.round(w * MAX / h); h = MAX; }
-          }
-          try {
-            const canvas = document.createElement('canvas');
-            canvas.width = w; canvas.height = h;
-            const ctx = canvas.getContext('2d')!;
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, w, h);
-            ctx.drawImage(img, 0, 0, w, h);
-            resolve(canvas.toDataURL('image/jpeg', 0.82));
-          } catch { resolve(dataUrl); }
+          const tryAt = (maxDim: number, quality: number): string | null => {
+            try {
+              let { naturalWidth: w, naturalHeight: h } = img;
+              if (!w || !h) return null;
+              if (w > maxDim || h > maxDim) {
+                if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+                else { w = Math.round(w * maxDim / h); h = maxDim; }
+              }
+              const canvas = document.createElement('canvas');
+              canvas.width = w; canvas.height = h;
+              const ctx = canvas.getContext('2d')!;
+              ctx.fillStyle = '#ffffff';
+              ctx.fillRect(0, 0, w, h);
+              ctx.drawImage(img, 0, 0, w, h);
+              const out = canvas.toDataURL('image/jpeg', quality);
+              return out.length > 100 ? out : null;
+            } catch { return null; }
+          };
+          // Try progressively smaller/lower quality; never fall back to original
+          resolve(tryAt(1024, 0.82) || tryAt(768, 0.75) || tryAt(512, 0.65) || '');
         };
-        img.onerror = () => resolve(dataUrl);
+        img.onerror = () => resolve('');
         img.src = dataUrl;
       };
       reader.onerror = () => resolve('');
