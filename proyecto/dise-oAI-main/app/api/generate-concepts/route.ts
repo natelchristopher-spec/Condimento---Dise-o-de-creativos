@@ -29,7 +29,7 @@ function getOpenAIErrorMessage(e: unknown): string {
   return 'Error al conectar con OpenAI. Intentá de nuevo.';
 }
 
-type PeopleMode = 'none' | 'ai' | 'real';
+type PeopleMode = 'none' | 'ai' | 'real' | 'branding';
 
 interface ConceptItem {
   concept_name: string;
@@ -49,18 +49,27 @@ Describí en este orden exacto:
 
 CRÍTICO para pantalones y prendas de color sólido: el color debe quedar completamente fiel. Si es beige, describí exactamente qué tipo de beige. Si es negro, indicá si tiene subtono. La IA tiende a desaturar o cambiar la temperatura del color — tu descripción debe ser lo suficientemente específica para evitarlo.`;
 
-const PRODUCT_DESCRIPTION_PROMPT_GENERIC = `Sos un experto en descripción de productos para e-commerce. Analizá este producto y describilo con precisión máxima para que pueda ser reproducido EXACTAMENTE por un generador de imágenes IA. La persona que lea tu descripción no puede ver la foto — tu texto es el único recurso. El producto puede ser de CUALQUIER categoría: suplemento, cosmético, reloj, accesorio, electrónico, alimento, herramienta, etc.
+const PRODUCT_DESCRIPTION_PROMPT_GENERIC = `Sos un experto en descripción de productos para generación de imágenes IA. Analizá este producto y describilo con precisión máxima. La persona que lea tu descripción no puede ver la foto — tu texto es el único recurso.
 
-Describí en este orden:
+PRIMERO determiná si el producto tiene packaging/envase (suplemento, cosmético, alimento, bebida, limpieza, etc.) o si es un producto sin packaging (electrónico, joyería, calzado, mueble, decoración, accesorio, juguete, etc.).
 
-1. TIPO DE PRODUCTO: categoría exacta (suplemento deportivo, reloj de pulsera, crema facial, auriculares, etc.), nombre específico, variante o modelo visible
-2. FORMA Y ESTRUCTURA: forma general (cilíndrico, rectangular, esférico, irregular), dimensiones relativas (grande/mediano/pequeño), presentación (envase, caja, suelto, con correa, etc.)
-3. COLOR — ES LO MÁS CRÍTICO: describí el color principal con máxima precisión. NO uses solo el nombre. Usá referencias concretas con subtono, saturación y temperatura (ej: "negro mate profundo sin brillo, sin subtono", "blanco perla con leve subtono cálido — NO es blanco puro"). Para neutros cálidos (beige, arena, khaki, dorado mate): aclará explícitamente que NO debe renderizarse como blanco ni gris. Para colores oscuros: aclará que NO debe aclararse.
-4. MATERIALES Y ACABADO: superficie (mate, satinado, brillante, texturado), material visible (plástico, metal, vidrio, tela, cuero, etc.), peso visual
-5. ELEMENTOS GRÁFICOS Y DISEÑO: para productos con packaging → diseño de etiqueta, tipografía del nombre, elementos visuales principales (franjas, íconos, degradados); para accesorios/electrónicos → grabados, pantallas, botones, detalles decorativos; para prendas → estampado, costuras visibles
-6. DETALLES ÚNICOS: lo que diferencia este producto específico de uno genérico de la misma categoría (forma de tapa, acabado especial, detalle de diseño característico)
+Para PRODUCTOS CON PACKAGING / ENVASE:
+1. TIPO DE PRODUCTO: nombre exacto, categoría, variante o sabor visible
+2. FORMATO / PRESENTACIÓN: tipo de envase (pote, bolsa, botella, caja, tubo), tamaño relativo
+3. COLORES DEL ENVASE — CRÍTICO: color exacto del cuerpo y del diseño/etiqueta. Para colores oscuros, aclará que NO debe renderizarse más claro.
+4. DISEÑO GRÁFICO DEL PACKAGING: estilo tipográfico, elementos visuales principales (franjas, íconos, geometría, degradados)
+5. TEXTO CLAVE VISIBLE: nombre del producto, sabor/variante si aplica, claims visibles en la etiqueta
+6. ELEMENTOS ÚNICOS: forma de la tapa, textura, detalles que distinguen este packaging específico
 
-CRÍTICO: NO menciones ninguna marca, logo ni texto de terceros. Solo describí el producto en sí.`;
+Para PRODUCTOS SIN PACKAGING (electrónico, joyería, calzado, decoración, accesorio, alimento fresco, etc.):
+1. TIPO DE PRODUCTO: nombre exacto, categoría, función principal
+2. FORMA Y DIMENSIONES: silueta general, proporciones, si es grande/compacto/pequeño/delgado
+3. COLORES — CRÍTICO: color exacto de cada componente. Para colores oscuros, aclará que NO debe renderizarse más claro. Para metales, especificá tono (plateado frío, dorado cálido, bronce, etc.).
+4. MATERIALES Y ACABADOS: metales, plásticos, madera, cuero, vidrio, tela, etc. y su acabado (mate/brillante/satinado/texturado)
+5. DETALLES FUNCIONALES: botones, pantallas, conectores, bisagras, cierres, costuras, herrajes, etc.
+6. ELEMENTOS ÚNICOS: lo que diferencia este producto específico de uno genérico
+
+CRÍTICO: NO menciones ninguna marca ni logo de terceros. Solo describí el producto en sí.`;
 
 async function describeProductWithVision(openai: OpenAI, imageDataUrl: string, prompt: string): Promise<string> {
   const response = await openai.chat.completions.create({
@@ -180,7 +189,10 @@ export async function POST(req: NextRequest) {
   let productDescription = '';
   let personDescription = '';
 
-  const descriptionPrompt = peopleMode !== 'none'
+  const CLOTHING_TERMS = /\b(prenda|vestido|pantalón|remera|camiseta|camisa|campera|buzo|short|pollera|falda|indumentaria|calzado|zapatilla|zapato|tela|tejido|outfit|jean|jogger|bikini|traje|garment|clothing|apparel|fabric|dress|shirt|pants|jacket|hoodie|sneaker|shoe|top|blouse|skirt|coat|sleeve|collar|hem|knit|denim|cotton|polyester)\b/i;
+  // Use fashion prompt only for actual clothing — detected from brief + brand style before vision runs
+  const isFashionBrief = CLOTHING_TERMS.test(brief + ' ' + (brandKit.styleDescription || ''));
+  const descriptionPrompt = (peopleMode !== 'none' && isFashionBrief)
     ? PRODUCT_DESCRIPTION_PROMPT_FASHION
     : PRODUCT_DESCRIPTION_PROMPT_GENERIC;
 
@@ -217,12 +229,17 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  const isBrandingMode = peopleMode === 'branding';
   const isProductEcommerce = peopleMode === 'none' && productDetailImages.length > 0;
 
   // People instruction for concept generation
-  const peopleInstruction = peopleMode === 'none'
-    ? 'NO incluir personas. Enfocarse en producto, composición, elementos gráficos y copy.'
-    : 'Incluir una persona usando una prenda de moda acorde al brief y brand kit. Actitud aspiracional, editorial.';
+  const peopleInstruction = isBrandingMode
+    ? 'NO incluir productos específicos ni personas. El foco es la identidad de marca, el mensaje y la composición gráfica pura.'
+    : peopleMode === 'none'
+      ? 'NO incluir personas. Enfocarse en producto, composición, elementos gráficos y copy.'
+      : isFashionBrief
+        ? 'Incluir una persona usando la prenda del brief. Actitud aspiracional, editorial.'
+        : 'Incluir una persona usando o interactuando con el producto del brief de forma natural. Actitud aspiracional. El producto aparece en su forma original — no mostrar consumo ni aplicación directa en piel o cuerpo.';
 
   const hasVisualRefs = visualRefs.length > 0;
 
@@ -233,19 +250,29 @@ export async function POST(req: NextRequest) {
       ? `6. DAILY USE / USE CASE — el producto integrado en su contexto cotidiano real (escritorio, gym, cocina, rutina, setup). El ambiente rodea al producto de forma natural. Hacerlo sentir usable y cercano.`
       : `6. PRODUCT DETAIL FOCUS — destacar calidad y detalles del producto. Texturas, costuras, fit, closeups de materiales, acabados. Incluir copy que resalte la calidad: un claim técnico corto o descripción de material superpuesto en tipografía refinada (ej: "100% algodón pima" / "Corte entallado premium" / "Hecho para durar").`;
 
-  const conceptDirections = isProductEcommerce
+  const brandingConceptDirections = `MODO BRANDING / CAMPAÑA — sin producto específico. El mensaje de marca y la identidad visual son los protagonistas absolutos. CADA concepto usa una estrategia visual completamente distinta. REGLA DE TEXTO: el copy debe ser tipografía bold, grande, claramente legible — nunca pequeño, nunca sutil. Usá la paleta y tipografía del brand kit con precisión:
+1. BRAND STATEMENT HERO — el nombre de la marca + tagline principal dominan el encuadre. Tipografía que ocupa 60-70% del frame. Paleta del brand kit pura. Composición geométrica o abstracta de alto impacto. Declaración de identidad.
+2. LAUNCH / ANNOUNCEMENT — composición de expectativa: "Viene algo nuevo", fecha de lanzamiento, cuenta regresiva visual o titulares de campaña. Elementos gráficos que generan anticipación. Copy de lanzamiento en tipografía grande. Drama visual.
+3. CAMPAIGN MOOD — storytelling visual puro: ambiente, emoción, textura que conecta con la esencia del brief. Fotografía de ambiente o ilustración abstracta. Copy de campaña aspiracional corto pero poderoso superpuesto. Sin producto.
+4. BRAND VALUES / MANIFESTO — los valores de la marca como imagen. Tipografía + elementos gráficos del brand kit. Manifiesto visual corto: 3-5 palabras que expresan el por qué de la marca. Composición premium y memorable.
+5. AWARENESS / SOCIAL PROOF — imagen que genera pertenencia e identidad de comunidad. Emoción colectiva, movimiento, energía de marca. Copy que invita a ser parte. Paleta del brand kit con contraste fuerte.
+${slot6}`;
+
+  const conceptDirections = isBrandingMode
+    ? brandingConceptDirections
+    : isProductEcommerce
     ? `MODO PRODUCTO — el producto es el protagonista absoluto. Sin personas. CADA concepto usa una estrategia visual completamente distinta:
 1. PRODUCT HERO — el producto LLENA el encuadre (80-90% del frame). Fondo color sólido del brand kit. Iluminación de estudio fuerte, limpio, premium. Sin copy excepto logo pequeño. El producto debe verse irresistible.
 2. OFFER FOCUS — la oferta es el protagonista. Pricing grande en tipografía bold, descuento destacado (ej: "30% OFF"), TODAS las mecánicas del brief (cuotas, fechas, envío gratis, retiro). Contraste fuerte. Composición lista para publicar y generar clic.
 3. BENEFIT FOCUS — se vende el resultado, no el producto. Claims claros en tipografía grande, iconos o checkmarks, highlights de beneficios. ¿Qué gana la persona? (ej: más energía, piel más limpia, frío 24h, mayor rendimiento). El producto aparece secundario.
-4. FEATURE FOCUS — se venden características técnicas para elevar percepción de calidad. Closeup/macro del producto, ingredientes o materiales visibles, specs técnicos como copy. Composición de catálogo de alta gama.
-5. NEED / BENEFIT — dos zonas visuales en la misma imagen: zona izquierda muestra el contexto SIN el producto (ambiente sin resolver, textura difícil, situación cotidiana incómoda — sin personas en estados negativos), zona derecha muestra el producto como respuesta. Copy que nombra el beneficio clave. Sin transformación de personas, sin imágenes de malestar físico.
+4. FEATURE FOCUS — se venden características técnicas para elevar percepción de calidad. Closeup/macro del producto, ingredientes o materiales visibles, specs como copy. Solo usar datos que estén en el brief — PROHIBIDO inventar specs, métricas o porcentajes. Composición de catálogo de alta gama.
+5. NEED / BENEFIT — dos zonas: zona izquierda muestra el contexto SIN el producto (ambiente o situación neutral), zona derecha muestra el producto como la respuesta. Sin personas en estados negativos ni transformaciones físicas. Contraste visual claro entre el "sin" y el "con". Incluir copy que refuerce el beneficio.
 ${slot6}`
     : `MODO FASHION / IN USE — el producto es experimentado por personas. El foco es la experiencia e identidad. CADA concepto usa una estrategia visual completamente distinta Y TODOS deben incluir texto/copy GRANDE Y VISIBLE en la imagen. REGLA DE TEXTO: el copy debe ser tipografía bold, grande, claramente legible — nunca pequeño, nunca sutil, nunca decorativo. Debe ocupar una porción importante de la imagen y ser lo primero que se lee:
 1. OFFER FOCUS — la oferta/promoción/descuento como protagonista visual. Pricing grande en tipografía bold, descuento destacado, mecánicas de venta (cuotas, envío gratis, fechas). La persona muestra/usa el producto mientras el copy de la promo domina. Concepto diseñado para generar clic.
 2. LIFESTYLE FOCUS — uso natural del producto en situaciones reales. Iluminación natural, movimiento auténtico. Incluir un headline corto o tagline de marca en tipografía GRANDE y bold, claramente visible, que ocupe una porción significativa de la imagen (ej: "Vestite como querés vivir" en letras grandes superpuestas). El texto debe ser prominente y legible — NO pequeño, NO sutil, NO decorativo.
 3. ASPIRATIONAL FOCUS — se vende identidad y deseo. Editorial premium, estética fuerte. Incluir nombre de marca prominente + claim aspiracional corto en tipografía elegante (ej: "Nueva colección" / "SS25" / tagline de campaña). El texto refuerza el deseo.
-4. TRANSFORMATION FOCUS — composición split screen before/after con LA MISMA persona en ambas mitades. REGLA CRÍTICA: el producto/prenda aparece ÚNICAMENTE en el lado "Después" (right/after side) — el lado "Antes" (left/before side) muestra a la persona con ropa básica, neutral o sin el producto. Incluir etiquetas de texto que marquen el contraste (ej: "Antes / Después", "Sin estilo / Con estilo") más un beneficio o claim corto que cierre la narrativa de cambio.
+4. CONTRAST FOCUS — composición de dos zonas: zona izquierda muestra el contexto SIN el producto (ropa básica, ambiente neutro), zona derecha muestra la persona CON el producto. Sin transformaciones físicas ni cambios en el cuerpo. Etiquetas de texto que marcan el contraste (ej: "Antes / Después", "Sin / Con") más un claim corto. NO mostrar personas en estados negativos.
 5. DAILY USE FOCUS — el producto integrado a la rutina cotidiana, momentos casuales y espontáneos. Incluir copy accesible y cercano superpuesto, tono conversacional (ej: "Para cada día" / "Tu look de siempre, mejor"). Tipografía casual, no corporativa.
 ${slot6}`;
 
@@ -260,7 +287,7 @@ REGLAS:
 - Estilo PREMIUM, nunca genérico ni clipart
 - Fondos en colores del brand kit, tipografía precisa, máx 2-3 elementos por pieza
 - Si hay descripción de productos, los image_prompts deben referenciar esos productos específicos
-- PROHIBIDO inventar: precios, descuentos, porcentajes, cupones, promos, mecánicas. Solo lo que esté EXPLÍCITAMENTE en el brief.
+- PROHIBIDO INVENTAR — REGLA ABSOLUTA: NO agregar ningún dato que no esté explícitamente en el brief o brand kit: teléfonos, URLs, redes sociales (@handles), QR codes, ratings ("4.8/5"), reseñas, número de clientes, certificaciones, claims de ingredientes o materiales, fechas límite, descuentos, mecánicas promocionales, premios o cualquier estadística. Solo datos del brief.
 ${isProductEcommerce ? `
 MODO E-COMMERCE CON PRODUCTO: cada image_prompt es una INSTRUCCIÓN DE EDICIÓN para images.edit.
 El modelo recibe la foto del producto y la transforma. Describí:
@@ -282,7 +309,7 @@ ${conceptDirections}
 - Fondos en colores del brand kit, tipografía precisa, máx 2-3 elementos por pieza
 - Si hay descripción de productos, los image_prompts deben referenciar esos productos específicos
 - Si hay referencias visuales de marca, los image_prompts deben seguir ese estilo visual
-- PROHIBIDO inventar: precios, descuentos, porcentajes, cupones, promos, mecánicas. Solo lo que esté EXPLÍCITAMENTE en el brief.
+- PROHIBIDO INVENTAR — REGLA ABSOLUTA: NO agregar ningún dato que no esté explícitamente en el brief o brand kit: teléfonos, URLs, redes sociales (@handles), QR codes, ratings ("4.8/5"), reseñas, número de clientes, certificaciones, claims de ingredientes o materiales, fechas límite, descuentos, mecánicas promocionales, premios o cualquier estadística. Solo datos del brief.
 - IDIOMA OBLIGATORIO: todos los textos, claims, beneficios, features y copy de los image_prompts deben estar en ESPAÑOL. Solo se permite inglés si es el nombre de marca o nombre de producto (ej: "Ultra Mass", "Weight Gainer"). NUNCA generar copy descriptivo en inglés.
 ${isProductEcommerce ? `
 MODO E-COMMERCE CON PRODUCTO: cada image_prompt es una INSTRUCCIÓN DE EDICIÓN para images.edit.
@@ -345,12 +372,12 @@ El image_prompt debe mencionar colores hex exactos, disposición, estilo y eleme
     ...(peopleMode === 'real' ? referenceImages.slice(0, 1) : []),
   ];
 
-  const hasPeople = peopleMode !== 'none';
+  const hasPeople = peopleMode === 'real';
   const styleSuffix = hasPeople
     ? 'Fashion editorial photography, natural skin tones, soft studio lighting, 85mm lens, high-end fashion campaign, photorealistic.'
     : isProductEcommerce
       ? 'Professional product photography or high-end retail graphic design, agency quality, photorealistic where applicable.'
-      : 'Premium graphic design, agency quality, NOT generic AI art, portrait 4:5.';
+      : 'Premium graphic design, bold typography, brand identity, agency quality, NOT generic AI art, portrait 4:5.';
   const productHint = productDetailImages.length > 0
     ? isProductEcommerce
       ? 'IMPORTANT: The provided reference images show the exact products — feature those specific products in the composition, replicating their appearance faithfully.'
@@ -377,8 +404,8 @@ El image_prompt debe mencionar colores hex exactos, disposición, estilo y eleme
               styleSuffix,
               productHint,
               styleHint,
-              'IDIOMA — CRÍTICO: TODO el texto generado (beneficios, features, claims, CTAs, etiquetas, descripciones) debe estar en ESPAÑOL. Solo se permite inglés si es parte del nombre de marca o nombre de producto (ej: "Ultra Mass", "Weight Gainer"). Ningún texto descriptivo o de comunicación puede estar en inglés.',
-              'do NOT include any invented text, prices, discounts, coupons, promo codes, or promotional copy that is not explicitly in the brief.',
+              'IDIOMA — CRÍTICO: TODO el texto visible en la imagen debe estar en ESPAÑOL. Solo se permite inglés para nombres de marca o producto. NUNCA generar copy descriptivo, beneficios, claims o CTAs en inglés.',
+              'ANTI-HALLUCINATION — do NOT invent or add any data not in the brief: phone numbers, URLs, social handles, QR codes, star ratings, testimonials, customer counts, certifications, ingredient/material claims, deadlines, discounts, promotional mechanics, awards, or any statistics. Only use what is explicitly in the brief.',
               'do NOT include button-style CTA elements in the image (e.g. "Compra ahora", "Ver más", "Buy Now", "Shop Now" rendered as a visual button, pill, or badge) — those CTAs are configured in the ad platform (Meta, Google), not inside the creative image itself.',
             ].filter(Boolean).join(' ');
 

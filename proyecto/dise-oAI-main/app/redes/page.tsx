@@ -642,7 +642,7 @@ export default function RedesPage() {
                 </div>
               )}
 
-              {step === 'done' && postCopy && (
+              {step === 'done' && postCopy && (postCopy.caption || postCopy.hashtags) && (
                 <div className="border border-gray-200 rounded-xl overflow-hidden mt-2">
                   <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
                     <h3 className="text-sm font-semibold text-gray-700">Copy del post</h3>
@@ -665,14 +665,14 @@ export default function RedesPage() {
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Hashtags</span>
                         <button
-                          onClick={() => { navigator.clipboard.writeText(postCopy.hashtags.split(' ').map(h => `#${h}`).join(' ')); setCopiedHashtags(true); setTimeout(() => setCopiedHashtags(false), 2000); }}
+                          onClick={() => { navigator.clipboard.writeText((postCopy.hashtags || '').split(' ').filter(Boolean).map(h => `#${h}`).join(' ')); setCopiedHashtags(true); setTimeout(() => setCopiedHashtags(false), 2000); }}
                           className="text-xs text-[#e42820] hover:text-[#c41f18] font-medium transition-colors"
                         >
                           {copiedHashtags ? '¡Copiado!' : 'Copiar'}
                         </button>
                       </div>
                       <p className="text-sm text-gray-500 leading-relaxed bg-gray-50 rounded-lg p-3">
-                        {postCopy.hashtags.split(' ').map((h, i) => (
+                        {(postCopy.hashtags || '').split(' ').filter(Boolean).map((h, i) => (
                           <span key={i} className="text-blue-500 mr-1">#{h}</span>
                         ))}
                       </p>

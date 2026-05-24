@@ -575,7 +575,7 @@ export default function CrearMarcaPage() {
               </div>
               <div className="flex gap-3">
                 <Link
-                  href="/"
+                  href="/anuncios"
                   className="bg-[#e42820] hover:bg-[#c41f18] text-white font-semibold px-6 py-3 rounded-xl transition-colors"
                 >
                   Crear anuncios

@@ -53,7 +53,10 @@ export default function ConfigPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState('');
-  const [newAdjustment, setNewAdjustment] = useState('');
+  const [choiceMade, setChoiceMade] = useState(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem('condimento_config_choice') === 'manual';
+    return false;
+  });
 
   useEffect(() => {
     fetch('/api/brand-kits').then(r => r.json()).then(kit => {
@@ -94,31 +97,32 @@ export default function ConfigPage() {
         styleDescription: data.styleDescription || f.styleDescription,
       }));
     } catch (e) {
-      setSaveError(e instanceof Error ? e.message : 'No se pudo leer el PDF');
+      alert(`Error: ${e instanceof Error ? e.message : 'No se pudo leer el PDF'}`);
     } finally {
       setExtracting(false);
       e.target.value = '';
     }
   };
 
-  const compressImage = (file: File, maxDim = 1024, quality = 0.75): Promise<string> =>
+  const compressImage = (file: File): Promise<string> =>
     new Promise(resolve => {
       const reader = new FileReader();
       reader.onload = () => {
         const dataUrl = reader.result as string;
         const img = new Image();
         img.onload = () => {
+          const MAX = 1024;
           let { naturalWidth: w, naturalHeight: h } = img;
           if (!w || !h) { resolve(dataUrl); return; }
-          if (w > maxDim || h > maxDim) {
-            if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
-            else { w = Math.round(w * maxDim / h); h = maxDim; }
+          if (w > MAX || h > MAX) {
+            if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+            else { w = Math.round(w * MAX / h); h = MAX; }
           }
           try {
             const canvas = document.createElement('canvas');
             canvas.width = w; canvas.height = h;
             canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
-            const result = canvas.toDataURL('image/jpeg', quality);
+            const result = canvas.toDataURL('image/jpeg', 0.75);
             resolve(result.length > 100 ? result : dataUrl);
           } catch { resolve(dataUrl); }
         };
@@ -145,7 +149,7 @@ export default function ConfigPage() {
       const data = await res.json();
       setForm(f => ({ ...f, referencePiecesThumbnails: allImages, referencePiecesStyle: data.styleDescription }));
     } catch {
-      setSaveError('No se pudieron analizar las piezas. Intentá de nuevo.');
+      alert('No se pudieron analizar las piezas. Intentá de nuevo.');
     } finally {
       setAnalyzingRefs(false);
       e.target.value = '';
@@ -169,18 +173,18 @@ export default function ConfigPage() {
       if (!res.ok) throw new Error(data.error || 'Error analizando piezas');
       setForm(f => ({ ...f, referencePiecesThumbnails: remaining, referencePiecesStyle: data.styleDescription }));
     } catch {
-      setSaveError('No se pudieron analizar las piezas restantes. Intentá de nuevo.');
+      alert('No se pudieron analizar las piezas restantes. Intentá de nuevo.');
     } finally {
       setAnalyzingRefs(false);
     }
   };
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const compressed = await compressImage(file, 800, 0.85);
-    setForm(f => ({ ...f, logoBase64: compressed, logoColorBase64: compressed }));
-    e.target.value = '';
+    const reader = new FileReader();
+    reader.onload = () => setForm(f => ({ ...f, logoBase64: reader.result as string, logoColorBase64: reader.result as string }));
+    reader.readAsDataURL(file);
   };
 
   const handleSave = async () => {
@@ -195,9 +199,14 @@ export default function ConfigPage() {
         body: JSON.stringify(kit),
       });
       if (!res.ok) throw new Error('Error guardando la marca. Intentá de nuevo.');
+      const isFirstKit = !hasKit;
       setHasKit(true);
       setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      if (isFirstKit) {
+        setTimeout(() => { window.location.href = '/'; }, 1500);
+      } else {
+        setTimeout(() => setSaved(false), 2000);
+      }
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : 'Error guardando');
     } finally {
@@ -217,16 +226,42 @@ export default function ConfigPage() {
       <main className="max-w-2xl mx-auto px-6 py-10">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-1">Mi marca</h1>
-          <p className="text-gray-500 text-sm">Configurá tu identidad de marca. Condimento la aplica automáticamente en cada pieza que generés.</p>
+          <p className="text-gray-500 text-sm">Configurá el brand kit de tu marca. Se usará en todas tus generaciones.</p>
         </div>
 
-        {!hasKit && hasApiKey && (
-          <div className="mb-6 bg-[#e42820]/5 border border-[#e42820]/20 rounded-2xl p-5 space-y-1">
-            <div className="flex items-center gap-2 mb-2">
+        {/* Brand creation choice — only shown on first setup */}
+        {!hasKit && !choiceMade && (
+          <div className="space-y-4 mb-8">
+            <div className="bg-[#e42820]/5 border border-[#e42820]/20 rounded-2xl p-5 space-y-1 mb-6">
               <span className="bg-[#e42820] text-white text-xs font-bold px-2 py-0.5 rounded-md">Paso 2 de 2</span>
+              <p className="text-sm font-semibold text-gray-900 mt-2">Configurá tu marca</p>
+              <p className="text-xs text-gray-500">Condimento aplica tu identidad automáticamente en cada pieza que generés.</p>
             </div>
-            <p className="text-sm font-semibold text-gray-900">Configurá tu marca</p>
-            <p className="text-xs text-gray-500">Cargá colores, tipografía y estilo de comunicación. A partir de acá la IA producirá cada anuncio, carrusel y ficha de producto respetando tu identidad — sin que tengas que explicarla cada vez.</p>
+            <p className="text-sm font-medium text-gray-700">¿Cómo querés empezar?</p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <button
+                onClick={() => { window.location.href = '/crear-marca'; }}
+                className="group flex flex-col gap-3 bg-white border-2 border-[#e42820]/30 hover:border-[#e42820] rounded-2xl p-5 text-left transition-all hover:shadow-md"
+              >
+                <div className="w-10 h-10 rounded-xl bg-[#e42820]/10 flex items-center justify-center text-xl">✨</div>
+                <div>
+                  <p className="font-semibold text-gray-900 text-sm">Crear marca desde cero con IA</p>
+                  <p className="text-xs text-gray-500 mt-1">Respondés unas preguntas y la IA genera nombre, paleta, estilo y logo. Ideal si todavía no tenés marca.</p>
+                </div>
+                <span className="text-xs text-[#e42820] font-medium group-hover:underline">Empezar →</span>
+              </button>
+              <button
+                onClick={() => { setChoiceMade(true); localStorage.setItem('condimento_config_choice', 'manual'); }}
+                className="group flex flex-col gap-3 bg-white border-2 border-gray-200 hover:border-gray-400 rounded-2xl p-5 text-left transition-all hover:shadow-md"
+              >
+                <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-xl">📋</div>
+                <div>
+                  <p className="font-semibold text-gray-900 text-sm">Ya tengo marca, completar el formulario</p>
+                  <p className="text-xs text-gray-500 mt-1">Cargás colores, tipografía, estilo y logo de tu marca existente.</p>
+                </div>
+                <span className="text-xs text-gray-500 font-medium group-hover:underline">Completar formulario →</span>
+              </button>
+            </div>
           </div>
         )}
 
@@ -243,7 +278,7 @@ export default function ConfigPage() {
           </div>
         )}
 
-        <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-6">
+        {(hasKit || choiceMade) && <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-lg text-gray-900">{hasKit ? 'Editar brand kit' : 'Crear brand kit'}</h2>
             <label className={`cursor-pointer flex items-center gap-2 text-sm px-4 py-2 rounded-xl border transition-colors ${extracting ? 'opacity-50 cursor-not-allowed border-gray-200 text-gray-500' : 'border-[#e42820]/40 text-[#e42820] hover:bg-[#e42820]/10 hover:border-[#e42820]'}`}>
@@ -401,51 +436,6 @@ export default function ConfigPage() {
             </div>
           </div>
 
-          {/* Quick adjustments */}
-          <div className="space-y-3">
-            <div>
-              <label className="text-sm text-gray-600">Ajustes rápidos</label>
-              <p className="text-xs text-gray-400 mt-0.5">Aparecen como botones al afinar. Ej: "Fondo con textura industrial".</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {(form.quickAdjustments || []).map((adj, i) => (
-                <span key={i} className="flex items-center gap-1.5 bg-[#e42820]/10 border border-[#e42820]/30 text-[#e42820] text-xs px-3 py-1.5 rounded-lg">
-                  {adj}
-                  <button
-                    onClick={() => setForm(f => ({ ...f, quickAdjustments: (f.quickAdjustments || []).filter((_, idx) => idx !== i) }))}
-                    className="text-[#e42820]/60 hover:text-[#e42820] ml-0.5"
-                  >×</button>
-                </span>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newAdjustment}
-                onChange={e => setNewAdjustment(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && newAdjustment.trim()) {
-                    setForm(f => ({ ...f, quickAdjustments: [...(f.quickAdjustments || []), newAdjustment.trim()] }));
-                    setNewAdjustment('');
-                  }
-                }}
-                placeholder="Escribí un ajuste y presioná Enter..."
-                className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] text-sm"
-              />
-              <button
-                onClick={() => {
-                  if (!newAdjustment.trim()) return;
-                  setForm(f => ({ ...f, quickAdjustments: [...(f.quickAdjustments || []), newAdjustment.trim()] }));
-                  setNewAdjustment('');
-                }}
-                disabled={!newAdjustment.trim()}
-                className="bg-gray-100 hover:bg-gray-100 disabled:opacity-40 text-gray-900 px-4 py-2.5 rounded-xl text-sm transition-colors"
-              >
-                + Agregar
-              </button>
-            </div>
-          </div>
-
           {/* Save */}
           {saveError && (
             <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">{saveError}</div>
@@ -461,7 +451,7 @@ export default function ConfigPage() {
               <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>Guardado</>
             ) : saving ? 'Guardando...' : hasKit ? 'Guardar cambios' : 'Crear brand kit'}
           </button>
-        </div>
+        </div>}
 
         <Link
           href="/"

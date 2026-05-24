@@ -43,11 +43,13 @@ export async function POST(req: NextRequest) {
   const openai = new OpenAI({ apiKey: ctx.openaiApiKey });
   const brandKitContext = buildBrandKitContext(brandKit);
 
+  const antiHallucinationRule = 'PROHIBIDO INVENTAR — REGLA ABSOLUTA para todas las etapas: NO agregar ningún dato que no esté explícitamente en el brief o brand kit: teléfonos, URLs, redes sociales (@handles), QR codes, ratings ("4.8/5"), reseñas, número de clientes, certificaciones, claims de ingredientes o materiales, fechas límite, descuentos, mecánicas promocionales, premios o cualquier estadística. Solo datos del brief.';
+
   const claimRule = funnel === 'BOFU'
-    ? 'BOFU — PROHIBICIÓN ESTRICTA: no inventar precios, métricas, porcentajes, descuentos, resultados numéricos ni testimonios. Solo usar datos presentes en el brand kit o en el título del carousel.'
+    ? `BOFU — PROHIBICIÓN ESTRICTA: no inventar precios, métricas, porcentajes, descuentos, resultados numéricos ni testimonios. Solo usar datos presentes en el brand kit o en el título del carousel. ${antiHallucinationRule}`
     : funnel === 'MOFU'
-    ? 'MOFU — usar solo datos del brand kit. No inventar specs técnicas ni comparativas sin base en la información de la marca.'
-    : 'TOFU — contenido educativo genérico del nicho. No mencionar el producto directamente. Solo conocimiento general.';
+    ? `MOFU — usar solo datos del brand kit. No inventar specs técnicas ni comparativas sin base en la información de la marca. ${antiHallucinationRule}`
+    : `TOFU — contenido educativo genérico del nicho. No mencionar el producto directamente. Solo conocimiento general. ${antiHallucinationRule}`;
 
   const prompt = `Sos un copywriter y director creativo para Instagram.
 
@@ -61,20 +63,23 @@ HOOK: ${hook}
 ETAPA DEL FUNNEL: ${funnel}
 REGLA DE CLAIMS: ${claimRule}
 
+ESTILO VISUAL UNIFICADO — definilo UNA SOLA VEZ antes de las slides:
+Las 3 slides deben verse como parte de una misma serie diseñada por un solo director creativo. Decidí: un color de fondo dominante (de la paleta de la marca), un mood tipográfico (bold/clean/editorial), y un tratamiento visual general (minimalista, dinámico, fotográfico, etc.). Ese estilo se aplica IGUAL en las 3 slides. Solo varía la composición de contenido, nunca el estilo.
+
 ESTRUCTURA DE SLIDES — seguila exactamente:
 
 Slide 1 (HOOK): captura la atención, hace que la persona quiera ver más.
 - title: máximo 8 palabras, impactante, usa el hook provisto como base
 - subtitle: máximo 6 palabras, complementa el título. Puede ser null.
-- image_direction: instrucción breve en inglés para el generador (describe background color, layout, typography mood — NO describas el producto ni la marca)
+- image_direction: instrucción en inglés para el generador. DEBE comenzar con el estilo visual unificado definido arriba, luego especificar solo la variación de esta slide. Ejemplo: "Dark red background, bold white typography — Slide 1: large centered headline, minimal elements."
 
 Slide 2 (VALOR): entrega el contenido prometido en el hook.
 - items: exactamente 3 bullets o pasos numerados. Máximo 5 palabras cada uno.
-- image_direction: ídem
+- image_direction: MISMO estilo base que slide 1, solo varía la composición. Ejemplo: "Dark red background, bold white typography — Slide 2: structured list layout with icons or numbers."
 
 Slide 3 (CIERRE): slide de marca que cierra el relato — sin CTA explícito, solo branding.
 - title: máximo 8 palabras, frase de cierre que conecta con el tema y refuerza la marca
-- image_direction: ídem
+- image_direction: MISMO estilo base que slides 1 y 2. Ejemplo: "Dark red background, bold white typography — Slide 3: centered brand closing, clean and premium."
 
 COPY DEL POST DE INSTAGRAM:
 - caption: texto que acompaña el carrusel en el feed. Tono conversacional, primera línea gancho para que expandan. 2-3 párrafos cortos. Emojis estratégicos. En español. Adaptado a la etapa del funnel: TOFU=educativo sin vender, MOFU=comparativo/beneficios, BOFU=urgencia/prueba social. NO inventar precios, métricas ni descuentos que no estén en el brand kit.
@@ -98,7 +103,7 @@ Respondé SOLO con JSON válido:
       model: 'gpt-4o-mini',
       messages: [{ role: 'user', content: prompt }],
       response_format: { type: 'json_object' },
-      max_tokens: 800,
+      max_tokens: 1200,
     });
     const data = JSON.parse(response.choices[0].message.content || '{}');
     return NextResponse.json({
