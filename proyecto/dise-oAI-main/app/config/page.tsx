@@ -47,6 +47,7 @@ export default function ConfigPage() {
   const supabase = createSupabaseBrowser();
   const [form, setForm] = useState(EMPTY_FORM);
   const [hasKit, setHasKit] = useState(false);
+  const [kitLoading, setKitLoading] = useState(true);
   const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
   const [extracting, setExtracting] = useState(false);
   const [analyzingRefs, setAnalyzingRefs] = useState(false);
@@ -64,7 +65,7 @@ export default function ConfigPage() {
         setForm({ ...EMPTY_FORM, ...kit });
         setHasKit(true);
       }
-    }).catch(console.error);
+    }).catch(console.error).finally(() => setKitLoading(false));
     fetch('/api/profile').then(r => r.json()).then(data => {
       setHasApiKey(!!data.openai_api_key);
     }).catch(() => setHasApiKey(false));
@@ -229,8 +230,16 @@ export default function ConfigPage() {
           <p className="text-gray-500 text-sm">Configurá el brand kit de tu marca. Se usará en todas tus generaciones.</p>
         </div>
 
+        {/* Loading skeleton while fetching brand kit */}
+        {kitLoading && (
+          <div className="space-y-4 animate-pulse">
+            <div className="h-10 bg-gray-100 rounded-xl w-1/2" />
+            <div className="h-32 bg-gray-100 rounded-2xl" />
+          </div>
+        )}
+
         {/* Brand creation choice — only shown on first setup */}
-        {!hasKit && !choiceMade && (
+        {!kitLoading && !hasKit && !choiceMade && (
           <div className="space-y-4 mb-8">
             <div className="bg-[#e42820]/5 border border-[#e42820]/20 rounded-2xl p-5 space-y-1 mb-6">
               <span className="bg-[#e42820] text-white text-xs font-bold px-2 py-0.5 rounded-md">Paso 2 de 2</span>
@@ -278,7 +287,7 @@ export default function ConfigPage() {
           </div>
         )}
 
-        {(hasKit || choiceMade) && <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-6">
+        {!kitLoading && (hasKit || choiceMade) && <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-lg text-gray-900">{hasKit ? 'Editar brand kit' : 'Crear brand kit'}</h2>
             <label className={`cursor-pointer flex items-center gap-2 text-sm px-4 py-2 rounded-xl border transition-colors ${extracting ? 'opacity-50 cursor-not-allowed border-gray-200 text-gray-500' : 'border-[#e42820]/40 text-[#e42820] hover:bg-[#e42820]/10 hover:border-[#e42820]'}`}>
