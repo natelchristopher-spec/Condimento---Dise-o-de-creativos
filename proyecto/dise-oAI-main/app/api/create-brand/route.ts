@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import OpenAI from 'openai';
 import { getUserContext } from '@/app/lib/get-user-context';
 
@@ -33,7 +33,9 @@ async function generateColorLogo(openai: OpenAI, name: string, prompt: string): 
 
 export async function POST(req: NextRequest) {
   const ctx = await getUserContext();
-  if (!ctx) return NextResponse.json({ error: 'Configurá tu API key de OpenAI en el perfil.' }, { status: 401 });
+  if (!ctx) {
+    return new Response(JSON.stringify({ error: 'Configurá tu API key de OpenAI en el perfil.' }), { status: 401 });
+  }
 
   const { businessName, category, brief }: {
     businessName?: string;
@@ -74,34 +76,79 @@ REGLAS CRÍTICAS:
 
 Respondé SOLO con JSON: { "concepts": [ {...}, {...}, {...} ] }`;
 
-  const conceptsRes = await openai.chat.completions.create({
-    model: 'gpt-4o',
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: `CATEGORÍA: ${category}\nBRIEF: ${brief}` },
-    ],
-    response_format: { type: 'json_object' },
+  const encoder = new TextEncoder();
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (data: object) => {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+      };
+
+      try {
+        const conceptsRes = await openai.chat.completions.create({
+          model: 'gpt-4o',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: `CATEGORÍA: ${category}\nBRIEF: ${brief}` },
+          ],
+          response_format: { type: 'json_object' },
+        });
+
+        const parsed = JSON.parse(conceptsRes.choices[0].message.content || '{}');
+        const rawConcepts: RawConcept[] = (parsed.concepts || []).slice(0, 3);
+
+        // Generate logos in parallel — stream each concept as its logo finishes
+        const logoPromises = rawConcepts.map((c: RawConcept, i: number) =>
+          generateColorLogo(openai, c.name, c.logo_prompt)
+            .then(logoColorBase64 => {
+              send({
+                concept: {
+                  index: i,
+                  name: c.name,
+                  nameRationale: c.name_rationale,
+                  tagline: c.tagline,
+                  primary1: c.primary1, primary2: c.primary2, primary3: c.primary3,
+                  secondary1: c.secondary1, secondary2: c.secondary2, secondary3: c.secondary3,
+                  typography: c.typography,
+                  styleDescription: c.style_description,
+                  logoPrompt: c.logo_prompt,
+                  logoColorBase64,
+                },
+              });
+            })
+            .catch(() => {
+              send({
+                concept: {
+                  index: i,
+                  name: c.name,
+                  nameRationale: c.name_rationale,
+                  tagline: c.tagline,
+                  primary1: c.primary1, primary2: c.primary2, primary3: c.primary3,
+                  secondary1: c.secondary1, secondary2: c.secondary2, secondary3: c.secondary3,
+                  typography: c.typography,
+                  styleDescription: c.style_description,
+                  logoPrompt: c.logo_prompt,
+                  logoColorBase64: '',
+                },
+              });
+            })
+        );
+
+        await Promise.allSettled(logoPromises);
+        send({ done: true });
+      } catch (err) {
+        send({ error: err instanceof Error ? err.message : 'Error generando marcas' });
+      } finally {
+        controller.close();
+      }
+    },
   });
 
-  const parsed = JSON.parse(conceptsRes.choices[0].message.content || '{}');
-  const rawConcepts: RawConcept[] = parsed.concepts || [];
-
-  // Generate color logos for all 3 concepts in parallel
-  const logoResults = await Promise.allSettled(
-    rawConcepts.map((c: RawConcept) => generateColorLogo(openai, c.name, c.logo_prompt))
-  );
-
-  const concepts = rawConcepts.map((c: RawConcept, i) => ({
-    name: c.name,
-    nameRationale: c.name_rationale,
-    tagline: c.tagline,
-    primary1: c.primary1, primary2: c.primary2, primary3: c.primary3,
-    secondary1: c.secondary1, secondary2: c.secondary2, secondary3: c.secondary3,
-    typography: c.typography,
-    styleDescription: c.style_description,
-    logoPrompt: c.logo_prompt,
-    logoColorBase64: logoResults[i].status === 'fulfilled' ? logoResults[i].value : '',
-  }));
-
-  return NextResponse.json({ concepts });
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    },
+  });
 }

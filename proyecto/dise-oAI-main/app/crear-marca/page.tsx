@@ -79,7 +79,8 @@ export default function CrearMarcaPage() {
   const [businessName, setBusinessName] = useState('');
   const [category, setCategory] = useState('');
   const [brief, setBrief] = useState('');
-  const [concepts, setConcepts] = useState<BrandConcept[]>([]);
+  const [concepts, setConcepts] = useState<(BrandConcept | null)[]>([null, null, null]);
+  const [conceptsStreaming, setConceptsStreaming] = useState(false);
   const [selected, setSelected] = useState<BrandConcept | null>(null);
   const [msgIdx, setMsgIdx] = useState(0);
   const [error, setError] = useState('');
@@ -131,21 +132,57 @@ export default function CrearMarcaPage() {
   const generate = async () => {
     if (!category || !brief.trim()) return;
     setStep('generating');
+    setConcepts([null, null, null]);
+    setConceptsStreaming(true);
     setMsgIdx(0);
     setError('');
+    let hasShownPick = false;
     try {
       const res = await fetch('/api/create-brand', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ businessName: businessName.trim(), category, brief: brief.trim() }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Error generando marcas');
-      setConcepts(data.concepts || []);
-      setStep('pick');
+      if (!res.ok) throw new Error((await res.json()).error || 'Error generando marcas');
+
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const parts = buf.split('\n\n');
+        buf = parts.pop() || '';
+        for (const part of parts) {
+          if (!part.startsWith('data: ')) continue;
+          try {
+            const data = JSON.parse(part.slice(6));
+            if (data.error) throw new Error(data.error);
+            if (data.concept) {
+              const c = data.concept;
+              setConcepts(prev => {
+                const next = [...prev];
+                next[c.index] = c;
+                return next;
+              });
+              if (!hasShownPick) {
+                hasShownPick = true;
+                setStep('pick');
+              }
+            }
+            if (data.done) setConceptsStreaming(false);
+          } catch (parseErr) {
+            if (parseErr instanceof Error && parseErr.message !== 'Unexpected token') throw parseErr;
+          }
+        }
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error generando propuestas');
       setStep('input');
+    } finally {
+      setConceptsStreaming(false);
     }
   };
 
@@ -360,66 +397,93 @@ export default function CrearMarcaPage() {
             <div className="space-y-6">
               <div>
                 <h2 className="text-lg font-bold text-gray-900">Elegí tu marca</h2>
-                <p className="text-sm text-gray-500">Tres propuestas distintas. Hacé clic en la que más te gusta para editarla y guardarla.</p>
+                <p className="text-sm text-gray-500">
+                  {conceptsStreaming ? 'Generando propuestas...' : 'Tres propuestas distintas. Hacé clic en la que más te gusta para editarla y guardarla.'}
+                </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {concepts.map((concept, i) => (
-                  <button
-                    key={i}
-                    onClick={() => pickConcept(concept)}
-                    className="bg-white border border-gray-200 hover:border-[#e42820] hover:shadow-md rounded-2xl overflow-hidden text-left transition-all group"
-                  >
-                    {/* Logo */}
-                    <div className="aspect-square bg-gray-50 flex items-center justify-center overflow-hidden">
-                      {concept.logoColorBase64 ? (
-                        <img
-                          src={`data:image/png;base64,${concept.logoColorBase64}`}
-                          alt={concept.name}
-                          className="w-full h-full object-contain p-4"
-                        />
-                      ) : (
-                        <LogoPlaceholder name={concept.name} />
-                      )}
-                    </div>
-
-                    {/* Info */}
-                    <div className="p-4 space-y-3">
-                      <div>
-                        <p className="font-bold text-gray-900 text-base leading-tight">{concept.name}</p>
-                        <p className="text-xs text-gray-500 mt-0.5 italic">"{concept.tagline}"</p>
+                {[0, 1, 2].map(i => {
+                  const concept = concepts[i];
+                  if (!concept) {
+                    return (
+                      <div key={i} className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+                        <div className="aspect-square bg-gray-50 flex items-center justify-center">
+                          <div className="flex flex-col items-center gap-2">
+                            <div className="w-6 h-6 border-2 border-[#e42820]/20 border-t-[#e42820] rounded-full animate-spin" />
+                            <p className="text-[10px] text-gray-400">Generando...</p>
+                          </div>
+                        </div>
+                        <div className="p-4 space-y-3 animate-pulse">
+                          <div className="h-4 bg-gray-100 rounded w-2/3" />
+                          <div className="h-3 bg-gray-100 rounded w-full" />
+                          <div className="flex gap-1.5">
+                            {[0, 1, 2].map(j => <div key={j} className="w-6 h-6 rounded-full bg-gray-100" />)}
+                          </div>
+                          <div className="h-3 bg-gray-100 rounded w-5/6" />
+                        </div>
+                      </div>
+                    );
+                  }
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => pickConcept(concept)}
+                      className="bg-white border border-gray-200 hover:border-[#e42820] hover:shadow-md rounded-2xl overflow-hidden text-left transition-all group"
+                    >
+                      {/* Logo */}
+                      <div className="aspect-square bg-gray-50 flex items-center justify-center overflow-hidden">
+                        {concept.logoColorBase64 ? (
+                          <img
+                            src={`data:image/png;base64,${concept.logoColorBase64}`}
+                            alt={concept.name}
+                            className="w-full h-full object-contain p-4"
+                          />
+                        ) : (
+                          <LogoPlaceholder name={concept.name} />
+                        )}
                       </div>
 
-                      {/* Color swatches */}
-                      <div className="flex gap-1.5">
-                        {[concept.primary1, concept.primary2, concept.primary3].map((c, j) => (
-                          <div key={j} className="w-6 h-6 rounded-full border border-white shadow-sm" style={{ background: c }} title={c} />
-                        ))}
-                        <div className="w-px bg-gray-200 mx-0.5" />
-                        {[concept.secondary1, concept.secondary2, concept.secondary3].map((c, j) => (
-                          <div key={j} className="w-6 h-6 rounded-full border border-gray-200" style={{ background: c }} title={c} />
-                        ))}
-                      </div>
+                      {/* Info */}
+                      <div className="p-4 space-y-3">
+                        <div>
+                          <p className="font-bold text-gray-900 text-base leading-tight">{concept.name}</p>
+                          <p className="text-xs text-gray-500 mt-0.5 italic">"{concept.tagline}"</p>
+                        </div>
 
-                      <p className="text-[11px] text-gray-400 leading-relaxed line-clamp-2">{concept.styleDescription}</p>
+                        {/* Color swatches */}
+                        <div className="flex gap-1.5">
+                          {[concept.primary1, concept.primary2, concept.primary3].map((c, j) => (
+                            <div key={j} className="w-6 h-6 rounded-full border border-white shadow-sm" style={{ background: c }} title={c} />
+                          ))}
+                          <div className="w-px bg-gray-200 mx-0.5" />
+                          {[concept.secondary1, concept.secondary2, concept.secondary3].map((c, j) => (
+                            <div key={j} className="w-6 h-6 rounded-full border border-gray-200" style={{ background: c }} title={c} />
+                          ))}
+                        </div>
 
-                      <div className="flex items-center gap-1 text-[#e42820] text-xs font-semibold group-hover:gap-2 transition-all">
-                        Elegir esta
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                        </svg>
+                        <p className="text-[11px] text-gray-400 leading-relaxed line-clamp-2">{concept.styleDescription}</p>
+
+                        <div className="flex items-center gap-1 text-[#e42820] text-xs font-semibold group-hover:gap-2 transition-all">
+                          Elegir esta
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </div>
                       </div>
-                    </div>
-                  </button>
-                ))}
+                    </button>
+                  );
+                })}
               </div>
 
-              <button
-                onClick={() => { setStep('input'); setError(''); }}
-                className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                ← Volver y cambiar el brief
-              </button>
+              {!conceptsStreaming && (
+                <button
+                  onClick={() => { setStep('input'); setError(''); }}
+                  className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  ← Volver y cambiar el brief
+                </button>
+              )}
             </div>
           )}
 
