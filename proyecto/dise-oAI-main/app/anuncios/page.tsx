@@ -379,7 +379,8 @@ export default function Home() {
     setRefiningIndex(null);
     setError('');
 
-    if (productDetailImages.length > 0 && peopleMode === 'real') {
+    const isFashionBrief = /\b(ropa|prenda|vestido|pantalón|remera|camiseta|camisa|campera|buzo|short|pollera|falda|moda|indumentaria|calzado|zapatilla|zapato|tela|tejido|corte|outfit|jean|jogger|bikini|traje)\b/i.test(brief + ' ' + (brandKit?.styleDescription || ''));
+    if (productDetailImages.length > 0 && peopleMode === 'real' && isFashionBrief) {
       const statuses: Array<'pending' | 'applying' | 'done'> = Array(n).fill('pending');
       setApplyStatuses([...statuses]);
       setStep('refine');
