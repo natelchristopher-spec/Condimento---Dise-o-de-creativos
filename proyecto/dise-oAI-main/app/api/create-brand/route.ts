@@ -4,6 +4,17 @@ import { getUserContext } from '@/app/lib/get-user-context';
 
 export const maxDuration = 120;
 
+function getOpenAIErrorMessage(e: unknown): string {
+  const msg = e instanceof Error ? e.message : String(e);
+  if (msg.includes('insufficient_quota') || msg.includes('billing'))
+    return 'Sin crédito en tu cuenta de OpenAI. Cargá saldo en platform.openai.com → Settings → Billing.';
+  if (msg.includes('401') || msg.includes('invalid_api_key'))
+    return 'API key inválida. Verificá en platform.openai.com → API Keys.';
+  if (msg.includes('429') || msg.includes('rate_limit'))
+    return 'Límite de requests alcanzado. Esperá unos segundos e intentá de nuevo.';
+  return e instanceof Error ? e.message : 'Error generando marcas';
+}
+
 interface RawConcept {
   name: string;
   name_rationale: string;
@@ -137,7 +148,7 @@ Respondé SOLO con JSON: { "concepts": [ {...}, {...}, {...} ] }`;
         await Promise.allSettled(logoPromises);
         send({ done: true });
       } catch (err) {
-        send({ error: err instanceof Error ? err.message : 'Error generando marcas' });
+        send({ error: getOpenAIErrorMessage(err) });
       } finally {
         controller.close();
       }

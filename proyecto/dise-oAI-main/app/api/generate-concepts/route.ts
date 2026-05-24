@@ -250,13 +250,22 @@ export async function POST(req: NextRequest) {
       ? `6. DAILY USE / USE CASE — el producto integrado en su contexto cotidiano real (escritorio, gym, cocina, rutina, setup). El ambiente rodea al producto de forma natural. Hacerlo sentir usable y cercano.`
       : `6. PRODUCT DETAIL FOCUS — destacar calidad y detalles del producto. Texturas, costuras, fit, closeups de materiales, acabados. Incluir copy que resalte la calidad: un claim técnico corto o descripción de material superpuesto en tipografía refinada (ej: "100% algodón pima" / "Corte entallado premium" / "Hecho para durar").`;
 
-  const brandingConceptDirections = `MODO BRANDING / CAMPAÑA — sin producto específico. El mensaje de marca y la identidad visual son los protagonistas absolutos. CADA concepto usa una estrategia visual completamente distinta. REGLA DE TEXTO: el copy debe ser tipografía bold, grande, claramente legible — nunca pequeño, nunca sutil. Usá la paleta y tipografía del brand kit con precisión:
-1. BRAND STATEMENT HERO — el nombre de la marca + tagline principal dominan el encuadre. Tipografía que ocupa 60-70% del frame. Paleta del brand kit pura. Composición geométrica o abstracta de alto impacto. Declaración de identidad.
-2. LAUNCH / ANNOUNCEMENT — composición de expectativa: "Viene algo nuevo", fecha de lanzamiento, cuenta regresiva visual o titulares de campaña. Elementos gráficos que generan anticipación. Copy de lanzamiento en tipografía grande. Drama visual.
-3. CAMPAIGN MOOD — storytelling visual puro: ambiente, emoción, textura que conecta con la esencia del brief. Fotografía de ambiente o ilustración abstracta. Copy de campaña aspiracional corto pero poderoso superpuesto. Sin producto.
-4. BRAND VALUES / MANIFESTO — los valores de la marca como imagen. Tipografía + elementos gráficos del brand kit. Manifiesto visual corto: 3-5 palabras que expresan el por qué de la marca. Composición premium y memorable.
-5. AWARENESS / SOCIAL PROOF — imagen que genera pertenencia e identidad de comunidad. Emoción colectiva, movimiento, energía de marca. Copy que invita a ser parte. Paleta del brand kit con contraste fuerte.
-${slot6}`;
+  const brandingConceptDirections = `MODO BRANDING / CAMPAÑA — sin producto específico.
+PASO 1: Leé el brief y determiná el ÚNICO objetivo principal de campaña (ej: lanzamiento de tienda, Black Friday, temporada de verano, awareness de marca, aniversario, campaña de valores, etc.).
+PASO 2: Generá 6 conceptos que ejecuten ESE MISMO objetivo con 6 TRATAMIENTOS VISUALES completamente distintos. Todos los conceptos deben responder al mismo intent — NO mezclar distintos objetivos entre sí.
+PASO 3: Elegí los 6 tratamientos más apropiados para ese objetivo específico entre estas posibilidades:
+  - TIPOGRAFÍA DOMINANTE: solo copy grande + paleta del brand kit. 0% fotografía. Las palabras son la imagen.
+  - COUNTDOWN / ANTICIPACIÓN: elementos de cuenta regresiva, fecha, urgencia o expectativa visual.
+  - COMPOSICIÓN GEOMÉTRICA: formas abstractas + color del brand kit + copy superpuesto. Sin objetos literales.
+  - MOOD CINEMATOGRÁFICO: ambiente fotográfico o ilustrado + copy corto poderoso superpuesto.
+  - MANIFESTO BOLD: 3-5 palabras enormes que declaran el porqué de la campaña. Composición brutal y memorable.
+  - SPLIT / CONTRASTE: dos zonas que cuentan una historia visual (antes/después, problema/solución, two worlds).
+  - GRAFISMO DE MARCA: elementos visuales abstractos propios de la marca + copy de campaña.
+  - ENERGÍA COLECTIVA: identidad de comunidad, movimiento, pertenencia. Copy que invita a ser parte.
+
+REGLA DE COHERENCIA: todos los conceptos deben sentirse como parte de la MISMA campaña — misma paleta, mismo tono, mismo objetivo. Lo que varía es el tratamiento visual, no el mensaje central.
+REGLA DE TEXTO: el copy debe ser tipografía bold, grande, claramente legible — nunca pequeño, nunca sutil, nunca decorativo. Debe ocupar una porción importante del frame.
+Usá la paleta y tipografía del brand kit con precisión exacta.`;
 
   const conceptDirections = isBrandingMode
     ? brandingConceptDirections

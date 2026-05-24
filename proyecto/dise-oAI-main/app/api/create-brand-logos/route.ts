@@ -4,6 +4,17 @@ import { getUserContext } from '@/app/lib/get-user-context';
 
 export const maxDuration = 120;
 
+function getOpenAIErrorMessage(e: unknown): string {
+  const msg = e instanceof Error ? e.message : String(e);
+  if (msg.includes('insufficient_quota') || msg.includes('billing'))
+    return 'Sin crédito en tu cuenta de OpenAI. Cargá saldo en platform.openai.com → Settings → Billing.';
+  if (msg.includes('401') || msg.includes('invalid_api_key'))
+    return 'API key inválida. Verificá en platform.openai.com → API Keys.';
+  if (msg.includes('429') || msg.includes('rate_limit'))
+    return 'Límite de requests alcanzado. Esperá unos segundos e intentá de nuevo.';
+  return e instanceof Error ? e.message : 'Error generando logos';
+}
+
 export async function POST(req: NextRequest) {
   const ctx = await getUserContext();
   if (!ctx) {
@@ -36,21 +47,26 @@ export async function POST(req: NextRequest) {
         },
       ];
 
-      const promises = variants.map(v =>
-        openai.images.generate({
-          model: 'gpt-image-2',
-          prompt: v.prompt,
-          size: '1024x1024',
-          quality: 'medium',
-          n: 1,
-        })
-          .then(result => send({ variant: v.key, b64: result.data?.[0]?.b64_json || '' }))
-          .catch(() => send({ variant: v.key, b64: '' }))
-      );
+      try {
+        const promises = variants.map(v =>
+          openai.images.generate({
+            model: 'gpt-image-2',
+            prompt: v.prompt,
+            size: '1024x1024',
+            quality: 'medium',
+            n: 1,
+          })
+            .then(result => send({ variant: v.key, b64: result.data?.[0]?.b64_json || '' }))
+            .catch(() => send({ variant: v.key, b64: '' }))
+        );
 
-      await Promise.allSettled(promises);
-      send({ done: true });
-      controller.close();
+        await Promise.allSettled(promises);
+        send({ done: true });
+      } catch (err) {
+        send({ error: getOpenAIErrorMessage(err) });
+      } finally {
+        controller.close();
+      }
     },
   });
 

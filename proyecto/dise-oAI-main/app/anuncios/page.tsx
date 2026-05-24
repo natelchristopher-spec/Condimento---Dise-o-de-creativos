@@ -777,7 +777,7 @@ export default function Home() {
                   </svg>
                   Regenerar
                 </button>
-                <button onClick={reset} className="text-gray-500 hover:text-gray-600 text-sm transition-colors">
+                <button onClick={() => setStep('brief')} className="text-gray-500 hover:text-gray-600 text-sm transition-colors">
                   ← Volver
                 </button>
               </div>
