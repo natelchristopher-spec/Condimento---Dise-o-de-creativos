@@ -128,7 +128,7 @@ export default function PerfilPage() {
           <div className="border-t border-gray-200 pt-4 space-y-2">
             <p className="text-xs text-gray-500 font-medium">¿Dónde obtengo mi API key?</p>
             <ol className="text-xs text-gray-500 space-y-1 list-decimal list-inside">
-              <li>Entrá a platform.openai.com</li>
+              <li>Entrá a <a href="https://platform.openai.com" target="_blank" rel="noopener noreferrer" className="text-[#e42820] underline">platform.openai.com</a></li>
               <li>Menú izquierdo → API Keys</li>
               <li>Create new secret key</li>
               <li>Cargá crédito en Settings → Billing (mínimo $5)</li>
