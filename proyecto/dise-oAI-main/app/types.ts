@@ -32,4 +32,4 @@ export interface GeneratedImage {
 }
 
 export type Step = 'brief' | 'concepts' | 'refine' | 'done';
-export type PeopleMode = 'none' | 'ai' | 'real';
+export type PeopleMode = 'none' | 'ai' | 'real' | 'branding';

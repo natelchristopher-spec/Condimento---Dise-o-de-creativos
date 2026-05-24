@@ -18,7 +18,7 @@ function isRefusal(text: string): boolean {
 
 export const maxDuration = 300;
 
-type PeopleMode = 'none' | 'ai' | 'real';
+type PeopleMode = 'none' | 'ai' | 'real' | 'branding';
 
 interface ConceptItem {
   concept_name: string;
@@ -213,14 +213,17 @@ export async function POST(req: NextRequest) {
     personDescription = visionResponse.choices[0].message.content || '';
   }
 
+  const isBrandingMode = peopleMode === 'branding';
   const isProductEcommerce = peopleMode === 'none' && productDetailImages.length > 0;
 
   // People instruction for concept generation
-  const peopleInstruction = peopleMode === 'none'
-    ? 'NO incluir personas. Enfocarse en producto, composición, elementos gráficos y copy.'
-    : isFashionBrief
-      ? 'Incluir una persona usando la prenda del brief. Actitud aspiracional, editorial.'
-      : 'Incluir una persona usando o interactuando con el producto del brief de forma natural. Actitud aspiracional. El producto aparece en su forma original — no mostrar consumo ni aplicación directa en piel o cuerpo.';
+  const peopleInstruction = isBrandingMode
+    ? 'NO incluir productos específicos ni personas. El foco es la identidad de marca, el mensaje y la composición gráfica pura.'
+    : peopleMode === 'none'
+      ? 'NO incluir personas. Enfocarse en producto, composición, elementos gráficos y copy.'
+      : isFashionBrief
+        ? 'Incluir una persona usando la prenda del brief. Actitud aspiracional, editorial.'
+        : 'Incluir una persona usando o interactuando con el producto del brief de forma natural. Actitud aspiracional. El producto aparece en su forma original — no mostrar consumo ni aplicación directa en piel o cuerpo.';
 
   const hasVisualRefs = visualRefs.length > 0;
 
@@ -231,7 +234,17 @@ export async function POST(req: NextRequest) {
       ? `6. DAILY USE / USE CASE — el producto integrado en su contexto cotidiano real (escritorio, gym, cocina, rutina, setup). El ambiente rodea al producto de forma natural. Hacerlo sentir usable y cercano.`
       : `6. PRODUCT DETAIL FOCUS — destacar calidad y detalles del producto. Texturas, costuras, fit, closeups de materiales, acabados. Incluir copy que resalte la calidad: un claim técnico corto o descripción de material superpuesto en tipografía refinada (ej: "100% algodón pima" / "Corte entallado premium" / "Hecho para durar").`;
 
-  const conceptDirections = isProductEcommerce
+  const brandingConceptDirections = `MODO BRANDING / CAMPAÑA — sin producto específico. El mensaje de marca y la identidad visual son los protagonistas absolutos. CADA concepto usa una estrategia visual completamente distinta. REGLA DE TEXTO: el copy debe ser tipografía bold, grande, claramente legible — nunca pequeño, nunca sutil. Usá la paleta y tipografía del brand kit con precisión:
+1. BRAND STATEMENT HERO — el nombre de la marca + tagline principal dominan el encuadre. Tipografía que ocupa 60-70% del frame. Paleta del brand kit pura. Composición geométrica o abstracta de alto impacto. Declaración de identidad.
+2. LAUNCH / ANNOUNCEMENT — composición de expectativa: "Viene algo nuevo", fecha de lanzamiento, cuenta regresiva visual o titulares de campaña. Elementos gráficos que generan anticipación. Copy de lanzamiento en tipografía grande. Drama visual.
+3. CAMPAIGN MOOD — storytelling visual puro: ambiente, emoción, textura que conecta con la esencia del brief. Fotografía de ambiente o ilustración abstracta. Copy de campaña aspiracional corto pero poderoso superpuesto. Sin producto.
+4. BRAND VALUES / MANIFESTO — los valores de la marca como imagen. Tipografía + elementos gráficos del brand kit. Manifiesto visual corto: 3-5 palabras que expresan el por qué de la marca. Composición premium y memorable.
+5. AWARENESS / SOCIAL PROOF — imagen que genera pertenencia e identidad de comunidad. Emoción colectiva, movimiento, energía de marca. Copy que invita a ser parte. Paleta del brand kit con contraste fuerte.
+${slot6}`;
+
+  const conceptDirections = isBrandingMode
+    ? brandingConceptDirections
+    : isProductEcommerce
     ? `MODO PRODUCTO — el producto es el protagonista absoluto. Sin personas. CADA concepto usa una estrategia visual completamente distinta:
 1. PRODUCT HERO — el producto LLENA el encuadre (80-90% del frame). Fondo color sólido del brand kit. Iluminación de estudio fuerte, limpio, premium. Sin copy excepto logo pequeño. El producto debe verse irresistible.
 2. OFFER FOCUS — la oferta es el protagonista. Pricing grande en tipografía bold, descuento destacado (ej: "30% OFF"), TODAS las mecánicas del brief (cuotas, fechas, envío gratis, retiro). Contraste fuerte. Composición lista para publicar y generar clic.
@@ -335,12 +348,12 @@ El image_prompt debe mencionar colores hex exactos, disposición, estilo y eleme
     ...(peopleMode === 'real' ? referenceImages.slice(0, 1) : []),
   ];
 
-  const hasPeople = peopleMode !== 'none';
+  const hasPeople = peopleMode === 'real';
   const styleSuffix = hasPeople
     ? 'Fashion editorial photography, natural skin tones, soft studio lighting, 85mm lens, high-end fashion campaign, photorealistic.'
     : isProductEcommerce
       ? 'Professional product photography or high-end retail graphic design, agency quality, photorealistic where applicable.'
-      : 'Premium graphic design, agency quality, NOT generic AI art, portrait 4:5.';
+      : 'Premium graphic design, bold typography, brand identity, agency quality, NOT generic AI art, portrait 4:5.';
   const productHint = productDetailImages.length > 0
     ? isProductEcommerce
       ? 'IMPORTANT: The provided reference images show the exact products — feature those specific products in the composition, replicating their appearance faithfully.'
