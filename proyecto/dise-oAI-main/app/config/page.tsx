@@ -53,7 +53,7 @@ export default function ConfigPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState('');
-  const [newAdjustment, setNewAdjustment] = useState('');
+  const [choiceMade, setChoiceMade] = useState(false);
 
   useEffect(() => {
     fetch('/api/brand-kits').then(r => r.json()).then(kit => {
@@ -221,6 +221,42 @@ export default function ConfigPage() {
           <p className="text-gray-500 text-sm">Configurá el brand kit de tu marca. Se usará en todas tus generaciones.</p>
         </div>
 
+        {/* Brand creation choice — only shown on first setup */}
+        {!hasKit && !choiceMade && (
+          <div className="space-y-4 mb-8">
+            <div className="bg-[#e42820]/5 border border-[#e42820]/20 rounded-2xl p-5 space-y-1 mb-6">
+              <span className="bg-[#e42820] text-white text-xs font-bold px-2 py-0.5 rounded-md">Paso 2 de 2</span>
+              <p className="text-sm font-semibold text-gray-900 mt-2">Configurá tu marca</p>
+              <p className="text-xs text-gray-500">Condimento aplica tu identidad automáticamente en cada pieza que generés.</p>
+            </div>
+            <p className="text-sm font-medium text-gray-700">¿Cómo querés empezar?</p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <button
+                onClick={() => { window.location.href = '/crear-marca'; }}
+                className="group flex flex-col gap-3 bg-white border-2 border-[#e42820]/30 hover:border-[#e42820] rounded-2xl p-5 text-left transition-all hover:shadow-md"
+              >
+                <div className="w-10 h-10 rounded-xl bg-[#e42820]/10 flex items-center justify-center text-xl">✨</div>
+                <div>
+                  <p className="font-semibold text-gray-900 text-sm">Crear marca desde cero con IA</p>
+                  <p className="text-xs text-gray-500 mt-1">Respondés unas preguntas y la IA genera nombre, paleta, estilo y logo. Ideal si todavía no tenés marca.</p>
+                </div>
+                <span className="text-xs text-[#e42820] font-medium group-hover:underline">Empezar →</span>
+              </button>
+              <button
+                onClick={() => setChoiceMade(true)}
+                className="group flex flex-col gap-3 bg-white border-2 border-gray-200 hover:border-gray-400 rounded-2xl p-5 text-left transition-all hover:shadow-md"
+              >
+                <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-xl">📋</div>
+                <div>
+                  <p className="font-semibold text-gray-900 text-sm">Ya tengo marca, completar el formulario</p>
+                  <p className="text-xs text-gray-500 mt-1">Cargás colores, tipografía, estilo y logo de tu marca existente.</p>
+                </div>
+                <span className="text-xs text-gray-500 font-medium group-hover:underline">Completar formulario →</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {hasApiKey === false && (
           <div className="mb-6 bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-4 text-sm flex items-start gap-3">
             <span className="text-amber-400 text-base mt-0.5">⚠</span>
@@ -234,7 +270,7 @@ export default function ConfigPage() {
           </div>
         )}
 
-        <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-6">
+        {(hasKit || choiceMade) && <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-lg text-gray-900">{hasKit ? 'Editar brand kit' : 'Crear brand kit'}</h2>
             <label className={`cursor-pointer flex items-center gap-2 text-sm px-4 py-2 rounded-xl border transition-colors ${extracting ? 'opacity-50 cursor-not-allowed border-gray-200 text-gray-500' : 'border-[#e42820]/40 text-[#e42820] hover:bg-[#e42820]/10 hover:border-[#e42820]'}`}>
@@ -407,7 +443,7 @@ export default function ConfigPage() {
               <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>Guardado</>
             ) : saving ? 'Guardando...' : hasKit ? 'Guardar cambios' : 'Crear brand kit'}
           </button>
-        </div>
+        </div>}
 
         <Link
           href="/"

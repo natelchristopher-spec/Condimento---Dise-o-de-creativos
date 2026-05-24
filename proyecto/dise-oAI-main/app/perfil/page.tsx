@@ -10,8 +10,10 @@ export default function PerfilPage() {
   const [apiKey, setApiKey] = useState('');
   const [savedKey, setSavedKey] = useState('');
   const [saving, setSaving] = useState(false);
+  const [validating, setValidating] = useState(false);
   const [saved, setSaved] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
+  const [error, setError] = useState('');
   const [email, setEmail] = useState('');
   const [showKey, setShowKey] = useState(false);
 
@@ -30,14 +32,37 @@ export default function PerfilPage() {
 
   const handleSave = async () => {
     if (!apiKey.trim()) return;
-    setSaving(true);
+    setError('');
     const isFirstTime = !savedKey;
+
+    // Validate key before saving
+    setValidating(true);
     try {
-      await fetch('/api/profile', {
+      const validateRes = await fetch('/api/validate-openai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: apiKey.trim() }),
+      });
+      const validateData = await validateRes.json();
+      if (!validateData.valid) {
+        setError(validateData.error || 'API key inválida.');
+        return;
+      }
+    } catch {
+      setError('No se pudo verificar la API key. Revisá tu conexión.');
+      return;
+    } finally {
+      setValidating(false);
+    }
+
+    setSaving(true);
+    try {
+      const res = await fetch('/api/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ openai_api_key: apiKey.trim() }),
       });
+      if (!res.ok) throw new Error('Error guardando la API key');
       setSavedKey(apiKey.trim());
       setSaved(true);
       if (isFirstTime) {
@@ -46,6 +71,8 @@ export default function PerfilPage() {
       } else {
         setTimeout(() => setSaved(false), 2000);
       }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error guardando. Intentá de nuevo.');
     } finally {
       setSaving(false);
     }
@@ -61,6 +88,9 @@ export default function PerfilPage() {
     window.location.href = '/login';
   };
 
+  const isLoading = validating || saving;
+  const buttonLabel = validating ? 'Verificando API key...' : saving ? 'Guardando...' : 'Guardar API key';
+
   return (
     <div className="min-h-screen flex bg-gray-50">
       <Sidebar active="/perfil" onLogout={handleLogout} userEmail={email} />
@@ -70,6 +100,14 @@ export default function PerfilPage() {
           <h1 className="text-2xl font-bold text-gray-900 mb-1">Perfil</h1>
           <p className="text-gray-500 text-sm">{email}</p>
         </div>
+
+        {!savedKey && (
+          <div className="bg-[#e42820]/5 border border-[#e42820]/20 rounded-2xl p-5 space-y-1">
+            <span className="bg-[#e42820] text-white text-xs font-bold px-2 py-0.5 rounded-md">Paso 1 de 2</span>
+            <p className="text-sm font-semibold text-gray-900 mt-2">Conectá tu cuenta de OpenAI</p>
+            <p className="text-xs text-gray-500">Condimento automatiza la producción de tu marca usando la IA de OpenAI. Necesitás una cuenta con al menos $5 de crédito.</p>
+          </div>
+        )}
 
         <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-5">
           <div>
@@ -94,7 +132,7 @@ export default function PerfilPage() {
               <input
                 type={showKey ? 'text' : 'password'}
                 value={apiKey}
-                onChange={e => setApiKey(e.target.value)}
+                onChange={e => { setApiKey(e.target.value); setError(''); }}
                 placeholder="sk-proj-..."
                 className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 pr-12 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] text-sm font-mono"
               />
@@ -113,16 +151,24 @@ export default function PerfilPage() {
             </div>
           </div>
 
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-700 text-sm">
+              {error}
+            </div>
+          )}
+
           <button
             onClick={handleSave}
-            disabled={!apiKey.trim() || saving || apiKey === savedKey}
+            disabled={!apiKey.trim() || isLoading || apiKey === savedKey}
             className={`w-full font-medium px-4 py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-sm ${
               saved ? 'bg-emerald-600 text-white' : 'bg-[#e42820] hover:bg-[#c41f18] disabled:opacity-40 disabled:cursor-not-allowed text-white'
             }`}
           >
             {saved ? (
-              <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>{redirecting ? 'Guardada — configurando tu marca...' : 'Guardada'}</>
-            ) : saving ? 'Guardando...' : 'Guardar API key'}
+              <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>{redirecting ? 'Verificada — configurando tu marca...' : 'Guardada'}</>
+            ) : isLoading ? (
+              <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{buttonLabel}</>
+            ) : 'Guardar API key'}
           </button>
 
           <div className="border-t border-gray-200 pt-4 space-y-2">
