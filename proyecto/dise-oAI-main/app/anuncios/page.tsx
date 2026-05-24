@@ -150,8 +150,11 @@ export default function Home() {
           try {
             const canvas = document.createElement('canvas');
             canvas.width = w; canvas.height = h;
-            canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
-            resolve(canvas.toDataURL('image/png'));
+            const ctx = canvas.getContext('2d')!;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, w, h);
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/jpeg', 0.82));
           } catch { resolve(dataUrl); }
         };
         img.onerror = () => resolve(dataUrl);
