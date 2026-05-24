@@ -34,8 +34,8 @@ interface GeneratedSlide {
 }
 
 const FUNNEL_LABELS: Record<FunnelStage, { label: string; desc: string; color: string }> = {
-  TOFU: { label: 'Awareness', desc: 'Atraer nuevas personas', color: 'bg-blue-50 border-blue-200 text-blue-700' },
-  MOFU: { label: 'Consideración', desc: 'Convencer indecisos', color: 'bg-amber-50 border-amber-200 text-amber-700' },
+  TOFU: { label: 'Prospección', desc: 'Atraer personas que no te conocen', color: 'bg-blue-50 border-blue-200 text-blue-700' },
+  MOFU: { label: 'Evaluación', desc: 'Convencer a quien ya te vio', color: 'bg-amber-50 border-amber-200 text-amber-700' },
   BOFU: { label: 'Conversión', desc: 'Cerrar la venta', color: 'bg-green-50 border-green-200 text-green-700' },
 };
 
@@ -431,7 +431,7 @@ export default function RedesPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-lg font-bold text-gray-900">Elegí un tema</h2>
-                  <p className="text-sm text-gray-500">9 ideas organizadas por etapa del funnel. Hacé clic para planificar el carousel.</p>
+                  <p className="text-sm text-gray-500">9 ideas organizadas por etapa del sistema PEC. Hacé clic para planificar el carousel.</p>
                 </div>
                 <button onClick={reset} className="text-sm text-gray-700 hover:text-gray-900 border border-gray-300 hover:border-gray-400 px-4 py-2 rounded-xl transition-colors">Volver</button>
               </div>
@@ -442,8 +442,8 @@ export default function RedesPage() {
                 return (
                   <div key={stage} className="space-y-3">
                     <div className="flex items-center gap-2">
-                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${color}`}>{stage}</span>
-                      <span className="text-xs text-gray-500">{label} — {desc}</span>
+                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${color}`}>{label}</span>
+                      <span className="text-xs text-gray-500">{desc}</span>
                     </div>
                     <div className="space-y-2">
                       {stageTopics.map((topic, i) => {
