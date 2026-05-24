@@ -243,6 +243,7 @@ export async function POST(req: NextRequest) {
     brief, brandKit, peopleMode = 'none', pdpMode = 'product',
     productImages = [], referenceImages = [],
     testimonialText = '', authorityText = '',
+    personDescription = '',
     plans: confirmedPlans,
     productDescription: confirmedProductDescription,
   }: {
@@ -254,6 +255,7 @@ export async function POST(req: NextRequest) {
     referenceImages: string[];
     testimonialText: string;
     authorityText: string;
+    personDescription?: string;
     plans?: PdpImageItem[];
     productDescription?: string;
   } = await req.json();
@@ -442,6 +444,7 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
       try {
         const isFashion = pdpMode === 'fashion';
         const slideVisualRules = buildSlideVisualRules(hasPeople, pdpMode);
+        const personSlideTypes = isFashion ? ['hero', 'benefit', 'lifestyle'] : ['lifestyle'];
         await Promise.allSettled(
           orderedItems.map(async (item) => {
             const noPersonInSlide = isFashion && (item.type === 'authority' || item.type === 'howto');
@@ -454,8 +457,16 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
               ? `THE REFERENCE PHOTOS ABOVE ARE THE SINGLE SOURCE OF TRUTH FOR THE PRODUCT. Reproduce the product EXACTLY as it appears in the photos — same shape, same color, same label, same packaging, same proportions. DO NOT invent or modify any visual aspect of the product. IMPORTANT: the layout instructions below describe composition only — if they mention any product color or shape that contradicts the photos, IGNORE that and use the photos instead.${productDescription ? ` Supplementary context (never overrides photos): ${productDescription}` : ''}`
               : `PRODUCT TO REPRODUCE EXACTLY: ${productDescription}. Same color, shape, packaging design — do not modify.`;
 
+            const isPersonSlide = hasPeople && personSlideTypes.includes(item.type) && !noPersonInSlide;
+            const personGuide = isPersonSlide && personDescription
+              ? referenceDataUrls.length > 0
+                ? `ADDITIONAL PERSON DETAILS: "${personDescription}". The reference photo is the primary visual guide; use this description to supplement details not clearly visible in the photo.`
+                : `PERSON TO FEATURE: "${personDescription}". Generate a person matching this description consistently in this slide.`
+              : '';
+
             const fullPrompt = [
               productConstraint,
+              personGuide,
               item.image_prompt,
               visualRule,
               copyInjection,

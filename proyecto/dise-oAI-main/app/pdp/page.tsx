@@ -60,6 +60,7 @@ export default function PdpPage() {
   const [brief, setBrief] = useState('');
   const [productImages, setProductImages] = useState<string[]>([]);
   const [referenceImages, setReferenceImages] = useState<string[]>([]);
+  const [personDescription, setPersonDescription] = useState('');
   const [pdpImages, setPdpImages] = useState<(PdpImage | null)[]>(Array(6).fill(null));
   const [generatedCount, setGeneratedCount] = useState(0);
   const [error, setError] = useState('');
@@ -196,6 +197,7 @@ export default function PdpPage() {
           peopleMode: mode === 'product' ? 'none' : 'real',
           productImages: compressedProducts,
           referenceImages: compressedRefs,
+          personDescription: personDescription.trim(),
         }),
       });
 
@@ -255,6 +257,7 @@ export default function PdpPage() {
           referenceImages: compressedRefs,
           plans,
           productDescription,
+          personDescription: personDescription.trim(),
         }),
         signal: controller.signal,
       });
@@ -479,34 +482,62 @@ export default function PdpPage() {
 
               {/* Person reference images (product-use and fashion modes) */}
               {mode !== 'product' && (
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-700">
-                    Fotos de referencia de persona
-                    <span className="font-normal text-gray-400 ml-1">(hasta 2, opcional)</span>
-                  </label>
-                  <p className="text-xs text-gray-400">{mode === 'fashion' ? 'Modelos o personas de referencia para las fotos con la prenda puesta.' : 'Personas de referencia para lifestyle y how-to.'}</p>
-                  <div className="flex flex-wrap gap-3">
-                    {referenceImages.map((img, i) => (
-                      <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-gray-200 bg-gray-100">
-                        <img src={img} alt="" className="w-full h-full object-cover" />
-                        <button
-                          onClick={() => setReferenceImages(prev => prev.filter((_, j) => j !== i))}
-                          className="absolute top-1 right-1 w-5 h-5 bg-black/60 hover:bg-black/80 rounded-full flex items-center justify-center"
-                        >
-                          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-semibold text-gray-700">
+                      Persona
+                    </label>
+                    <p className="text-xs text-gray-400 mt-0.5">{mode === 'fashion' ? 'Subí una foto del modelo o describí cómo querés que sea.' : 'Subí una foto de referencia o describí la persona para lifestyle y how-to.'}</p>
+                  </div>
+
+                  {/* Photo upload */}
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium text-gray-500">Foto de referencia <span className="font-normal text-gray-400">(hasta 2, opcional)</span></p>
+                    <div className="flex flex-wrap gap-3">
+                      {referenceImages.map((img, i) => (
+                        <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-gray-200 bg-gray-100">
+                          <img src={img} alt="" className="w-full h-full object-cover" />
+                          <button
+                            onClick={() => setReferenceImages(prev => prev.filter((_, j) => j !== i))}
+                            className="absolute top-1 right-1 w-5 h-5 bg-black/60 hover:bg-black/80 rounded-full flex items-center justify-center"
+                          >
+                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+                      {referenceImages.length < 2 && (
+                        <label className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-200 hover:border-[#e42820]/50 bg-white flex flex-col items-center justify-center cursor-pointer transition-colors">
+                          <svg className="w-5 h-5 text-gray-300 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
                           </svg>
-                        </button>
-                      </div>
-                    ))}
-                    {referenceImages.length < 2 && (
-                      <label className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-200 hover:border-[#e42820]/50 bg-white flex flex-col items-center justify-center cursor-pointer transition-colors">
-                        <svg className="w-5 h-5 text-gray-300 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
-                        </svg>
-                        <span className="text-[10px] text-gray-300">Foto</span>
-                        <input type="file" accept="image/*" multiple onChange={handleReferenceImageUpload} className="hidden" />
-                      </label>
+                          <span className="text-[10px] text-gray-300">Foto</span>
+                          <input type="file" accept="image/*" multiple onChange={handleReferenceImageUpload} className="hidden" />
+                        </label>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Text description */}
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium text-gray-500">
+                      {referenceImages.length > 0 ? 'Descripción adicional (opcional)' : 'O describí la persona'}
+                    </p>
+                    <textarea
+                      value={personDescription}
+                      onChange={e => setPersonDescription(e.target.value)}
+                      placeholder={mode === 'fashion'
+                        ? 'Ej: Mujer 25-35 años, piel morena, cabello oscuro lacio, estilo minimalista'
+                        : 'Ej: Hombre 30-40 años, contexto gym, ropa deportiva, piel clara'}
+                      rows={2}
+                      className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] resize-none"
+                    />
+                    {referenceImages.length === 0 && !personDescription.trim() && (
+                      <p className="text-[11px] text-amber-500">Sin foto ni descripción la IA generará una persona genérica.</p>
+                    )}
+                    {referenceImages.length > 0 && personDescription.trim() && (
+                      <p className="text-[11px] text-gray-400">La foto se usa como referencia visual, la descripción complementa el prompt.</p>
                     )}
                   </div>
                 </div>
