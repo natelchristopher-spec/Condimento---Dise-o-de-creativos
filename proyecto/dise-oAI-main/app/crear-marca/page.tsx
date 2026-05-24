@@ -440,7 +440,7 @@ export default function CrearMarcaPage() {
               <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-4">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Versiones de logo</p>
-                  {logosFailed && (
+                  {!logosLoading && (!selected.logoWhiteBase64 || !selected.logoDarkBase64) && (
                     <button
                       onClick={() => selected && fetchVariantLogos(selected.logoPrompt)}
                       className="text-xs text-[#e42820] hover:underline font-medium"
@@ -461,13 +461,13 @@ export default function CrearMarcaPage() {
                           <img src={`data:image/png;base64,${v.b64}`} alt={v.label} className="w-full h-full object-contain p-3" />
                         ) : v.alwaysReady ? (
                           <LogoPlaceholder name={selected.name} />
-                        ) : logosFailed ? (
-                          <p className="text-[10px] text-gray-400 text-center px-2">No generado</p>
-                        ) : (
+                        ) : logosLoading ? (
                           <div className="flex flex-col items-center gap-1">
                             <div className="w-4 h-4 border-2 border-gray-200 border-t-[#e42820] rounded-full animate-spin" />
                             <p className="text-[10px] text-gray-400">Generando...</p>
                           </div>
+                        ) : (
+                          <p className="text-[10px] text-gray-400 text-center px-2">No generado</p>
                         )}
                       </div>
                       <p className="text-[11px] text-center text-gray-400">{v.label}</p>

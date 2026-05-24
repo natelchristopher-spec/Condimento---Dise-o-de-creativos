@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { getUserContext } from '@/app/lib/get-user-context';
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 export async function POST(req: NextRequest) {
   const ctx = await getUserContext();
@@ -28,8 +28,12 @@ export async function POST(req: NextRequest) {
     }),
   ]);
 
-  return NextResponse.json({
-    logoWhiteBase64: whiteResult.status === 'fulfilled' ? (whiteResult.value.data?.[0]?.b64_json || '') : '',
-    logoDarkBase64: darkResult.status === 'fulfilled' ? (darkResult.value.data?.[0]?.b64_json || '') : '',
-  });
+  const logoWhiteBase64 = whiteResult.status === 'fulfilled' ? (whiteResult.value.data?.[0]?.b64_json || '') : '';
+  const logoDarkBase64 = darkResult.status === 'fulfilled' ? (darkResult.value.data?.[0]?.b64_json || '') : '';
+
+  if (!logoWhiteBase64 && !logoDarkBase64) {
+    return NextResponse.json({ error: 'No se pudieron generar las variantes de logo.' }, { status: 500 });
+  }
+
+  return NextResponse.json({ logoWhiteBase64, logoDarkBase64 });
 }
