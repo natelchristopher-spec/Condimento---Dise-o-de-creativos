@@ -269,9 +269,11 @@ export async function POST(req: NextRequest) {
   // Slot 6 override when brand has approved reference pieces
   const slot6 = hasVisualRefs
     ? `6. BRAND STYLE REPLICATION — seguí EXACTAMENTE el estilo visual, composición tipográfica y tratamiento gráfico de las piezas de referencia de la marca que se incluyen como imágenes. Máxima fidelidad al look aprobado.`
-    : isProductEcommerce
-      ? `6. DAILY USE / USE CASE — el producto integrado en su contexto cotidiano real (escritorio, gym, cocina, rutina, setup). El ambiente rodea al producto de forma natural. Hacerlo sentir usable y cercano.`
-      : `6. PRODUCT DETAIL FOCUS — destacar calidad y detalles del producto. Texturas, costuras, fit, closeups de materiales, acabados. Incluir copy que resalte la calidad: un claim técnico corto o descripción de material superpuesto en tipografía refinada (ej: "100% algodón pima" / "Corte entallado premium" / "Hecho para durar").`;
+    : `6. ROTATIVO — elegí el tipo MÁS RELEVANTE para este brief específico entre las siguientes opciones. El elegido debe agregar un ángulo de mensaje que los 5 conceptos anteriores no cubrieron:
+   - PRENSA / EDITORIAL: simula el formato de nota periodística o recomendación de medio. Titular en tipografía de diario/revista, copy estilo "El producto que todos están eligiendo" o "La marca que llegó para quedarse". Nombre del producto prominente. Alto CTR en Prospección por el efecto sorpresa de formato. Ideal para lanzamientos o novedades.
+   - FUNDADOR / HUMANO: humaniza la marca mostrando el proceso de producción, el equipo o la historia de origen. Copy en primera persona o que revela el "por qué" detrás de la marca (ej: "Lo creamos porque nosotros lo necesitábamos"). Diferenciador frente a marcas grandes. Funciona para marcas con historia o fundadores visibles.
+   - PANTALLA DIVIDIDA (COMPARATIVA): dos zonas que narran un contraste — nuestra marca vs. alternativa genérica, con producto vs. sin producto, ocasión A vs. ocasión B. Copy que marca la diferencia entre ambas mitades. Sin mostrar personas en estados negativos.
+   ${isProductEcommerce ? '- DAILY USE / USE CASE: el producto integrado en su contexto cotidiano real (escritorio, gym, cocina, rutina, setup). El ambiente rodea al producto de forma natural. Hacerlo sentir usable y cercano.' : '- PRODUCT DETAIL FOCUS: destacar calidad y detalles del producto. Texturas, costuras, fit, closeups de materiales, acabados. Claim técnico corto superpuesto en tipografía refinada (ej: "100% algodón pima" / "Hecho para durar").'}`;
 
   const brandingConceptDirections = `MODO BRANDING / CAMPAÑA — sin producto específico.
 PASO 1: Leé el brief y determiná el ÚNICO objetivo principal de campaña (ej: lanzamiento de tienda, Black Friday, temporada de verano, awareness de marca, aniversario, campaña de valores, etc.).
