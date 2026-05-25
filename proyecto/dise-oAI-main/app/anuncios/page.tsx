@@ -264,7 +264,7 @@ export default function Home() {
         setConcepts(prev => [...prev, img])
       );
       if (pd && !productDescription) setProductDescription(pd);
-      setSelectedConcepts([]);
+      setSelectedConcepts(pinned);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error generando similares');
     } finally {
@@ -276,7 +276,6 @@ export default function Home() {
     setSelectedConcepts(prev => {
       const exists = prev.find(c => c.id === img.id);
       if (exists) return prev.filter(c => c.id !== img.id);
-      if (prev.length >= 3) return prev;
       return [...prev, img];
     });
   };
@@ -749,8 +748,8 @@ export default function Home() {
           <div className="space-y-6">
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-2xl font-bold mb-1">Elegí hasta 3 conceptos</h2>
-                <p className="text-gray-500 text-sm">Seleccioná los que más te gustan para afinarlos</p>
+                <h2 className="text-2xl font-bold mb-1">Elegí tus conceptos</h2>
+                <p className="text-gray-500 text-sm">Seleccioná todos los que quieras afinar y descargar</p>
               </div>
               <div className="flex items-center gap-2">
                 <button
