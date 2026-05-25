@@ -48,10 +48,14 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'Configurá tu API key de OpenAI en el perfil.' }), { status: 401 });
   }
 
-  const { businessName, category, brief }: {
+  const { businessName, category, brief, brandTone, visualStyle, photoStyle, adjectives }: {
     businessName?: string;
     category: string;
     brief: string;
+    brandTone?: string;
+    visualStyle?: string;
+    photoStyle?: string;
+    adjectives?: string[];
   } = await req.json();
 
   const openai = new OpenAI({ apiKey: ctx.openaiApiKey });
@@ -76,7 +80,16 @@ Para cada propuesta devolvé:
 - secondary2: gris medio o neutro (hex)
 - secondary3: tercer neutro (hex)
 - typography: descripción de tipografía para títulos y cuerpo (ej: "Playfair Display Bold para títulos, Inter Regular para cuerpo — elegante y legible")
-- style_description: 3-4 líneas describiendo personalidad de marca, tono de comunicación, estilo visual y target
+- style_description: descripción rica y detallada de la identidad visual en 10-14 líneas, cubriendo TODOS estos puntos:
+  (1) PERSONALIDAD Y POSICIONAMIENTO: adjetivos clave que definen la marca, territorio emocional, propuesta de valor
+  (2) TONO DE COMUNICACIÓN: cómo habla la marca (cercano/formal/técnico/aspiracional), tipo de lenguaje, que palabras usar y cuáles evitar
+  (3) TARGET DETALLADO: edad, género, estilo de vida, aspiraciones, qué valora este consumidor
+  (4) ESTILO FOTOGRÁFICO: tipo de composición (lifestyle/packshot/editorial), iluminación (natural/estudio/dramática), presencia de personas o no, encuadres preferidos, ejemplos de lo que se busca visualmente
+  (5) PALETA EN USO: cómo y dónde aplicar cada color, combinaciones permitidas, color dominante en creativos
+  (6) TIPOGRAFÍA EN ACCIÓN: jerarquía tipográfica, pesos preferidos, tamaños relativos, uso en titulares vs cuerpo
+  (7) REGLAS DE COMPOSICIÓN: uso del espacio en blanco, márgenes, alineación, densidad visual
+  (8) PROHIBICIONES CONCRETAS: qué estilos, colores, composiciones, tipografías o recursos visuales NO usar jamás
+  (9) REFERENCIAS DE ESTILO: marcas o estéticas visuales de referencia coherentes con este posicionamiento
 - logo_prompt: instrucción detallada para generar el logo. Incluir: nombre de la marca que debe aparecer escrito, tipo de logo (wordmark / lettermark / combinado con símbolo), descripción del símbolo o ícono si aplica, colores hex exactos a usar, estilo tipográfico, composición. El logo debe ser minimalista, vectorizable, profesional. NO fotorrealista, NO sombras 3D, NO degradados complejos.
 
 REGLAS CRÍTICAS:
@@ -95,12 +108,19 @@ Respondé SOLO con JSON: { "concepts": [ {...}, {...}, {...} ] }`;
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
       };
 
+      const styleContext = [
+        brandTone ? `TONO DE MARCA: ${brandTone}` : '',
+        visualStyle ? `ESTILO VISUAL: ${visualStyle}` : '',
+        photoStyle ? `ESTILO FOTOGRÁFICO: ${photoStyle}` : '',
+        adjectives?.filter(Boolean).length ? `PERSONALIDAD EN PALABRAS CLAVE: ${adjectives.filter(Boolean).join(', ')}` : '',
+      ].filter(Boolean).join('\n');
+
       try {
         const conceptsRes = await openai.chat.completions.create({
           model: 'gpt-4o',
           messages: [
             { role: 'system', content: systemPrompt },
-            { role: 'user', content: `CATEGORÍA: ${category}\nBRIEF: ${brief}` },
+            { role: 'user', content: `CATEGORÍA: ${category}\nBRIEF: ${brief}${styleContext ? '\n\n' + styleContext : ''}` },
           ],
           response_format: { type: 'json_object' },
         });
