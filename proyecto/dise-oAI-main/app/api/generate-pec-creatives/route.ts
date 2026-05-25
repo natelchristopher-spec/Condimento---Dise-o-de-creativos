@@ -20,7 +20,7 @@ function getOpenAIErrorMessage(e: unknown): string {
 
 const P_FORMATS = ['Aspiracional', 'Fundador', 'Editorial'];
 const E_FORMATS = ['Testimonial', 'Beneficios', 'How-to'];
-const C_FORMATS = ['Urgencia', 'Prueba Social', 'Garantía'];
+const C_FORMATS = ['Oferta/Precio', 'Prueba Social', 'Garantía'];
 
 const STAGE_STYLES: Record<string, string> = {
   Aspiracional: 'Lifestyle imagery. Person embodying the aspirational identity the product enables. Natural, candid energy. The garment/product is the visual hero in context.',
@@ -29,8 +29,8 @@ const STAGE_STYLES: Record<string, string> = {
   Testimonial: 'Real-looking customer. Genuine, relatable expression. Quote or review text prominently featured. Trust-focused composition.',
   Beneficios: 'Product hero shot with benefit callouts. Clean, informative layout. Features labeled or visually highlighted.',
   'How-to': 'Step-by-step or process visual. Product shown in use. Educational, clear, sequential feel.',
-  Urgencia: 'Product hero with urgency cues. Bold, high-contrast, conversion-focused composition. No invented prices, discounts, or promotions.',
-  'Prueba Social': 'Social proof focus. Customer trust and satisfaction cues. Trust-focused composition. Do NOT invent star ratings, counts, or statistics not in the brief.',
+  'Oferta/Precio': 'Product hero with offer or price element — ONLY if a price or promotion is explicitly mentioned in the brief. If no price is in the brief, treat this as urgency-focused: bold, high-contrast, conversion-driven without any invented numbers.',
+  'Prueba Social': 'Social proof focus. Customer trust and satisfaction cues. Trust-focused composition. Do NOT invent star ratings, counts, or statistics not mentioned in the brief.',
   'Garantía': 'Trust and confidence imagery. Quality, safety, and risk-reversal cues. Clean, reassuring, premium feel.',
 };
 
