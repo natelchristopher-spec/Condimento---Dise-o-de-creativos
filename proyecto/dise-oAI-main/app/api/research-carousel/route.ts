@@ -21,10 +21,17 @@ export async function POST(req: NextRequest) {
   const ctx = await getUserContext();
   if (!ctx) return NextResponse.json({ error: 'Configurá tu API key de OpenAI en el perfil.' }, { status: 401 });
 
-  const { brandKit, topicHint = '', excludeTopics = [] }: { brandKit: BrandKit; topicHint?: string; excludeTopics?: string[] } = await req.json();
+  const { brandKit, topicHint = '', excludeTopics = [], productImages = [] }: {
+    brandKit: BrandKit;
+    topicHint?: string;
+    excludeTopics?: string[];
+    productImages?: string[];
+  } = await req.json();
 
   const openai = new OpenAI({ apiKey: ctx.openaiApiKey });
   const brandKitContext = buildBrandKitContext(brandKit);
+
+  const hasProduct = productImages.length > 0;
 
   const excludeSection = excludeTopics.length > 0
     ? `TEMAS YA GENERADOS — NO repetir ni temas similares:\n${excludeTopics.map(t => `- ${t}`).join('\n')}\n\n`
@@ -32,7 +39,9 @@ export async function POST(req: NextRequest) {
 
   const prompt = `Sos un estratega de contenido para e-commerce en redes sociales.
 Generá exactamente 9 ideas de carruseles de Instagram para esta marca, 3 por cada etapa del funnel.
-${topicHint ? `
+${hasProduct ? `
+PRODUCTO ESPECÍFICO — PRIORITARIO: Se adjunta una imagen del producto para este carousel. Generá los temas en torno a ESE PRODUCTO ESPECÍFICO — no a la marca en general. La marca es el contexto de estilo; el producto es el eje central de todos los temas.
+` : ''}${topicHint ? `
 TEMA PRINCIPAL — PRIORITARIO: "${topicHint}"
 TODAS las ideas deben girar en torno a este tema. El brand kit da el contexto de marca, pero el tema del usuario es la restricción principal.
 ` : ''}
@@ -65,9 +74,19 @@ Respondé SOLO con JSON válido:
 Donde: funnel = "TOFU"|"MOFU"|"BOFU", title = nombre del carousel (max 6 palabras), hook = frase de apertura que GENERE CURIOSIDAD O TENSIÓN — usá preguntas incómodas, datos sorpresivos, afirmaciones contraintuitivas o promesas específicas. PROHIBIDO frases motivacionales genéricas ("Transforma tu vida", "El secreto del éxito"). Ejemplos del tipo correcto: "¿Por qué el 80% falla en esto?" / "Lo que nadie te dice sobre X" / "El error que te está costando ventas" / "Por qué esto no funciona como creés". Máx 8 palabras. why = por qué este contenido funciona para este negocio (1 oración corta).`;
 
   try {
+    const userContent: Parameters<typeof openai.chat.completions.create>[0]['messages'][0]['content'] = hasProduct
+      ? [
+          { type: 'text', text: prompt },
+          ...productImages.slice(0, 1).map(img => ({
+            type: 'image_url' as const,
+            image_url: { url: img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`, detail: 'low' as const },
+          })),
+        ]
+      : prompt;
+
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ role: 'user', content: userContent }],
       response_format: { type: 'json_object' },
       max_tokens: 1200,
       temperature: 0.8,

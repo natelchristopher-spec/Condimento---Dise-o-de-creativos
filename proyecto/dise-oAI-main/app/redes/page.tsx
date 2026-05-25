@@ -108,10 +108,11 @@ export default function RedesPage() {
       const excludeTopics = append
         ? [...usedTopics, ...topics.map(t => t.title)]
         : usedTopics;
+      const compressedProducts = productImages.map(img => img.includes(',') ? img.split(',')[1] : img);
       const res = await fetch('/api/research-carousel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ brandKit, topicHint, excludeTopics }),
+        body: JSON.stringify({ brandKit, topicHint, excludeTopics, productImages: compressedProducts }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error generando temas');
@@ -142,10 +143,11 @@ export default function RedesPage() {
 
     setLoadingPlan(true);
     try {
+      const compressedProducts = productImages.map(img => img.includes(',') ? img.split(',')[1] : img);
       const res = await fetch('/api/plan-carousel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ brandKit, title: topic.title, hook: topic.hook, funnel: topic.funnel }),
+        body: JSON.stringify({ brandKit, title: topic.title, hook: topic.hook, funnel: topic.funnel, productImages: compressedProducts }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error planificando carousel');
