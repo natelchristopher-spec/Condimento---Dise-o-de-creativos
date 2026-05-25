@@ -96,6 +96,13 @@ export default function Sidebar({ active, onLogout, userEmail }: SidebarProps) {
             PDP
           </NavItem>
           <NavItem
+            href="/testing"
+            icon="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+            active={active === '/testing'}
+          >
+            Test de Ángulos
+          </NavItem>
+          <NavItem
             href="/email"
             icon="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
             active={active === '/email'}
@@ -243,6 +250,14 @@ export default function Sidebar({ active, onLogout, userEmail }: SidebarProps) {
                 onClick={closeDrawer}
               >
                 PDP
+              </NavItem>
+              <NavItem
+                href="/testing"
+                icon="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+                active={active === '/testing'}
+                onClick={closeDrawer}
+              >
+                Test de Ángulos
               </NavItem>
               <NavItem
                 href="/email"
