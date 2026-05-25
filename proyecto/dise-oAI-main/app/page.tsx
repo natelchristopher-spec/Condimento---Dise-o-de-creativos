@@ -82,13 +82,28 @@ export default function HomePage() {
             <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
               <p className="text-xs font-bold text-gray-700 uppercase tracking-wider">Configuración</p>
 
-              <div className={`flex items-center gap-3 p-3.5 rounded-xl border ${hasApiKey ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${hasApiKey ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-700'}`}>
+              <div className={`flex items-start gap-3 p-3.5 rounded-xl border ${hasApiKey ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 ${hasApiKey ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-700'}`}>
                   {hasApiKey ? '✓' : '1'}
                 </div>
-                <p className={`flex-1 text-sm font-medium ${hasApiKey ? 'text-emerald-700' : 'text-amber-800'}`}>
-                  {hasApiKey ? 'API key de OpenAI conectada' : 'Conectá tu API key de OpenAI'}
-                </p>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-medium ${hasApiKey ? 'text-emerald-700' : 'text-amber-800'}`}>
+                    {hasApiKey ? 'API key de OpenAI conectada' : 'Conectá tu API key de OpenAI'}
+                  </p>
+                  {!hasApiKey && (
+                    <a
+                      href="https://www.loom.com/share/a2017d5a785b47299ce3ecd994df1909"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-amber-700 underline hover:text-amber-900 transition-colors mt-0.5"
+                    >
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-1.5 14.5v-9l7 4.5-7 4.5z"/>
+                      </svg>
+                      Ver tutorial en video
+                    </a>
+                  )}
+                </div>
                 {!hasApiKey && (
                   <Link href="/perfil" className="shrink-0 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
                     Configurar
