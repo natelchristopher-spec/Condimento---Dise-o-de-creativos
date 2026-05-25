@@ -170,6 +170,7 @@ Respondé SOLO con JSON válido:
                   : `PRODUCT: ${productDescription}.`;
 
                 const imagePrompt = [
+                  `THIS CREATIVE IS EXCLUSIVELY FOR ANGLE: "${angle.name}" — Hook: "${angle.hook}" — Emphasis: "${angle.emphasis}". Every visual element must reflect THIS specific angle's message. Do NOT mix with other angles.`,
                   productConstraint,
                   `CREATIVE FORMAT — ${stagePlan.format}: ${styleNote}`,
                   `FUNNEL STAGE: ${label}. ${stagePlan.concept}`,
@@ -178,6 +179,7 @@ Respondé SOLO con JSON válido:
                   personPart,
                   `Brand: ${brandKit.name}. Colors: ${brandKit.primary1}, ${brandKit.primary2}, ${brandKit.primary3}. Typography: ${brandKit.typography || 'bold sans-serif'}.`,
                   `Brand context: ${brandKitContext}`,
+                  'MOBILE-FIRST TEXT RULE: maximum 2 text elements visible (1 headline + 1 subline). No bullet lists, no paragraphs, no dense text blocks. Text must be large and legible on a phone screen at arm\'s length.',
                   'Portrait 1024x1536. ALL text in Spanish. Professional agency quality.',
                   'ANTI-HALLUCINATION: Do NOT invent prices, discounts, metrics, phone numbers, URLs, or statistics not in the brief.',
                   'Do NOT include button-style CTAs in the image.',
