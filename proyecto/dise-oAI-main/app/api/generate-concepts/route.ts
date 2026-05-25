@@ -258,7 +258,9 @@ export async function POST(req: NextRequest) {
 
   // People instruction for concept generation
   const peopleInstruction = isBrandingMode
-    ? 'NO incluir productos específicos ni personas. El foco es la identidad de marca, el mensaje y la composición gráfica pura.'
+    ? productRef
+      ? 'NO incluir personas. El foco es la identidad de marca junto con el producto. El producto puede aparecer como elemento visual en las composiciones tipográficas y de marca.'
+      : 'NO incluir productos específicos ni personas. El foco es la identidad de marca, el mensaje y la composición gráfica pura.'
     : peopleMode === 'none'
       ? 'NO incluir personas. Enfocarse en producto, composición, elementos gráficos y copy.'
       : isFashionProduct
@@ -276,9 +278,9 @@ export async function POST(req: NextRequest) {
    - PANTALLA DIVIDIDA (COMPARATIVA): dos zonas que narran un contraste — nuestra marca vs. alternativa genérica, con producto vs. sin producto, ocasión A vs. ocasión B. Copy que marca la diferencia entre ambas mitades. Sin mostrar personas en estados negativos.
    ${isProductEcommerce ? '- DAILY USE / USE CASE: el producto integrado en su contexto cotidiano real (escritorio, gym, cocina, rutina, setup). El ambiente rodea al producto de forma natural. Hacerlo sentir usable y cercano.' : '- PRODUCT DETAIL FOCUS: destacar calidad y detalles del producto. Texturas, costuras, fit, closeups de materiales, acabados. Claim técnico corto superpuesto en tipografía refinada (ej: "100% algodón pima" / "Hecho para durar").'}`;
 
-  const brandingConceptDirections = `MODO BRANDING / CAMPAÑA — sin producto específico.
+  const brandingConceptDirections = `MODO BRANDING / CAMPAÑA${productRef ? ' — el producto puede aparecer como elemento visual' : ' — sin producto específico'}.
 PASO 1: Leé el brief y determiná el ÚNICO objetivo principal de campaña (ej: lanzamiento de tienda, Black Friday, temporada de verano, awareness de marca, aniversario, campaña de valores, etc.).
-PASO 2: Generá 6 conceptos que ejecuten ESE MISMO objetivo con 6 TRATAMIENTOS VISUALES completamente distintos. Todos los conceptos deben responder al mismo intent — NO mezclar distintos objetivos entre sí.
+PASO 2: Generá 6 conceptos que ejecuten ESE MISMO objetivo con 6 TRATAMIENTOS VISUALES completamente distintos. Todos los conceptos deben responder al mismo intent — NO mezclar distintos objetivos entre sí.${productRef ? '\nSi el brief incluye el producto, podés incorporarlo en la composición como elemento visual secundario que refuerza el mensaje de marca — pero el protagonista siempre es la identidad y el mensaje, no el producto.' : ''}
 PASO 3: Elegí los 6 tratamientos más apropiados para ese objetivo específico entre estas posibilidades:
   - TIPOGRAFÍA DOMINANTE: solo copy grande + paleta del brand kit. 0% fotografía. Las palabras son la imagen.
   - COUNTDOWN / ANTICIPACIÓN: elementos de cuenta regresiva, fecha, urgencia o expectativa visual.

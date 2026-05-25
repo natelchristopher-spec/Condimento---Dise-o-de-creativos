@@ -25,6 +25,7 @@ export default function Home() {
   const [adaptSourceIds, setAdaptSourceIds] = useState<string[]>([]);
   const [adaptedImages, setAdaptedImages] = useState<{ format: string; label: string; conceptId: string; base64: string }[]>([]);
   const [generatingAdaptations, setGeneratingAdaptations] = useState(false);
+  const [adaptationsJustFinished, setAdaptationsJustFinished] = useState(false);
   const [step, setStep] = useState<Step>('brief');
   const [loading, setLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState('');
@@ -424,7 +425,7 @@ export default function Home() {
     if (adaptFormats.length === 0 || conceptsToAdapt.length === 0) return;
     setGeneratingAdaptations(true);
     const FORMAT_LABELS: Record<string, string> = {
-      story: 'Story 9:16', feed45: 'Feed 4:5', square: 'Cuadrado 1:1', landscape: 'Landscape 16:9',
+      instant_exp: 'Exp. Instantánea', square: 'Cuadrado 1:1', landscape: 'Landscape 16:9',
       pmax_square: 'PMax 1:1', pmax_landscape: 'PMax 1.91:1', pmax_portrait: 'PMax 4:5',
       banner_desktop: 'Banner Desktop', banner_mobile: 'Banner Mobile', webpush: 'Webpush', mailing: 'Mailing',
     };
@@ -453,6 +454,8 @@ export default function Home() {
         allResults.push(...(results.filter(Boolean) as { format: string; label: string; conceptId: string; base64: string }[]));
       }
       setAdaptedImages(allResults);
+      setAdaptationsJustFinished(true);
+      setTimeout(() => setAdaptationsJustFinished(false), 4000);
     } finally {
       setGeneratingAdaptations(false);
     }
@@ -1184,8 +1187,7 @@ export default function Home() {
 
               {[
                 { group: 'RRSS', items: [
-                  { key: 'story', label: 'Story 9:16', desc: 'Instagram / TikTok' },
-                  { key: 'feed45', label: 'Feed 4:5', desc: 'Instagram / Facebook' },
+                  { key: 'instant_exp', label: 'Experiencia Instantánea', desc: 'Facebook Canvas · Full screen' },
                   { key: 'square', label: 'Cuadrado 1:1', desc: 'Instagram / Facebook' },
                   { key: 'landscape', label: 'Landscape 16:9', desc: 'Facebook / YouTube' },
                 ]},
@@ -1224,7 +1226,7 @@ export default function Home() {
               <button
                 onClick={generateAdaptations}
                 disabled={adaptFormats.length === 0 || adaptSourceIds.length === 0 || generatingAdaptations}
-                className="bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed text-gray-900 font-medium px-5 py-2.5 rounded-xl transition-colors flex items-center gap-2 text-sm"
+                className={`font-medium px-5 py-2.5 rounded-xl transition-colors flex items-center gap-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed ${generatingAdaptations ? 'bg-[#e42820] text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-900'}`}
               >
                 {generatingAdaptations ? (
                   <><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />Generando adaptaciones...</>
@@ -1237,6 +1239,15 @@ export default function Home() {
                   </>
                 )}
               </button>
+
+              {adaptationsJustFinished && (
+                <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-800 text-sm font-medium px-4 py-2.5 rounded-xl">
+                  <svg className="w-4 h-4 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  </svg>
+                  ¡Adaptaciones generadas! Descargalas antes de salir.
+                </div>
+              )}
 
               {adaptedImages.length > 0 && (
                 <div className="space-y-3">

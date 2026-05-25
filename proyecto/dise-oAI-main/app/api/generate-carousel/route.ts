@@ -64,13 +64,14 @@ export async function POST(req: NextRequest) {
             const fullPrompt = [
               `Instagram carousel — slide ${slide.index} of 3, role: ${slide.role.toUpperCase()}.`,
               slide.image_direction,
+              hasProduct ? `PRODUCT REFERENCE: a product photo is provided — incorporate the product naturally into the composition. The product must be recognizable and visually present. Do NOT modify the product's color, shape, or packaging. Place it in a way that feels natural for the slide role: hook slide = product as supporting element in composition; value slide = product subtly visible; closing slide = product prominently featured.` : '',
               `Brand: ${brandKit.name}. Primary color: ${brandKit.primary1 || '#000000'}. Secondary: ${brandKit.primary2 || '#ffffff'}. Typography: ${brandKit.typography || 'bold sans-serif'}.`,
               `EXACT TEXT TO DISPLAY — use verbatim, do NOT modify or translate: ${copyText}`,
               `Premium graphic design for Instagram, portrait 4:5. Large bold legible typography. Clean, conversion-focused. Do NOT include funnel stage labels or internal tags as visible text.`,
               'IDIOMA — CRÍTICO: TODO el texto generado (beneficios, features, claims, CTAs, etiquetas) debe estar en ESPAÑOL. Solo se permite inglés si es parte del nombre de marca o nombre de producto. NUNCA generar copy descriptivo en inglés.',
               `CARRUSEL VISUAL COHERENTE: Esta es la slide ${slide.index} de 3. Las 3 slides DEBEN compartir idéntica paleta de colores, mismo peso tipográfico y mismo tratamiento visual general. Se ven como diseñadas por el mismo director creativo en la misma sesión de diseño.`,
               'ANTI-HALLUCINATION — do NOT invent or add any data not in the brief: phone numbers, URLs, social handles, QR codes, star ratings, testimonials, customer counts, certifications, ingredient/material claims, deadlines, discounts, promotional mechanics, awards, or any statistics. Only use what is explicitly in the brief.',
-            ].join(' ');
+            ].filter(Boolean).join(' ');
 
             let base64 = '';
             let lastError = '';

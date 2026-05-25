@@ -68,17 +68,17 @@ Las 3 slides deben verse como parte de una misma serie diseñada por un solo dir
 
 ESTRUCTURA DE SLIDES — seguila exactamente:
 
-Slide 1 (HOOK): captura la atención, hace que la persona quiera ver más.
-- title: máximo 8 palabras, impactante, usa el hook provisto como base
-- subtitle: máximo 6 palabras, complementa el título. Puede ser null.
+Slide 1 (HOOK): detiene el scroll generando curiosidad o tensión real.
+- title: máximo 8 palabras. Debe ser una pregunta incómoda, afirmación contraintuitiva, o promesa específica — NO frases motivacionales genéricas. Usá el hook provisto como base pero asegurate que genere verdadera curiosidad.
+- subtitle: máximo 6 palabras que añadan tensión o especificidad al hook. Puede ser null.
 - image_direction: instrucción en inglés para el generador. DEBE comenzar con el estilo visual unificado definido arriba, luego especificar solo la variación de esta slide. Ejemplo: "Dark red background, bold white typography — Slide 1: large centered headline, minimal elements."
 
-Slide 2 (VALOR): entrega el contenido prometido en el hook.
-- items: exactamente 3 bullets o pasos numerados. Máximo 5 palabras cada uno.
+Slide 2 (VALOR): RESUELVE la promesa o tensión planteada en el hook. Los 3 items deben sentirse como el desarrollo lógico de lo que el hook prometió — no son frases aisladas, son la respuesta directa a la tensión generada. Narrative continuity: el lector debe sentir que el slide 2 cumple lo que el slide 1 prometió.
+- items: exactamente 3 puntos. Máximo 6 palabras cada uno. Deben responder o desarrollar el hook — si el hook preguntó algo, estos items responden. Si el hook planteó un problema, estos son la solución concreta.
 - image_direction: MISMO estilo base que slide 1, solo varía la composición. Ejemplo: "Dark red background, bold white typography — Slide 2: structured list layout with icons or numbers."
 
-Slide 3 (CIERRE): slide de marca que cierra el relato — sin CTA explícito, solo branding.
-- title: máximo 8 palabras, frase de cierre que conecta con el tema y refuerza la marca
+Slide 3 (CIERRE): cierra el arco narrativo — conecta el tema con la marca de forma natural, sin CTA explícito.
+- title: máximo 8 palabras, frase de cierre que retoma el tema del hook y lo conecta con la marca o producto
 - image_direction: MISMO estilo base que slides 1 y 2. Ejemplo: "Dark red background, bold white typography — Slide 3: centered brand closing, clean and premium."
 
 COPY DEL POST DE INSTAGRAM:

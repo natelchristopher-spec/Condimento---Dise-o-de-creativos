@@ -1763,6 +1763,14 @@ export default function OneShootPage() {
               </div>
             </div>
 
+            {/* Download disclaimer */}
+            <div className="mb-5 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800 flex items-start gap-2">
+              <svg className="w-4 h-4 mt-0.5 shrink-0 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </svg>
+              <span>Las imágenes se guardan solo en este navegador. Descargalas antes de salir o cambiar de dispositivo.</span>
+            </div>
+
             {p2Error && (
               <div className="mb-5 bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700">{p2Error}</div>
             )}

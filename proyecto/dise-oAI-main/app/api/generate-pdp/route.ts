@@ -91,7 +91,7 @@ function buildSlideVisualRules(hasPeople: boolean, pdpMode: string): Record<stri
   const isFashion = pdpMode === 'fashion';
   return {
     hero: isFashion
-      ? 'COMPOSITION: garment worn on person or editorial flat lay. Clean background or solid brand color. Full garment visible with exact color, cut and silhouette. Aspirational fashion feel. NO text overlays.'
+      ? 'COMPOSITION: garment worn on person or model (preferred) OR on a mannequin — NOT floating in the air, NOT an isolated flat lay. Clean background or solid brand color. Full garment visible with exact color, cut and silhouette. Aspirational fashion feel. NO text overlays.'
       : 'COMPOSITION: product centered, filling 80% of frame, pure white or solid brand-color background, studio lighting, NO text overlays, NO bullets — pure product focus.',
     benefit: isFashion
       ? 'COMPOSITION: person wearing the garment showing fit, drape and movement. 3 benefit callouts as text labels on the side or overlaid. Clean, editorial. NO numbered list.'
@@ -142,7 +142,7 @@ function buildFallbackPrompt(
       return [
         base,
         isFashion
-          ? `Place garment as the clear hero — editorial flat lay or worn look. Clean ${bg} or neutral background. Exact garment color and silhouette.`
+          ? `Place garment worn on a person or mannequin — NOT floating. Clean ${bg} or neutral background. Full garment visible with exact color and silhouette.`
           : `Center the product on a clean ${bg} background, filling ~80% of the frame. Studio lighting, minimal composition.`,
         copy?.tagline ? `Add tagline text: "${copy.tagline}" in large ${font} above or below the product.` : '',
       ].filter(Boolean).join(' ');
@@ -151,7 +151,7 @@ function buildFallbackPrompt(
       return [
         base,
         isFashion
-          ? `Show the garment (worn or flat lay) on one side. Display these benefits as bold text on the other side:`
+          ? `Show the garment worn on a person or mannequin (NOT flat lay, NOT floating) on one side. Display these benefits as bold text on the other side:`
           : `Product on the left half. Display these benefits on the right side with icons:`,
         items.length
           ? items.map((it, i) => `${i + 1}. "${it}"`).join(' | ')
@@ -368,6 +368,7 @@ REGLAS CRÍTICAS:
 - PROHIBIDO incluir logos, marcas o textos de marca de terceros — las imágenes de referencia son solo para color/forma, NO reproducir sus logos
 - PROHIBIDO badges inventados ("Compra Segura", "Sitio Protegido", "Envío Gratis" si no está en el brief)
 - PROHIBIDO: botones CTA, precios inventados, descuentos no mencionados, métricas falsas
+- ANTI-ALUCINACIÓN CRÍTICO: SOLO mencioná características, materiales, beneficios o especificaciones que estén literalmente en el brief del usuario. NO inventes propiedades del producto (ej: "100% algodón" si el brief no lo dice, "resistente al agua" si no se menciona, etc.). Si el brief no lo dice, no lo incluyas.
 - TODO EL COPY EN ESPAÑOL — títulos, beneficios, pasos, testimonios, callouts: todo en español, sin excepción
 - Colores: usá los hex exactos del brand kit
 - ${hasPeople ? 'Modo fashion: LIFESTYLE debe incluir personas' : 'Sin personas en ninguna imagen'}
@@ -475,9 +476,9 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
               'Professional e-commerce product photography or high-end retail graphic design. Square 1:1 format for Shopify / Tienda Nube. Premium quality, clean, conversion-focused.',
               'BRAND COLORS ARE FOR DESIGN ELEMENTS ONLY — never apply brand colors to the product. The product color is fixed by the reference photos.',
               'COLOR ACCURACY — CRITICAL: replicate the product color with pixel-level accuracy from the reference photos. Do NOT shift, lighten, darken, or desaturate.',
-              isFashion ? 'PANTALONES Y PRENDAS INFERIORES — DOBLE ATENCIÓN: si la prenda es un pantalón, prestá máxima atención al color — es donde el modelo tiende a fallar más. Telas lisas (twill, gabardina, cotton chino): superficie uniforme y suave, sin texturas artificiales ni arrugas exageradas. Replicá largo, ancho de pierna y tiro tal cual se ven en la referencia.' : '',
+              isFashion ? 'PANTALONES Y PRENDAS INFERIORES — DOBLE ATENCIÓN: si la prenda es un pantalón, prestá máxima atención al color — es donde el modelo tiende a fallar más. Telas lisas (twill, gabardina): superficie uniforme y suave, sin texturas artificiales ni arrugas exageradas. Replicá largo, ancho de pierna y tiro tal cual se ven en la referencia. NO reclasifiques el tipo de pantalón.' : '',
               'Do NOT reproduce any brand logos or marks from the reference photos.',
-              'Do NOT include invented trust badges, button-style CTAs, prices, discounts, or false metrics.',
+              'Do NOT include invented trust badges, button-style CTAs, prices, discounts, or false metrics. Do NOT invent product characteristics, materials, certifications, or claims not explicitly stated in the brief.',
               'IDIOMA — CRÍTICO: TODO el texto generado (títulos, beneficios, pasos, callouts, labels) debe estar en ESPAÑOL. Solo se permite inglés si es parte del nombre de marca o producto.',
             ].filter(Boolean).join(' ');
 

@@ -62,7 +62,7 @@ Respondé SOLO con JSON válido:
     { "funnel": "BOFU", "title": "...", "hook": "...", "why": "..." }
   ]
 }
-Donde: funnel = "TOFU"|"MOFU"|"BOFU", title = nombre del carousel (max 6 palabras), hook = frase de apertura del primer slide que detenga el scroll (max 8 palabras), why = por qué este contenido funciona para este negocio (1 oración corta).`;
+Donde: funnel = "TOFU"|"MOFU"|"BOFU", title = nombre del carousel (max 6 palabras), hook = frase de apertura que GENERE CURIOSIDAD O TENSIÓN — usá preguntas incómodas, datos sorpresivos, afirmaciones contraintuitivas o promesas específicas. PROHIBIDO frases motivacionales genéricas ("Transforma tu vida", "El secreto del éxito"). Ejemplos del tipo correcto: "¿Por qué el 80% falla en esto?" / "Lo que nadie te dice sobre X" / "El error que te está costando ventas" / "Por qué esto no funciona como creés". Máx 8 palabras. why = por qué este contenido funciona para este negocio (1 oración corta).`;
 
   try {
     const response = await openai.chat.completions.create({
