@@ -21,6 +21,7 @@ export default function Home() {
   const [scrapingUrl, setScrapingUrl] = useState(false);
 
   const [adaptFormats, setAdaptFormats] = useState<string[]>([]);
+  const [adaptSourceIds, setAdaptSourceIds] = useState<string[]>([]);
   const [adaptedImages, setAdaptedImages] = useState<{ format: string; label: string; conceptId: string; base64: string }[]>([]);
   const [generatingAdaptations, setGeneratingAdaptations] = useState(false);
   const [step, setStep] = useState<Step>('brief');
@@ -440,7 +441,15 @@ export default function Home() {
     setRefineImage(selectedConcepts[nextIndex]);
   };
 
-  const finishRefine = () => setStep('done');
+  const finishRefine = () => {
+    setAdaptSourceIds(selectedConcepts.map(c => c.id));
+    setStep('done');
+  };
+
+  const removeSelectedConcept = (id: string) => {
+    setSelectedConcepts(prev => prev.filter(c => c.id !== id));
+    setAdaptSourceIds(prev => prev.filter(x => x !== id));
+  };
 
   const downloadAllSelected = () => {
     selectedConcepts.forEach((img, i) => {
@@ -452,7 +461,8 @@ export default function Home() {
   };
 
   const generateAdaptations = async () => {
-    if (adaptFormats.length === 0 || selectedConcepts.length === 0) return;
+    const conceptsToAdapt = selectedConcepts.filter(c => adaptSourceIds.includes(c.id));
+    if (adaptFormats.length === 0 || conceptsToAdapt.length === 0) return;
     setGeneratingAdaptations(true);
     const FORMAT_LABELS: Record<string, string> = {
       story: 'Story 9:16', feed45: 'Feed 4:5', square: 'Cuadrado 1:1', landscape: 'Landscape 16:9',
@@ -463,7 +473,7 @@ export default function Home() {
     try {
       // Process concepts sequentially to avoid rate-limiting OpenAI with too many parallel calls.
       // Formats within each concept still run in parallel (same base image, manageable load).
-      for (const concept of selectedConcepts) {
+      for (const concept of conceptsToAdapt) {
         const results = await Promise.all(
           adaptFormats.map(async format => {
             for (let attempt = 0; attempt < 2; attempt++) {
@@ -508,6 +518,7 @@ export default function Home() {
     setProductDetailImages([]);
     setReferenceImages([]);
     setAdaptFormats([]);
+    setAdaptSourceIds([]);
     setAdaptedImages([]);
     setApplyStatuses([]);
     setRefineInputs([]);
@@ -520,6 +531,7 @@ export default function Home() {
     setSelectedConcepts([]);
     setRefineIndex(0);
     setAdaptFormats([]);
+    setAdaptSourceIds([]);
     setAdaptedImages([]);
     setApplyStatuses([]);
     setRefineInputs([]);
@@ -1120,8 +1132,19 @@ export default function Home() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {selectedConcepts.map((img, i) => (
                 <div key={img.id} className="space-y-2">
-                  <div className="rounded-xl overflow-hidden border border-gray-200">
+                  <div className="relative rounded-xl overflow-hidden border border-gray-200">
                     <img src={`data:image/png;base64,${img.base64}`} alt={img.conceptName} className="w-full" />
+                    {selectedConcepts.length > 1 && (
+                      <button
+                        onClick={() => removeSelectedConcept(img.id)}
+                        title="Quitar variante"
+                        className="absolute top-2 right-2 w-6 h-6 bg-black/60 hover:bg-black/80 rounded-full flex items-center justify-center transition-colors"
+                      >
+                        <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
                   </div>
                   <p className="text-xs text-gray-500 text-center truncate">{img.conceptName}</p>
                   <button
@@ -1166,6 +1189,40 @@ export default function Home() {
                 <h3 className="text-base font-semibold mb-1">Adaptaciones de tamaño</h3>
                 <p className="text-gray-500 text-sm">Generá los mismos conceptos en otros formatos.</p>
               </div>
+
+              {/* Source concept selector (only when > 1 concept) */}
+              {selectedConcepts.length > 1 && (
+                <div className="space-y-2">
+                  <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Adaptar desde</p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedConcepts.map(c => {
+                      const isSelected = adaptSourceIds.includes(c.id);
+                      return (
+                        <button
+                          key={c.id}
+                          onClick={() => setAdaptSourceIds(prev =>
+                            isSelected && prev.length > 1
+                              ? prev.filter(x => x !== c.id)
+                              : isSelected
+                                ? prev
+                                : [...prev, c.id]
+                          )}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm transition-all ${isSelected ? 'border-[#e42820] bg-[#e42820]/10' : 'border-gray-200 bg-white opacity-50 hover:opacity-80'}`}
+                        >
+                          <img src={`data:image/png;base64,${c.base64}`} alt="" className="w-8 h-8 rounded object-cover shrink-0" />
+                          <span className="text-xs font-medium truncate max-w-[100px] text-gray-700">{c.conceptName}</span>
+                          {isSelected && (
+                            <svg className="w-3.5 h-3.5 text-[#e42820] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {[
                 { group: 'RRSS', items: [
                   { key: 'story', label: 'Story 9:16', desc: 'Instagram / TikTok' },
@@ -1217,7 +1274,7 @@ export default function Home() {
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
                     </svg>
-                    Generar {adaptFormats.length > 0 ? `${adaptFormats.length} formato${adaptFormats.length > 1 ? 's' : ''} × ${selectedConcepts.length} concepto${selectedConcepts.length > 1 ? 's' : ''}` : 'adaptaciones'}
+                    Generar {adaptFormats.length > 0 ? `${adaptFormats.length} formato${adaptFormats.length > 1 ? 's' : ''} × ${adaptSourceIds.length} concepto${adaptSourceIds.length > 1 ? 's' : ''}` : 'adaptaciones'}
                   </>
                 )}
               </button>
