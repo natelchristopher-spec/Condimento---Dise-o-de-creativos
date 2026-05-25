@@ -100,6 +100,11 @@ export default function ConfigPage() {
         secondary3: data.secondary3 || f.secondary3,
         typography: data.typography || f.typography,
         styleDescription: data.styleDescription || f.styleDescription,
+        // Clear logos from previous brand — new brand will need its own logo
+        logoBase64: undefined,
+        logoColorBase64: undefined,
+        logoWhiteBase64: undefined,
+        logoDarkBase64: undefined,
       }));
     } catch (e) {
       alert(`Error: ${e instanceof Error ? e.message : 'No se pudo leer el PDF'}`);
@@ -353,6 +358,19 @@ export default function ConfigPage() {
               onChange={e => setForm(f => ({ ...f, styleDescription: e.target.value }))}
               placeholder="Estilo visual, tono, audiencia, reglas de diseño, prohibiciones, aplicaciones en RRSS..."
               rows={5}
+              className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] resize-none text-sm leading-relaxed"
+            />
+          </div>
+
+          {/* Quick adjustments */}
+          <div className="space-y-2">
+            <label className="text-sm text-gray-600">Ajustes aprobados por el cliente</label>
+            <p className="text-xs text-gray-400">Una línea por ajuste — se aplican siempre en los creativos. Ej: "Nunca usar fondos oscuros", "Siempre mostrar el producto de frente".</p>
+            <textarea
+              value={(form.quickAdjustments || []).join('\n')}
+              onChange={e => setForm(f => ({ ...f, quickAdjustments: e.target.value.split('\n').map(s => s.trim()).filter(Boolean) }))}
+              rows={3}
+              placeholder={'Nunca usar fondos oscuros\nSiempre incluir el logo en esquina superior derecha\nFotos siempre con personas reales'}
               className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] resize-none text-sm leading-relaxed"
             />
           </div>

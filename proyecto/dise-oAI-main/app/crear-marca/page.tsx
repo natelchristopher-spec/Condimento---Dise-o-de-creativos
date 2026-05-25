@@ -23,6 +23,31 @@ interface BrandConcept {
   logoDarkBase64?: string;
 }
 
+const BRAND_TONES = [
+  { id: 'premium', label: 'Premium / aspiracional' },
+  { id: 'cercano', label: 'Cercano / casual' },
+  { id: 'tecnico', label: 'Técnico / científico' },
+  { id: 'energetico', label: 'Energético / deportivo' },
+  { id: 'natural', label: 'Natural / consciente' },
+  { id: 'ludico', label: 'Lúdico / creativo' },
+];
+
+const VISUAL_STYLES = [
+  { id: 'minimal', label: 'Minimal limpio' },
+  { id: 'bold', label: 'Bold / impactante' },
+  { id: 'organico', label: 'Natural / orgánico' },
+  { id: 'editorial', label: 'Editorial / revista' },
+  { id: 'tech', label: 'Tech / futurista' },
+];
+
+const PHOTO_STYLES = [
+  { id: 'lifestyle', label: 'Lifestyle (personas usando el producto)' },
+  { id: 'packshot', label: 'Solo producto / packshot' },
+  { id: 'fondo_blanco', label: 'Fondo blanco / neutro' },
+  { id: 'oscuro', label: 'Ambiente oscuro / dramático' },
+  { id: 'mix', label: 'Mix estudio + lifestyle' },
+];
+
 const CATEGORIES = [
   { id: 'moda',        label: 'Moda',          emoji: '👕' },
   { id: 'skincare',    label: 'Skincare',       emoji: '✨' },
@@ -80,6 +105,10 @@ export default function CrearMarcaPage() {
   const [businessName, setBusinessName] = useState('');
   const [category, setCategory] = useState('');
   const [brief, setBrief] = useState('');
+  const [brandTone, setBrandTone] = useState('');
+  const [visualStyle, setVisualStyle] = useState('');
+  const [photoStyle, setPhotoStyle] = useState('');
+  const [adjectives, setAdjectives] = useState(['', '', '']);
   const [concepts, setConcepts] = useState<(BrandConcept | null)[]>([null, null, null]);
   const [conceptsStreaming, setConceptsStreaming] = useState(false);
   const [selected, setSelected] = useState<BrandConcept | null>(null);
@@ -96,6 +125,7 @@ export default function CrearMarcaPage() {
   const [eS1, setES1] = useState(''); const [eS2, setES2] = useState(''); const [eS3, setES3] = useState('');
   const [eTypo, setETypo] = useState('');
   const [eStyle, setEStyle] = useState('');
+  const [eQuickAdj, setEQuickAdj] = useState('');
 
   useEffect(() => {
     fetch('/api/check-credits')
@@ -149,7 +179,15 @@ export default function CrearMarcaPage() {
       const res = await fetch('/api/create-brand', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ businessName: businessName.trim(), category, brief: brief.trim() }),
+        body: JSON.stringify({
+          businessName: businessName.trim(),
+          category,
+          brief: brief.trim(),
+          brandTone: brandTone || undefined,
+          visualStyle: visualStyle || undefined,
+          photoStyle: photoStyle || undefined,
+          adjectives: adjectives.filter(Boolean).length ? adjectives.filter(Boolean) : undefined,
+        }),
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Error generando marcas');
 
@@ -245,6 +283,7 @@ export default function CrearMarcaPage() {
     setEP1(concept.primary1); setEP2(concept.primary2); setEP3(concept.primary3);
     setES1(concept.secondary1); setES2(concept.secondary2); setES3(concept.secondary3);
     setETypo(concept.typography); setEStyle(concept.styleDescription);
+    setEQuickAdj('');
     setStep('edit');
     fetchVariantLogos(concept.logoPrompt, concept.name, concept.logoColorBase64);
   };
@@ -256,6 +295,7 @@ export default function CrearMarcaPage() {
     const toDataUrl = (b64: string | undefined) =>
       b64 ? (b64.startsWith('data:') ? b64 : `data:image/png;base64,${b64}`) : undefined;
 
+    const quickAdjArr = eQuickAdj.split('\n').map(s => s.trim()).filter(Boolean);
     const kit: BrandKit = {
       id: '',
       name: eName,
@@ -268,6 +308,7 @@ export default function CrearMarcaPage() {
       logoWhiteBase64: toDataUrl(selected.logoWhiteBase64),
       logoDarkBase64: toDataUrl(selected.logoDarkBase64),
       clientRequest: brief.trim() || undefined,
+      quickAdjustments: quickAdjArr.length ? quickAdjArr : undefined,
     };
     try {
       const res = await fetch('/api/brand-kits', {
@@ -389,6 +430,102 @@ export default function CrearMarcaPage() {
                   rows={4}
                   className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] resize-none leading-relaxed"
                 />
+              </div>
+
+              {/* Brand tone */}
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">
+                  Tono de marca
+                  <span className="font-normal text-gray-400 ml-1">(opcional pero recomendado)</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {BRAND_TONES.map(t => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setBrandTone(prev => prev === t.id ? '' : t.id)}
+                      className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+                        brandTone === t.id
+                          ? 'border-[#e42820] bg-[#e42820]/5 text-[#e42820]'
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Visual style */}
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">
+                  Estilo visual
+                  <span className="font-normal text-gray-400 ml-1">(opcional)</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {VISUAL_STYLES.map(s => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setVisualStyle(prev => prev === s.id ? '' : s.id)}
+                      className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+                        visualStyle === s.id
+                          ? 'border-[#e42820] bg-[#e42820]/5 text-[#e42820]'
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Photo style */}
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">
+                  Estilo de fotos
+                  <span className="font-normal text-gray-400 ml-1">(opcional)</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {PHOTO_STYLES.map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setPhotoStyle(prev => prev === p.id ? '' : p.id)}
+                      className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+                        photoStyle === p.id
+                          ? 'border-[#e42820] bg-[#e42820]/5 text-[#e42820]'
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Personality adjectives */}
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">
+                  Describí tu marca en 3 palabras
+                  <span className="font-normal text-gray-400 ml-1">(opcional)</span>
+                </label>
+                <div className="flex gap-2">
+                  {[0, 1, 2].map(i => (
+                    <input
+                      key={i}
+                      type="text"
+                      value={adjectives[i]}
+                      onChange={e => {
+                        const next = [...adjectives];
+                        next[i] = e.target.value;
+                        setAdjectives(next);
+                      }}
+                      placeholder={['Ej: audaz', 'sofisticada', 'directa'][i]}
+                      className="flex-1 bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820]"
+                    />
+                  ))}
+                </div>
               </div>
 
               {creditsOk === false && (
@@ -629,8 +766,19 @@ export default function CrearMarcaPage() {
                   <textarea
                     value={eStyle}
                     onChange={e => setEStyle(e.target.value)}
-                    rows={3}
+                    rows={5}
                     className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-[#e42820] resize-none"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-gray-600">Ajustes aprobados por el cliente</label>
+                  <p className="text-[11px] text-gray-400">Una línea por ajuste — se aplican siempre en los creativos. Ej: "Nunca usar fondos oscuros", "Siempre mostrar el producto de frente".</p>
+                  <textarea
+                    value={eQuickAdj}
+                    onChange={e => setEQuickAdj(e.target.value)}
+                    rows={3}
+                    placeholder={'Nunca usar fondos oscuros\nSiempre incluir el logo en esquina superior derecha\nFotos siempre con personas reales'}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] resize-none"
                   />
                 </div>
               </div>
