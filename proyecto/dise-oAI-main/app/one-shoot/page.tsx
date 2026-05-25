@@ -119,6 +119,43 @@ function loadLsP2(id: string): PECCreative[] {
   } catch { return []; }
 }
 
+// ─── Supabase Storage helpers ─────────────────────────────────────────────────
+
+const STORAGE_BUCKET = 'one-shoot-images';
+
+async function uploadBase64(
+  supabase: ReturnType<typeof createSupabaseBrowser>,
+  path: string,
+  base64: string
+): Promise<void> {
+  try {
+    const b64 = base64.includes(',') ? base64.split(',')[1] : base64;
+    const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    await supabase.storage
+      .from(STORAGE_BUCKET)
+      .upload(path, new Blob([bytes], { type: 'image/jpeg' }), { contentType: 'image/jpeg', upsert: true });
+  } catch { /* non-blocking */ }
+}
+
+async function downloadBase64(
+  supabase: ReturnType<typeof createSupabaseBrowser>,
+  path: string
+): Promise<string | null> {
+  try {
+    const { data, error } = await supabase.storage.from(STORAGE_BUCKET).download(path);
+    if (error || !data) return null;
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        resolve(result.includes(',') ? result.split(',')[1] : result);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(data);
+    });
+  } catch { return null; }
+}
+
 // ─── Game Header Component ────────────────────────────────────────────────────
 
 interface GameHeaderProps {
@@ -283,6 +320,7 @@ export default function OneShootPage() {
   const supabase = createSupabaseBrowser();
 
   const [userEmail, setUserEmail] = useState('');
+  const [userId, setUserId] = useState('');
   const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
   const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
   const [brandKitLoaded, setBrandKitLoaded] = useState(false);
@@ -356,6 +394,7 @@ export default function OneShootPage() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
       setUserEmail(session.user.email || '');
+      setUserId(session.user.id);
       fetch('/api/profile').then(r => r.json()).then(data => {
         setHasApiKey(!!data.openai_api_key);
       }).catch(() => setHasApiKey(false));
@@ -551,8 +590,15 @@ export default function OneShootPage() {
         if (saveRes.ok) {
           const { id } = await saveRes.json();
           setSessionId(id);
-          // Store images + product/ref images in localStorage only
+          // Store images in localStorage (fast cache) and Supabase Storage (cross-device persistence)
           saveLsImages(id, finalImages, {}, '');
+          if (userId) {
+            void Promise.allSettled(
+              finalImages.map(img =>
+                uploadBase64(supabase, `${userId}/${id}/p1_${img.angleKey}.jpg`, img.base64)
+              )
+            );
+          }
           // Also store product/ref images for P2 generation
           try {
             if (productImagesCompressed.length > 0) {
@@ -590,7 +636,30 @@ export default function OneShootPage() {
     setWinnerKeys(session.winning_angle_keys || []);
 
     const stored = loadLsImages(session.id);
-    setP1Images(stored.p1);
+    let p1ToLoad = stored.p1;
+
+    // If localStorage is empty (different device/browser), download from Supabase Storage
+    if (p1ToLoad.length === 0 && userId) {
+      const downloaded = await Promise.all(
+        session.angles.map(async (angle) => {
+          const b64 = await downloadBase64(supabase, `${userId}/${session.id}/p1_${angle.key}.jpg`);
+          if (!b64) return null;
+          return {
+            id: angle.key,
+            base64: b64,
+            angleKey: angle.key,
+            angleName: angle.name,
+            hook: angle.hook,
+            emphasis: angle.emphasis,
+            level: angle.level,
+          } as AngleImage;
+        })
+      );
+      p1ToLoad = downloaded.filter(Boolean) as AngleImage[];
+      if (p1ToLoad.length > 0) saveLsImages(session.id, p1ToLoad, stored.angleStatuses, stored.launchDate);
+    }
+
+    setP1Images(p1ToLoad);
     setAngleStatuses(stored.angleStatuses || {});
 
     // Restore product images from localStorage
@@ -605,7 +674,21 @@ export default function OneShootPage() {
       if (refImgs) setReferenceImages(JSON.parse(refImgs));
     } catch { /* ok */ }
 
-    const storedP2 = loadLsP2(session.id);
+    let storedP2 = loadLsP2(session.id);
+
+    // If P2 localStorage is empty, download from Supabase Storage using pec_results metadata
+    if (session.status === 'paso2_done' && storedP2.length === 0 && userId && session.pec_results?.length > 0) {
+      const downloaded = await Promise.all(
+        session.pec_results.map(async (meta) => {
+          const b64 = await downloadBase64(supabase, `${userId}/${session.id}/p2_${meta.id}.jpg`);
+          if (!b64) return null;
+          return { ...meta, base64: b64 } as PECCreative;
+        })
+      );
+      storedP2 = downloaded.filter(Boolean) as PECCreative[];
+      if (storedP2.length > 0) saveLsP2(session.id, storedP2);
+    }
+
     if (session.status === 'paso2_done' && storedP2.length > 0) {
       setP2Creatives(storedP2);
       const wk = Object.entries(stored.angleStatuses || {})
@@ -733,6 +816,13 @@ export default function OneShootPage() {
                 const stored = loadLsImages(sessionId);
                 saveLsImages(sessionId, stored.p1, stored.angleStatuses, stored.launchDate);
                 saveLsP2(sessionId, collectedCreatives);
+                if (userId) {
+                  void Promise.allSettled(
+                    collectedCreatives.map(c =>
+                      uploadBase64(supabase, `${userId}/${sessionId}/p2_${c.id}.jpg`, c.base64)
+                    )
+                  );
+                }
                 await loadSessions();
               }
             }
@@ -764,6 +854,17 @@ export default function OneShootPage() {
       localStorage.removeItem(`one_shoot_product_img_${id}`);
       localStorage.removeItem(`one_shoot_ref_imgs_${id}`);
     } catch { /* ok */ }
+    // Delete images from Supabase Storage
+    if (userId) {
+      try {
+        const { data: files } = await supabase.storage.from(STORAGE_BUCKET).list(`${userId}/${id}`);
+        if (files && files.length > 0) {
+          await supabase.storage
+            .from(STORAGE_BUCKET)
+            .remove(files.map(f => `${userId}/${id}/${f.name}`));
+        }
+      } catch { /* ok */ }
+    }
     setSessions(prev => prev.filter(s => s.id !== id));
   };
 
