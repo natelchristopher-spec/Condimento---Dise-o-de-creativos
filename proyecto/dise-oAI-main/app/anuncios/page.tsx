@@ -425,7 +425,7 @@ export default function Home() {
     if (adaptFormats.length === 0 || conceptsToAdapt.length === 0) return;
     setGeneratingAdaptations(true);
     const FORMAT_LABELS: Record<string, string> = {
-      instant_exp: 'Exp. Instantánea', square: 'Cuadrado 1:1', landscape: 'Landscape 16:9',
+      story: 'Story / Reels', instant_exp: 'Exp. Instantánea', square: 'Cuadrado 1:1', landscape: 'Landscape 16:9',
       pmax_square: 'PMax 1:1', pmax_landscape: 'PMax 1.91:1', pmax_portrait: 'PMax 4:5',
       banner_desktop: 'Banner Desktop', banner_mobile: 'Banner Mobile', webpush: 'Webpush', mailing: 'Mailing',
     };
@@ -1187,6 +1187,7 @@ export default function Home() {
 
               {[
                 { group: 'RRSS', items: [
+                  { key: 'story', label: 'Story / Reels', desc: 'Instagram / Facebook · 9:16' },
                   { key: 'instant_exp', label: 'Experiencia Instantánea', desc: 'Facebook Canvas · Full screen' },
                   { key: 'square', label: 'Cuadrado 1:1', desc: 'Instagram / Facebook' },
                   { key: 'landscape', label: 'Landscape 16:9', desc: 'Facebook / YouTube' },

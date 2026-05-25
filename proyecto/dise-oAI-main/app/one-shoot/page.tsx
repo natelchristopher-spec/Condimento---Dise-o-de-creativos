@@ -119,6 +119,19 @@ function loadLsP2(id: string): PECCreative[] {
   } catch { return []; }
 }
 
+type AngleMetricsMap = Record<string, { purchases: string; spend: string }>;
+
+function saveAngleMetrics(id: string, metrics: AngleMetricsMap) {
+  try { localStorage.setItem(`one_shoot_angle_metrics_${id}`, JSON.stringify(metrics)); } catch { /* ok */ }
+}
+
+function loadAngleMetrics(id: string): AngleMetricsMap {
+  try {
+    const raw = localStorage.getItem(`one_shoot_angle_metrics_${id}`);
+    return raw ? JSON.parse(raw) : {};
+  } catch { return {}; }
+}
+
 // ─── Supabase Storage helpers ─────────────────────────────────────────────────
 
 const STORAGE_BUCKET = 'one-shoot-images';
@@ -313,6 +326,51 @@ function getGuidanceMessage(
   return null;
 }
 
+interface AngleRec {
+  type: 'scale' | 'off' | 'wait' | 'regenerate';
+  label: string;
+  color: string;
+}
+
+function getAngleRec(
+  purchases: number,
+  spend: number,
+  days: number,
+  targetCpa: number,
+  accountType: 'new' | 'established',
+  hasData: boolean,
+): AngleRec | null {
+  if (!hasData) return null;
+  const dayThreshold = accountType === 'new' ? 15 : 7;
+
+  if (purchases >= 7) return {
+    type: 'scale',
+    label: `${purchases} compras — potencial de escalado`,
+    color: 'bg-green-50 text-green-700 border-green-200',
+  };
+  if (!isNaN(targetCpa) && targetCpa > 0 && spend >= targetCpa * 2 && purchases === 0) return {
+    type: 'off',
+    label: `$${spend} gastados sin compras — apagar`,
+    color: 'bg-red-50 text-red-700 border-red-200',
+  };
+  if (!isNaN(days) && days >= dayThreshold && purchases === 0) return {
+    type: 'regenerate',
+    label: `${days} días sin compras — mensaje nuevo`,
+    color: 'bg-orange-50 text-orange-700 border-orange-200',
+  };
+  if (purchases > 0 && purchases < 7) return {
+    type: 'wait',
+    label: `${purchases} compra${purchases > 1 ? 's' : ''} — acumulando datos`,
+    color: 'bg-blue-50 text-blue-700 border-blue-200',
+  };
+  if (purchases === 0 && spend > 0) return {
+    type: 'wait',
+    label: 'Fase temprana — seguí esperando',
+    color: 'bg-gray-50 text-gray-600 border-gray-200',
+  };
+  return null;
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function OneShootPage() {
@@ -361,10 +419,9 @@ export default function OneShootPage() {
 
   // P1 review
   const [angleStatuses, setAngleStatuses] = useState<Record<string, AngleStatus>>({});
+  const [angleMetrics, setAngleMetrics] = useState<AngleMetricsMap>({});
   const [daysRunning, setDaysRunning] = useState('');
-  const [totalPurchases, setTotalPurchases] = useState('');
   const [accountType, setAccountType] = useState<'new' | 'established'>('new');
-  const [totalSpend, setTotalSpend] = useState('');
   const [targetCpa, setTargetCpa] = useState('');
   const [excludeAngles, setExcludeAngles] = useState<MessageAngle[]>([]);
 
@@ -491,8 +548,8 @@ export default function OneShootPage() {
     setP1Total(total);
     setP1Error('');
     setAngleStatuses({});
+    setAngleMetrics({});
     setDaysRunning('');
-    setTotalPurchases('');
     setView('p1-generating');
 
     const productImagesCompressed = await Promise.all(productImages.map(img => compressImage(img, 1024)));
@@ -661,6 +718,7 @@ export default function OneShootPage() {
 
     setP1Images(p1ToLoad);
     setAngleStatuses(stored.angleStatuses || {});
+    setAngleMetrics(loadAngleMetrics(session.id));
 
     // Restore product images from localStorage
     try {
@@ -853,6 +911,7 @@ export default function OneShootPage() {
       localStorage.removeItem(`one_shoot_product_imgs_${id}`);
       localStorage.removeItem(`one_shoot_product_img_${id}`);
       localStorage.removeItem(`one_shoot_ref_imgs_${id}`);
+      localStorage.removeItem(`one_shoot_angle_metrics_${id}`);
     } catch { /* ok */ }
     // Delete images from Supabase Storage
     if (userId) {
@@ -882,8 +941,8 @@ export default function OneShootPage() {
     setP2Done(0);
     setP2Total(0);
     setAngleStatuses({});
+    setAngleMetrics({});
     setDaysRunning('');
-    setTotalPurchases('');
     setWinnerKeys([]);
     setP2Creatives([]);
     setSessionId(null);
@@ -1530,13 +1589,23 @@ export default function OneShootPage() {
     const currentWinners = p1Angles.filter(a => (angleStatuses[a.key] || 'active') === 'winner');
 
     const daysNum = parseInt(daysRunning, 10);
-    const purchasesNum = parseInt(totalPurchases, 10);
-    const guidance = daysRunning !== ''
+    const cpaNum = parseFloat(targetCpa.replace(/,/g, '.')) || 0;
+
+    // Aggregate totals derived from per-angle metrics
+    const totalPurchasesAgg = Object.values(angleMetrics)
+      .reduce((sum, m) => sum + (parseInt(m.purchases, 10) || 0), 0);
+    const totalSpendAgg = Object.values(angleMetrics)
+      .reduce((sum, m) => sum + (parseFloat(m.spend.replace(/,/g, '.')) || 0), 0);
+    const hasAnyMetrics = p1Angles.some(a => {
+      const m = angleMetrics[a.key];
+      return m && (m.purchases !== '' || m.spend !== '');
+    });
+    const guidance = hasAnyMetrics && daysRunning !== ''
       ? getGuidanceMessage(
           isNaN(daysNum) ? 0 : daysNum,
-          isNaN(purchasesNum) ? 0 : purchasesNum,
+          totalPurchasesAgg,
           accountType,
-          totalSpend,
+          totalSpendAgg.toString(),
           targetCpa,
           p1Angles.length,
         )
@@ -1554,12 +1623,34 @@ export default function OneShootPage() {
       });
     };
 
+    const updateAngleMetric = (key: string, field: 'purchases' | 'spend', value: string) => {
+      setAngleMetrics(prev => {
+        const existing = prev[key] || { purchases: '', spend: '' };
+        const next = { ...prev, [key]: { ...existing, [field]: value } };
+        if (sessionId) saveAngleMetrics(sessionId, next);
+        return next;
+      });
+    };
+
     const renderReviewCard = (angle: MessageAngle) => {
       const img = p1Images.find(i => i.angleKey === angle.key);
       const status = angleStatuses[angle.key] || 'active';
       const isWinner = status === 'winner';
       const isOff = status === 'off';
       const isProduct = angle.level === 'product';
+
+      const metrics = angleMetrics[angle.key] || { purchases: '', spend: '' };
+      const purchasesNum = parseInt(metrics.purchases, 10);
+      const spendNum = parseFloat(metrics.spend.replace(/,/g, '.'));
+      const hasData = metrics.purchases !== '' || metrics.spend !== '';
+      const rec = getAngleRec(
+        isNaN(purchasesNum) ? 0 : purchasesNum,
+        isNaN(spendNum) ? 0 : spendNum,
+        isNaN(daysNum) ? 0 : daysNum,
+        cpaNum,
+        accountType,
+        hasData,
+      );
 
       return (
         <div
@@ -1572,19 +1663,13 @@ export default function OneShootPage() {
               : 'border-gray-200'
           }`}
         >
-          {/* Overlay for off state */}
           {isOff && (
             <div className="absolute inset-0 bg-gray-400/20 z-10 rounded-xl pointer-events-none" />
           )}
 
-          {/* Image */}
           {img ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={`data:image/png;base64,${img.base64}`}
-              alt={angle.name}
-              className="w-full aspect-[2/3] object-cover"
-            />
+            <img src={`data:image/png;base64,${img.base64}`} alt={angle.name} className="w-full aspect-[2/3] object-cover" />
           ) : (
             <div className="w-full aspect-[2/3] bg-gray-100 flex items-center justify-center">
               <svg className="w-8 h-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1593,12 +1678,9 @@ export default function OneShootPage() {
             </div>
           )}
 
-          {/* Card body */}
           <div className="p-3 relative z-20">
             <div className="flex items-center gap-1.5 mb-1">
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                isProduct ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
-              }`}>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isProduct ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
                 {isProduct ? 'Producto' : 'Categoría'}
               </span>
               <span className="text-xs text-gray-500 font-medium truncate">{angle.name}</span>
@@ -1607,14 +1689,45 @@ export default function OneShootPage() {
               &ldquo;{angle.hook}&rdquo;
             </p>
 
+            {/* Per-angle metrics */}
+            <div className="flex gap-2 mb-2">
+              <div className="flex-1">
+                <label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Compras</label>
+                <input
+                  type="number" min={0} value={metrics.purchases}
+                  onChange={e => updateAngleMetric(angle.key, 'purchases', e.target.value)}
+                  placeholder="0"
+                  className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Gasto ($)</label>
+                <input
+                  type="text" value={metrics.spend}
+                  onChange={e => updateAngleMetric(angle.key, 'spend', e.target.value)}
+                  placeholder="0"
+                  className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]"
+                />
+              </div>
+            </div>
+
+            {/* Per-angle recommendation */}
+            {rec && (
+              <div className={`text-[11px] font-semibold px-2 py-1 rounded-lg border mb-2 ${rec.color}`}>
+                {rec.type === 'scale' && '🟢 '}
+                {rec.type === 'off' && '🔴 '}
+                {rec.type === 'regenerate' && '🟠 '}
+                {rec.type === 'wait' && '⏳ '}
+                {rec.label}
+              </div>
+            )}
+
             {/* Action buttons */}
             <div className="flex gap-2">
               <button
                 onClick={() => setStatus(angle.key, isWinner ? 'active' : 'winner')}
                 className={`flex-1 text-xs font-semibold py-1.5 rounded-lg border transition-all flex items-center justify-center gap-1 ${
-                  isWinner
-                    ? 'bg-green-500 border-green-500 text-white'
-                    : 'bg-white border-gray-200 text-gray-600 hover:border-green-300 hover:text-green-700'
+                  isWinner ? 'bg-green-500 border-green-500 text-white' : 'bg-white border-gray-200 text-gray-600 hover:border-green-300 hover:text-green-700'
                 }`}
               >
                 <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -1625,9 +1738,7 @@ export default function OneShootPage() {
               <button
                 onClick={() => setStatus(angle.key, isOff ? 'active' : 'off')}
                 className={`flex-1 text-xs font-semibold py-1.5 rounded-lg border transition-all flex items-center justify-center gap-1 ${
-                  isOff
-                    ? 'bg-red-500 border-red-500 text-white'
-                    : 'bg-white border-gray-200 text-gray-600 hover:border-red-300 hover:text-red-600'
+                  isOff ? 'bg-red-500 border-red-500 text-white' : 'bg-white border-gray-200 text-gray-600 hover:border-red-300 hover:text-red-600'
                 }`}
               >
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1680,21 +1791,18 @@ export default function OneShootPage() {
                     className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Compras totales</label>
-                  <input type="number" min={0} value={totalPurchases} onChange={e => setTotalPurchases(e.target.value)} placeholder="0"
-                    className="w-24 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]" />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Gasto total ($)</label>
-                  <input type="text" value={totalSpend} onChange={e => setTotalSpend(e.target.value)} placeholder="0"
-                    className="w-28 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]" />
-                </div>
-                <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">CPA objetivo ($)</label>
                   <input type="text" value={targetCpa} onChange={e => setTargetCpa(e.target.value)} placeholder="0"
                     className="w-28 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]" />
                 </div>
+                {hasAnyMetrics && (
+                  <div className="flex gap-4 text-xs text-gray-500">
+                    <span>Total compras: <strong className="text-gray-900">{totalPurchasesAgg}</strong></span>
+                    <span>Total gasto: <strong className="text-gray-900">${totalSpendAgg.toFixed(0)}</strong></span>
+                  </div>
+                )}
               </div>
+              <p className="text-[11px] text-gray-400 mt-2">Ingresá compras y gasto por ángulo en cada tarjeta ↓</p>
 
               {guidance && (
                 <div className={`mt-3 text-sm px-3 py-2.5 rounded-lg border font-medium ${guidance.color}`}>
@@ -1753,14 +1861,34 @@ export default function OneShootPage() {
                     <p className="text-sm font-semibold text-gray-900">
                       {currentWinners.length} ganador{currentWinners.length > 1 ? 'es' : ''} seleccionado{currentWinners.length > 1 ? 's' : ''}
                     </p>
-                    <p className="text-xs text-gray-400">Se generarán {currentWinners.length * 3} creativos PEC</p>
+                    <p className="text-xs text-gray-400">
+                      {p2Creatives.length > 0 ? `${p2Creatives.length} creativos PEC ya generados` : `Se generarán ${currentWinners.length * 3} creativos PEC`}
+                    </p>
                   </div>
-                  <button
-                    onClick={generateP2}
-                    className="shrink-0 bg-[#e42820] text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-[#c82019] transition-colors text-sm"
-                  >
-                    Escalar al Paso 2 →
-                  </button>
+                  {p2Creatives.length > 0 ? (
+                    <div className="flex gap-2 shrink-0">
+                      <button
+                        onClick={() => setView('p2-results')}
+                        className="bg-[#e42820] text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-[#c82019] transition-colors text-sm"
+                      >
+                        Ver PEC →
+                      </button>
+                      <button
+                        onClick={generateP2}
+                        className="border border-gray-300 text-gray-700 font-semibold px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-colors text-sm"
+                        title="Genera nuevos creativos PEC distintos a los existentes"
+                      >
+                        Re-escalar
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={generateP2}
+                      className="shrink-0 bg-[#e42820] text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-[#c82019] transition-colors text-sm"
+                    >
+                      Escalar al Paso 2 →
+                    </button>
+                  )}
                 </>
               ) : (
                 <>
@@ -1985,6 +2113,7 @@ export default function OneShootPage() {
   if (view === 'p3') {
     const FORMAT_GROUPS = [
       { group: 'RRSS', items: [
+        { key: 'story', label: 'Story / Reels', desc: 'Instagram / Facebook · 9:16' },
         { key: 'instant_exp', label: 'Experiencia Instantánea', desc: 'Facebook Canvas · Full screen' },
         { key: 'square', label: 'Cuadrado 1:1', desc: 'Instagram / Facebook' },
         { key: 'landscape', label: 'Landscape 16:9', desc: 'Facebook / YouTube' },
