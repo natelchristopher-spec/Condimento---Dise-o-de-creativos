@@ -178,7 +178,7 @@ interface GameHeaderProps {
 
 function GameHeader({ view }: GameHeaderProps) {
   const step1Done = ['p1-review', 'p2-generating', 'p2-results', 'p3'].includes(view);
-  const step2Done = ['p2-results', 'p3'].includes(view);
+  const step2Done = ['p2-results', 'p2-refine', 'p3'].includes(view);
   const step1Active = ['p1-generating', 'p1-live', 'p1-review'].includes(view);
   const step2Active = ['p2-generating', 'p2-results'].includes(view);
   const step3Active = view === 'p3';
@@ -1014,7 +1014,7 @@ export default function OneShootPage() {
     if (p3AdaptFormats.length === 0 || creativesToAdapt.length === 0) return;
     setP3Generating(true);
     const FORMAT_LABELS: Record<string, string> = {
-      instant_exp: 'Exp. Instantánea', square: 'Cuadrado 1:1', landscape: 'Landscape 16:9',
+      story: 'Story / Reels', instant_exp: 'Exp. Instantánea', square: 'Cuadrado 1:1', landscape: 'Landscape 16:9',
     };
     const allResults: { format: string; label: string; creativeId: string; base64: string }[] = [];
     try {
