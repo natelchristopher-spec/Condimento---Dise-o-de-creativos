@@ -24,6 +24,7 @@ export default function TestingPage() {
   const supabase = createSupabaseBrowser();
 
   const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
+  const [brandKitLoaded, setBrandKitLoaded] = useState(false);
   const [userEmail, setUserEmail] = useState('');
   const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
 
@@ -62,7 +63,7 @@ export default function TestingPage() {
       }).catch(() => setHasApiKey(false));
       fetch('/api/brand-kits').then(r => r.json()).then(kit => {
         if (kit && !kit.error) setBrandKit(kit as BrandKit);
-      }).catch(console.error);
+      }).catch(console.error).finally(() => setBrandKitLoaded(true));
     };
     load();
   }, [supabase]);
@@ -275,7 +276,7 @@ export default function TestingPage() {
             </p>
           </div>
 
-          {!brandKit && (
+          {brandKitLoaded && !brandKit && (
             <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
               Necesitás configurar tu marca antes de generar ángulos.{' '}
               <a href="/config" className="underline font-medium">Ir a Mi marca →</a>

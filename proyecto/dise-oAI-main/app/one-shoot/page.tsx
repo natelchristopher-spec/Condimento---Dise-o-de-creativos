@@ -215,6 +215,7 @@ export default function OneShootPage() {
   const [userEmail, setUserEmail] = useState('');
   const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
   const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
+  const [brandKitLoaded, setBrandKitLoaded] = useState(false);
 
   // View
   const [view, setView] = useState<OneShootView>('sessions');
@@ -279,7 +280,7 @@ export default function OneShootPage() {
       }).catch(() => setHasApiKey(false));
       fetch('/api/brand-kits').then(r => r.json()).then(kit => {
         if (kit && !kit.error) setBrandKit(kit as BrandKit);
-      }).catch(console.error);
+      }).catch(console.error).finally(() => setBrandKitLoaded(true));
     };
     load();
   }, [supabase]);
@@ -822,7 +823,7 @@ export default function OneShootPage() {
               <p className="text-sm text-gray-500 mt-1">Una sesión = un producto o categoría. Encontrá el mensaje que convierte.</p>
             </div>
 
-            {!brandKit && (
+            {brandKitLoaded && !brandKit && (
               <div className="mb-5 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800">
                 No encontramos tu marca.{' '}
                 <a href="/config" className="underline font-medium">Configurala primero</a> para que los creativos reflejen tu identidad.
