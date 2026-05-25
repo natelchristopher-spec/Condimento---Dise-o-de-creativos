@@ -174,7 +174,7 @@ Respondé SOLO con JSON válido:
                       'REGLAS DE COLOR — CRÍTICO: color idéntico al de la foto de referencia. NO aclarar, NO oscurecer, NO desaturar, NO cambiar temperatura.',
                       'Para neutros cálidos (beige, arena, tostado, camel, crudo, khaki): NUNCA renderices como blanco ni gris claro.',
                       'Para colores oscuros (negro, azul marino, marrón): NUNCA los ilumines.',
-                      isFashionProduct ? 'PANTALONES Y PRENDAS INFERIORES — DOBLE ATENCIÓN: si la prenda es un pantalón, prestá máxima atención al color. Telas lisas (twill, gabardina, cotton chino): superficie uniforme y suave, sin texturas artificiales ni arrugas exageradas. Replicá largo, ancho de pierna y tiro tal cual se ven en la referencia.' : '',
+                      isFashionProduct ? 'PANTALONES Y PRENDAS INFERIORES — DOBLE ATENCIÓN: si la prenda es un pantalón, prestá máxima atención al color. Telas lisas (twill, gabardina): superficie uniforme y suave, sin texturas artificiales ni arrugas exageradas. Replicá largo, ancho de pierna y tiro tal cual se ven en la referencia. NO reclasifiques el tipo de pantalón — usá el nombre que indica el brief.' : '',
                     ].filter(Boolean).join(' ')
                   : `PRODUCT: ${productDescription}.`;
 
@@ -190,6 +190,7 @@ Respondé SOLO con JSON válido:
                   'Portrait 1024x1536. ALL text in Spanish. Professional agency quality.',
                   'ANTI-HALLUCINATION: Do NOT invent prices, discounts, metrics, phone numbers, URLs, or statistics not in the brief.',
                   'Do NOT include button-style CTAs in the image.',
+                  productDataUrl ? 'GARMENT COLOR FINAL CHECK — CRITICAL: the garment color in the generated image must exactly match the reference photo attached. Same hue, same saturation, same temperature. For warm neutrals (tostado, tan, camel, sand, beige): NEVER render as white or light gray — preserve the warm undertone from the reference.' : '',
                 ].filter(Boolean).join(' ');
 
                 const inputImages = [

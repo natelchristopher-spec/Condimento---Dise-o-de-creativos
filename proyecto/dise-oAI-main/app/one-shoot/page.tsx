@@ -267,6 +267,12 @@ export default function OneShootPage() {
   const [p2Elapsed, setP2Elapsed] = useState(0);
   const p2TimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // P3 format adaptation
+  const [p3AdaptFormats, setP3AdaptFormats] = useState<string[]>([]);
+  const [p3AdaptSourceIds, setP3AdaptSourceIds] = useState<string[]>([]);
+  const [p3AdaptedImages, setP3AdaptedImages] = useState<{ format: string; label: string; creativeId: string; base64: string }[]>([]);
+  const [p3Generating, setP3Generating] = useState(false);
+
   // Error handling
   const [error, setError] = useState('');
 
@@ -710,6 +716,42 @@ export default function OneShootPage() {
     setP2Error('');
     setError('');
     setView('setup');
+  };
+
+  // ── P3 Format Adaptation ─────────────────────────────────────────────────
+  const generateP3Adaptations = async () => {
+    const creativesToAdapt = p2Creatives.filter(c => p3AdaptSourceIds.includes(c.id));
+    if (p3AdaptFormats.length === 0 || creativesToAdapt.length === 0) return;
+    setP3Generating(true);
+    const FORMAT_LABELS: Record<string, string> = {
+      story: 'Story 9:16', feed45: 'Feed 4:5', square: 'Cuadrado 1:1', landscape: 'Landscape 16:9',
+    };
+    const allResults: { format: string; label: string; creativeId: string; base64: string }[] = [];
+    try {
+      for (const creative of creativesToAdapt) {
+        const results = await Promise.all(
+          p3AdaptFormats.map(async format => {
+            for (let attempt = 0; attempt < 2; attempt++) {
+              const res = await fetch('/api/adapt-size', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imageBase64: creative.base64, format }),
+              });
+              if (res.ok) {
+                const data = await res.json();
+                return { format, label: FORMAT_LABELS[format] || format, creativeId: creative.id, base64: data.base64 };
+              }
+              if (attempt === 0) await new Promise(r => setTimeout(r, 1500));
+            }
+            return null;
+          })
+        );
+        allResults.push(...(results.filter(Boolean) as { format: string; label: string; creativeId: string; base64: string }[]));
+      }
+      setP3AdaptedImages(allResults);
+    } finally {
+      setP3Generating(false);
+    }
   };
 
   // ─── Render helpers ───────────────────────────────────────────────────────
@@ -1653,95 +1695,221 @@ export default function OneShootPage() {
             )}
 
             {/* Go to Paso 3 */}
-            <div className="mt-10 flex justify-center">
-              <button
-                onClick={() => setView('p3')}
-                className="flex items-center gap-2 bg-white border border-purple-200 text-purple-700 font-semibold px-6 py-3 rounded-xl hover:bg-purple-50 transition-colors text-sm"
-              >
-                <span>Ver recomendación de formatos</span>
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
-              </button>
-            </div>
+            {p2Creatives.length > 0 && (
+              <div className="mt-10 flex justify-center">
+                <button
+                  onClick={() => {
+                    setP3AdaptSourceIds(p2Creatives.map(c => c.id));
+                    setP3AdaptFormats([]);
+                    setP3AdaptedImages([]);
+                    setView('p3');
+                  }}
+                  className="flex items-center gap-2 bg-white border border-purple-200 text-purple-700 font-semibold px-6 py-3 rounded-xl hover:bg-purple-50 transition-colors text-sm"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                  </svg>
+                  <span>Adaptar formatos</span>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                  </svg>
+                </button>
+              </div>
+            )}
           </div>
         </main>
       </div>
     );
   }
 
-  // ── Paso 3 (static) ───────────────────────────────────────────────────────
+  // ── Paso 3 — Format Adaptation ───────────────────────────────────────────
   if (view === 'p3') {
+    const FORMAT_GROUPS = [
+      { group: 'RRSS', items: [
+        { key: 'story', label: 'Story 9:16', desc: 'Instagram / TikTok' },
+        { key: 'feed45', label: 'Feed 4:5', desc: 'Instagram / Facebook' },
+        { key: 'square', label: 'Cuadrado 1:1', desc: 'Instagram / Facebook' },
+        { key: 'landscape', label: 'Landscape 16:9', desc: 'Facebook / YouTube' },
+      ]},
+    ];
+
+    const stages: Array<{ code: 'P' | 'E' | 'C'; label: string }> = [
+      { code: 'P', label: 'Prospección' },
+      { code: 'E', label: 'Evaluación' },
+      { code: 'C', label: 'Conversión' },
+    ];
+
     return (
       <div className="flex min-h-screen bg-gray-50">
         <Sidebar active="/one-shoot" onLogout={handleLogout} userEmail={userEmail} />
         <main className="flex-1 md:ml-56 pt-14 md:pt-0">
-          <div className="max-w-3xl mx-auto px-4 py-8">
+          <div className="max-w-4xl mx-auto px-4 py-8">
             <GameHeader view={view} />
 
-            {/* Celebration header */}
-            <div className="text-center mb-8">
-              <div className="text-4xl mb-3">🎯</div>
-              <h1 className="text-2xl font-bold text-gray-900">¡Misión completada!</h1>
-              <p className="text-gray-500 text-sm mt-2 max-w-lg mx-auto">
-                Escalaste tu ángulo ganador en toda la campaña PEC. El próximo nivel: probá diferentes formatos para seguir creciendo.
-              </p>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">Adaptá los formatos</h1>
+                <p className="text-sm text-gray-500 mt-1">Seleccioná los creativos y formatos que querés adaptar.</p>
+              </div>
+              <button
+                onClick={() => setView('p2-results')}
+                className="text-sm text-gray-400 hover:text-gray-700 flex items-center gap-1.5 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Volver a PEC
+              </button>
             </div>
 
-            {/* Format cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-              {[
-                {
-                  icon: '🎠',
-                  title: 'Carrusel',
-                  description: 'Contá la historia en múltiples slides',
-                  color: 'border-purple-200 bg-purple-50',
-                  badge: 'bg-purple-100 text-purple-700',
-                },
-                {
-                  icon: '🎬',
-                  title: 'Video UGC',
-                  description: 'Testimonio real del producto',
-                  color: 'border-blue-200 bg-blue-50',
-                  badge: 'bg-blue-100 text-blue-700',
-                },
-                {
-                  icon: '📱',
-                  title: 'Story 9:16',
-                  description: 'Formato nativo, máximo impacto mobile',
-                  color: 'border-green-200 bg-green-50',
-                  badge: 'bg-green-100 text-green-700',
-                },
-              ].map(format => (
-                <div key={format.title} className={`rounded-2xl border-2 p-5 ${format.color}`}>
-                  <div className="text-2xl mb-3">{format.icon}</div>
-                  <h3 className="font-bold text-gray-900 mb-1">{format.title}</h3>
-                  <p className="text-sm text-gray-600 mb-3">{format.description}</p>
-                  <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${format.badge}`}>
-                    Próximamente
-                  </span>
+            {/* Creative selector */}
+            <div className="mb-6">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Creativos a adaptar</p>
+              <div className="space-y-4">
+                {stages.map(stage => {
+                  const stageCreatives = p2Creatives.filter(c => c.stage === stage.code);
+                  if (stageCreatives.length === 0) return null;
+                  return (
+                    <div key={stage.code}>
+                      <p className="text-xs text-gray-400 mb-2 flex items-center gap-1.5">
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${STAGE_BG[stage.code]} text-white`}>{stage.code}</span>
+                        {stage.label}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {stageCreatives.map(c => {
+                          const isSelected = p3AdaptSourceIds.includes(c.id);
+                          return (
+                            <button
+                              key={c.id}
+                              onClick={() => setP3AdaptSourceIds(prev =>
+                                isSelected && prev.length > 1
+                                  ? prev.filter(x => x !== c.id)
+                                  : isSelected ? prev : [...prev, c.id]
+                              )}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm transition-all ${
+                                isSelected ? 'border-[#e42820] bg-[#e42820]/10' : 'border-gray-200 bg-white opacity-50 hover:opacity-80'
+                              }`}
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={`data:image/png;base64,${c.base64}`} alt="" className="w-8 h-10 rounded object-cover shrink-0" />
+                              <span className="text-xs font-medium text-gray-700 max-w-[90px] truncate">{c.angleName} · {c.formatName}</span>
+                              {isSelected && (
+                                <svg className="w-3.5 h-3.5 text-[#e42820] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Format selector */}
+            <div className="mb-6">
+              {FORMAT_GROUPS.map(({ group, items }) => (
+                <div key={group}>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">{group}</p>
+                  <div className="flex flex-wrap gap-3">
+                    {items.map(f => (
+                      <button
+                        key={f.key}
+                        onClick={() => setP3AdaptFormats(prev => prev.includes(f.key) ? prev.filter(x => x !== f.key) : [...prev, f.key])}
+                        className={`px-4 py-2.5 rounded-xl border text-left transition-all ${
+                          p3AdaptFormats.includes(f.key)
+                            ? 'border-[#e42820] bg-[#e42820]/10'
+                            : 'border-gray-200 hover:border-gray-300 bg-white'
+                        }`}
+                      >
+                        <p className="text-sm font-medium text-gray-900">{f.label}</p>
+                        <p className="text-xs text-gray-500">{f.desc}</p>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
 
-            {/* Note */}
-            <div className="mb-8 bg-white border border-gray-200 rounded-xl p-4 flex gap-3">
-              <svg className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p className="text-sm text-gray-600">
-                Mientras tanto, podés usar el módulo <strong>Anuncios</strong> para escalar en formatos personalizados.
-              </p>
-            </div>
+            {/* Generate button */}
+            <button
+              onClick={generateP3Adaptations}
+              disabled={p3AdaptFormats.length === 0 || p3AdaptSourceIds.length === 0 || p3Generating}
+              className="mb-8 bg-[#e42820] text-white font-semibold px-6 py-3 rounded-xl hover:bg-[#c82019] disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-2 text-sm"
+            >
+              {p3Generating ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Generando adaptaciones...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                  </svg>
+                  {p3AdaptFormats.length > 0
+                    ? `Generar ${p3AdaptFormats.length} formato${p3AdaptFormats.length > 1 ? 's' : ''} × ${p3AdaptSourceIds.length} creativo${p3AdaptSourceIds.length > 1 ? 's' : ''}`
+                    : 'Seleccioná al menos un formato'}
+                </>
+              )}
+            </button>
 
-            {/* CTAs */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <a
-                href="/anuncios"
-                className="flex-1 bg-[#e42820] text-white font-semibold py-3 rounded-xl hover:bg-[#c82019] transition-colors text-center text-sm"
-              >
-                Ir a Anuncios
-              </a>
+            {/* Adapted images */}
+            {p3AdaptedImages.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Adaptaciones generadas ({p3AdaptedImages.length})</p>
+                  <button
+                    onClick={() => {
+                      p3AdaptedImages.forEach((img, i) => {
+                        const creative = p2Creatives.find(c => c.id === img.creativeId);
+                        const a = document.createElement('a');
+                        a.href = `data:image/png;base64,${img.base64}`;
+                        a.download = `pec-${creative?.stage || ''}-${img.label.replace(/\s+/g, '-')}-${i + 1}.png`;
+                        a.click();
+                      });
+                    }}
+                    className="flex items-center gap-1.5 text-xs text-[#e42820] hover:text-[#c82019] font-medium transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Descargar todas
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {p3AdaptedImages.map((img, i) => {
+                    const creative = p2Creatives.find(c => c.id === img.creativeId);
+                    return (
+                      <div key={i} className="space-y-2">
+                        <div className="rounded-xl overflow-hidden border border-gray-200">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={`data:image/png;base64,${img.base64}`} alt={img.label} className="w-full" />
+                        </div>
+                        <p className="text-xs text-gray-500 text-center leading-snug">
+                          {img.label}<br />
+                          <span className="text-gray-400">{creative?.stage} · {creative?.angleName}</span>
+                        </p>
+                        <button
+                          onClick={() => downloadImage(img.base64, `pec-${creative?.stage || ''}-${img.label.replace(/\s+/g, '-')}-${i + 1}.png`)}
+                          className="w-full bg-white hover:bg-gray-100 border border-gray-200 text-gray-500 hover:text-gray-900 text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                        >
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                          Descargar
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Bottom CTAs */}
+            <div className="mt-10 flex flex-col sm:flex-row gap-3">
               <button
                 onClick={() => resetToSetup(false)}
                 className="flex-1 bg-white border border-gray-200 text-gray-700 font-semibold py-3 rounded-xl hover:border-gray-300 hover:bg-gray-50 transition-colors text-sm"
