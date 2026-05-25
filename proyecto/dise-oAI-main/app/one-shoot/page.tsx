@@ -6,6 +6,7 @@ import { useRequireAuth } from '@/app/lib/use-auth';
 import { BrandKit } from '@/app/types';
 import Sidebar from '@/app/components/Sidebar';
 import { MessageAngle } from '@/app/api/generate-testing-angles/route';
+import { readAsImage, compressImage } from '@/app/lib/image-utils';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -60,52 +61,6 @@ interface SessionRow {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const compressToJpeg = (base64: string, maxDim = 1024, quality = 0.82): Promise<string> =>
-  new Promise(resolve => {
-    const img = new Image();
-    img.onload = () => {
-      let { naturalWidth: w, naturalHeight: h } = img;
-      if (w > maxDim || h > maxDim) {
-        if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
-        else { w = Math.round(w * maxDim / h); h = maxDim; }
-      }
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
-      resolve(canvas.toDataURL('image/jpeg', quality).split(',')[1]);
-    };
-    img.onerror = () => resolve(base64);
-    img.src = base64.startsWith('data:') ? base64 : `data:image/png;base64,${base64}`;
-  });
-
-const readAsJpeg = (file: File): Promise<string> =>
-  new Promise(resolve => {
-    const blobUrl = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      URL.revokeObjectURL(blobUrl);
-      try {
-        let { naturalWidth: w, naturalHeight: h } = img;
-        if (!w || !h) { resolve(''); return; }
-        const maxDim = 1024;
-        if (w > maxDim || h > maxDim) {
-          if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
-          else { w = Math.round(w * maxDim / h); h = maxDim; }
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        const ctx = canvas.getContext('2d')!;
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, w, h);
-        ctx.drawImage(img, 0, 0, w, h);
-        const out = canvas.toDataURL('image/jpeg', 0.82);
-        resolve(out.length > 100 ? out : '');
-      } catch { resolve(''); }
-    };
-    img.onerror = () => { URL.revokeObjectURL(blobUrl); resolve(''); };
-    img.src = blobUrl;
-  });
 
 function downloadImage(base64: string, name: string) {
   const a = document.createElement('a');
@@ -379,12 +334,12 @@ export default function OneShootPage() {
 
   // ── File handlers ─────────────────────────────────────────────────────────
   const handleProductFile = async (file: File) => {
-    const b64 = await readAsJpeg(file);
+    const b64 = await readAsImage(file);
     if (b64) { setProductImage(b64); setProductPreview(b64); }
   };
 
   const handleReferenceFile = async (file: File) => {
-    const b64 = await readAsJpeg(file);
+    const b64 = await readAsImage(file);
     if (b64) setReferenceImages(prev => [...prev.slice(0, 2), b64]);
   };
 
@@ -406,10 +361,10 @@ export default function OneShootPage() {
     setView('p1-generating');
 
     const productImageCompressed = productImage
-      ? await compressToJpeg(productImage, 1024, 0.82)
+      ? await compressImage(productImage, 1024)
       : '';
     const refImagesCompressed = await Promise.all(
-      referenceImages.map(img => compressToJpeg(img, 768, 0.8))
+      referenceImages.map(img => compressImage(img, 768))
     );
 
     const controller = new AbortController();
@@ -601,8 +556,8 @@ export default function OneShootPage() {
       } catch { /* ok */ }
     }
 
-    const productImageCompressed = prodImg ? await compressToJpeg(prodImg, 1024, 0.82) : '';
-    const refImagesCompressed = await Promise.all(refImgs.map(img => compressToJpeg(img, 768, 0.8)));
+    const productImageCompressed = prodImg ? await compressImage(prodImg, 1024) : '';
+    const refImagesCompressed = await Promise.all(refImgs.map(img => compressImage(img, 768)));
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8 * 60 * 1000);

@@ -16,54 +16,8 @@ interface AngleResult {
   emphasis: string;
 }
 
-// Exact copy from anuncios/page.tsx
-const compressToJpeg = (base64: string, maxDim = 1024, quality = 0.82): Promise<string> =>
-  new Promise(resolve => {
-    const img = new Image();
-    img.onload = () => {
-      let { naturalWidth: w, naturalHeight: h } = img;
-      if (w > maxDim || h > maxDim) {
-        if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
-        else { w = Math.round(w * maxDim / h); h = maxDim; }
-      }
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
-      resolve(canvas.toDataURL('image/jpeg', quality).split(',')[1]);
-    };
-    img.onerror = () => resolve(base64);
-    img.src = base64.startsWith('data:') ? base64 : `data:image/png;base64,${base64}`;
-  });
+import { readAsImage, compressImage } from '@/app/lib/image-utils';
 
-const readAsPng = (file: File): Promise<string> =>
-  new Promise(resolve => {
-    const blobUrl = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      URL.revokeObjectURL(blobUrl);
-      const tryAt = (maxDim: number, quality: number): string | null => {
-        try {
-          let { naturalWidth: w, naturalHeight: h } = img;
-          if (!w || !h) return null;
-          if (w > maxDim || h > maxDim) {
-            if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
-            else { w = Math.round(w * maxDim / h); h = maxDim; }
-          }
-          const canvas = document.createElement('canvas');
-          canvas.width = w; canvas.height = h;
-          const ctx = canvas.getContext('2d')!;
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(0, 0, w, h);
-          ctx.drawImage(img, 0, 0, w, h);
-          const out = canvas.toDataURL('image/jpeg', quality);
-          return out.length > 100 ? out : null;
-        } catch { return null; }
-      };
-      resolve(tryAt(1024, 0.82) || tryAt(768, 0.75) || tryAt(512, 0.65) || '');
-    };
-    img.onerror = () => { URL.revokeObjectURL(blobUrl); resolve(''); };
-    img.src = blobUrl;
-  });
 
 export default function TestingPage() {
   useRequireAuth();
@@ -130,12 +84,12 @@ export default function TestingPage() {
   };
 
   const handleProductFile = async (file: File) => {
-    const b64 = await readAsPng(file);
+    const b64 = await readAsImage(file);
     if (b64) { setProductImage(b64); setProductPreview(b64); }
   };
 
   const handleReferenceFile = async (file: File) => {
-    const b64 = await readAsPng(file);
+    const b64 = await readAsImage(file);
     if (b64) setReferenceImages([b64]);
   };
 
@@ -147,8 +101,8 @@ export default function TestingPage() {
   ): Promise<AngleResult> => {
     if (!productImage) return result;
     try {
-      const compressedConcept = await compressToJpeg(result.base64);
-      const compressedProduct = await compressToJpeg(productImage);
+      const compressedConcept = await compressImage(result.base64);
+      const compressedProduct = await compressImage(productImage);
       const res = await fetch('/api/apply-product', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

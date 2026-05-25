@@ -5,6 +5,7 @@ import { createSupabaseBrowser } from '@/app/lib/supabase-browser';
 import { useRequireAuth } from '@/app/lib/use-auth';
 import { BrandKit } from '@/app/types';
 import Sidebar from '@/app/components/Sidebar';
+import { readAsImage } from '@/app/lib/image-utils';
 
 type CarouselStep = 'brief' | 'topics' | 'plan' | 'generating' | 'done';
 type FunnelStage = 'TOFU' | 'MOFU' | 'BOFU';
@@ -91,37 +92,10 @@ export default function RedesPage() {
     window.location.href = '/login';
   };
 
-  const readAsDataUrl = (file: File): Promise<string> =>
-    new Promise(resolve => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result as string;
-        const img = new Image();
-        img.onload = () => {
-          const MAX = 1024;
-          let { naturalWidth: w, naturalHeight: h } = img;
-          if (w > MAX || h > MAX) {
-            if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-            else { w = Math.round(w * MAX / h); h = MAX; }
-          }
-          try {
-            const canvas = document.createElement('canvas');
-            canvas.width = w; canvas.height = h;
-            canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
-            resolve(canvas.toDataURL('image/jpeg', 0.85));
-          } catch { resolve(dataUrl); }
-        };
-        img.onerror = () => resolve(dataUrl);
-        img.src = dataUrl;
-      };
-      reader.onerror = () => resolve('');
-      reader.readAsDataURL(file);
-    });
-
   const handleProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    const imgs = await Promise.all(files.slice(0, 1).map(readAsDataUrl));
+    const imgs = await Promise.all(files.slice(0, 1).map(readAsImage));
     setProductImages(imgs.filter(Boolean));
     e.target.value = '';
   };

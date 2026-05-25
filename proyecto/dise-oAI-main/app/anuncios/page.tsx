@@ -9,6 +9,7 @@ import ImageCard from '@/app/components/ImageCard';
 import StepIndicator from '@/app/components/StepIndicator';
 import LoadingGrid from '@/app/components/LoadingGrid';
 import Sidebar from '@/app/components/Sidebar';
+import { readAsImage, compressImage } from '@/app/lib/image-utils';
 
 export default function Home() {
   const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
@@ -116,59 +117,10 @@ export default function Home() {
     window.location.href = '/login';
   };
 
-  const compressToJpeg = (base64: string, maxDim = 1024, quality = 0.82): Promise<string> =>
-    new Promise(resolve => {
-      const img = new Image();
-      img.onload = () => {
-        let { naturalWidth: w, naturalHeight: h } = img;
-        if (w > maxDim || h > maxDim) {
-          if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
-          else { w = Math.round(w * maxDim / h); h = maxDim; }
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL('image/jpeg', quality).split(',')[1]);
-      };
-      img.onerror = () => resolve(base64);
-      img.src = base64.startsWith('data:') ? base64 : `data:image/png;base64,${base64}`;
-    });
-
-  const readAsPng = (file: File): Promise<string> =>
-    new Promise(resolve => {
-      // blob URL avoids loading the entire file as base64 in memory before touching canvas
-      const blobUrl = URL.createObjectURL(file);
-      const img = new Image();
-      img.onload = () => {
-        URL.revokeObjectURL(blobUrl);
-        const tryAt = (maxDim: number, quality: number): string | null => {
-          try {
-            let { naturalWidth: w, naturalHeight: h } = img;
-            if (!w || !h) return null;
-            if (w > maxDim || h > maxDim) {
-              if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
-              else { w = Math.round(w * maxDim / h); h = maxDim; }
-            }
-            const canvas = document.createElement('canvas');
-            canvas.width = w; canvas.height = h;
-            const ctx = canvas.getContext('2d')!;
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, w, h);
-            ctx.drawImage(img, 0, 0, w, h);
-            const out = canvas.toDataURL('image/jpeg', quality);
-            return out.length > 100 ? out : null;
-          } catch { return null; }
-        };
-        resolve(tryAt(1024, 0.82) || tryAt(768, 0.75) || tryAt(512, 0.65) || '');
-      };
-      img.onerror = () => { URL.revokeObjectURL(blobUrl); resolve(''); };
-      img.src = blobUrl;
-    });
-
   const handleProductDetailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    const imgs = await Promise.all(files.slice(0, 2 - productDetailImages.length).map(readAsPng));
+    const imgs = await Promise.all(files.slice(0, 2 - productDetailImages.length).map(readAsImage));
     setProductDetailImages(prev => [...prev, ...imgs].slice(0, 2));
     e.target.value = '';
   };
@@ -176,7 +128,7 @@ export default function Home() {
   const handleReferenceImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    const imgs = await Promise.all(files.slice(0, 2 - referenceImages.length).map(readAsPng));
+    const imgs = await Promise.all(files.slice(0, 2 - referenceImages.length).map(readAsImage));
     setReferenceImages(prev => [...prev, ...imgs.map(d => d.startsWith('data:') ? d : `data:image/png;base64,${d}`)].slice(0, 2));
     e.target.value = '';
   };
@@ -343,7 +295,7 @@ export default function Home() {
           imageBase64: concept.base64,
           instruction: input,
           productDetailImages: productDetailImages.length > 0
-            ? await Promise.all(productDetailImages.map(img => compressToJpeg(img)))
+            ? await Promise.all(productDetailImages.map(img => compressImage(img)))
             : [],
         }),
       });
@@ -406,8 +358,8 @@ export default function Home() {
         statuses[i] = 'applying';
         setApplyStatuses([...statuses]);
         try {
-          const compressedConcept = await compressToJpeg(applied[i].base64);
-          const compressedProducts = await Promise.all(productDetailImages.map(img => compressToJpeg(img)));
+          const compressedConcept = await compressImage(applied[i].base64);
+          const compressedProducts = await Promise.all(productDetailImages.map(img => compressImage(img)));
           const res = await fetch('/api/apply-product', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

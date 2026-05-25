@@ -5,6 +5,7 @@ import { createSupabaseBrowser } from '@/app/lib/supabase-browser';
 import { useRequireAuth } from '@/app/lib/use-auth';
 import { BrandKit } from '@/app/types';
 import Sidebar from '@/app/components/Sidebar';
+import { readAsImage, compressImage } from '@/app/lib/image-utils';
 
 type PdpStep = 'brief' | 'review' | 'generating' | 'done';
 type PdpMode = 'product' | 'product-use' | 'fashion';
@@ -96,56 +97,11 @@ export default function PdpPage() {
     window.location.href = '/login';
   };
 
-  const compressToJpeg = (base64: string, maxDim = 1024, quality = 0.82): Promise<string> =>
-    new Promise(resolve => {
-      const img = new Image();
-      img.onload = () => {
-        let { naturalWidth: w, naturalHeight: h } = img;
-        if (w > maxDim || h > maxDim) {
-          if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
-          else { w = Math.round(w * maxDim / h); h = maxDim; }
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL('image/jpeg', quality).split(',')[1]);
-      };
-      img.onerror = () => resolve(base64);
-      img.src = base64.startsWith('data:') ? base64 : `data:image/jpeg;base64,${base64}`;
-    });
-
-  const readAsDataUrl = (file: File): Promise<string> =>
-    new Promise(resolve => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result as string;
-        const imgEl = new Image();
-        imgEl.onload = () => {
-          const MAX = 1024;
-          let { naturalWidth: w, naturalHeight: h } = imgEl;
-          if (w > MAX || h > MAX) {
-            if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-            else { w = Math.round(w * MAX / h); h = MAX; }
-          }
-          try {
-            const canvas = document.createElement('canvas');
-            canvas.width = w; canvas.height = h;
-            canvas.getContext('2d')!.drawImage(imgEl, 0, 0, w, h);
-            resolve(canvas.toDataURL('image/jpeg', 0.85));
-          } catch { resolve(dataUrl); }
-        };
-        imgEl.onerror = () => resolve(dataUrl);
-        imgEl.src = dataUrl;
-      };
-      reader.onerror = () => resolve('');
-      reader.readAsDataURL(file);
-    });
-
   const handleProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
     const slots = 3 - productImages.length;
-    const imgs = await Promise.all(files.slice(0, slots).map(readAsDataUrl));
+    const imgs = await Promise.all(files.slice(0, slots).map(readAsImage));
     setProductImages(prev => [...prev, ...imgs].slice(0, 3));
     e.target.value = '';
   };
@@ -154,7 +110,7 @@ export default function PdpPage() {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
     const slots = 2 - referenceImages.length;
-    const imgs = await Promise.all(files.slice(0, slots).map(readAsDataUrl));
+    const imgs = await Promise.all(files.slice(0, slots).map(readAsImage));
     setReferenceImages(prev => [...prev, ...imgs].slice(0, 2));
     e.target.value = '';
   };
@@ -186,10 +142,10 @@ export default function PdpPage() {
 
     try {
       const compressedProducts = await Promise.all(
-        productImages.map(img => compressToJpeg(img.includes(',') ? img.split(',')[1] : img))
+        productImages.map(img => compressImage(img.includes(',') ? img.split(',')[1] : img))
       );
       const compressedRefs = await Promise.all(
-        referenceImages.map(img => compressToJpeg(img.includes(',') ? img.split(',')[1] : img))
+        referenceImages.map(img => compressImage(img.includes(',') ? img.split(',')[1] : img))
       );
 
       const res = await fetch('/api/plan-pdp', {
@@ -244,10 +200,10 @@ export default function PdpPage() {
     const timeout = setTimeout(() => controller.abort(), 5 * 60 * 1000); // 5 min
     try {
       const compressedProducts = await Promise.all(
-        productImages.map(img => compressToJpeg(img.includes(',') ? img.split(',')[1] : img))
+        productImages.map(img => compressImage(img.includes(',') ? img.split(',')[1] : img))
       );
       const compressedRefs = await Promise.all(
-        referenceImages.map(img => compressToJpeg(img.includes(',') ? img.split(',')[1] : img))
+        referenceImages.map(img => compressImage(img.includes(',') ? img.split(',')[1] : img))
       );
 
       const res = await fetch('/api/generate-pdp', {
@@ -326,7 +282,7 @@ export default function PdpPage() {
     setError('');
     try {
       const compressedProducts = await Promise.all(
-        productImages.map(i => compressToJpeg(i.includes(',') ? i.split(',')[1] : i))
+        productImages.map(i => compressImage(i.includes(',') ? i.split(',')[1] : i))
       );
       const res = await fetch('/api/adjust-image', {
         method: 'POST',
