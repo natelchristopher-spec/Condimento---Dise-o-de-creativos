@@ -29,6 +29,8 @@ export default function TestingPage() {
 
   // Inputs
   const [brief, setBrief] = useState('');
+  const [productUrl, setProductUrl] = useState('');
+  const [scrapingUrl, setScrapingUrl] = useState(false);
   const [productImage, setProductImage] = useState('');
   const [productPreview, setProductPreview] = useState('');
   const [referenceImages, setReferenceImages] = useState<string[]>([]);
@@ -55,13 +57,12 @@ export default function TestingPage() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
       setUserEmail(session.user.email || '');
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('openai_api_key, brand_kit')
-        .eq('id', session.user.id)
-        .single();
-      setHasApiKey(!!profile?.openai_api_key);
-      if (profile?.brand_kit) setBrandKit(profile.brand_kit as BrandKit);
+      fetch('/api/profile').then(r => r.json()).then(data => {
+        setHasApiKey(!!data.openai_api_key);
+      }).catch(() => setHasApiKey(false));
+      fetch('/api/brand-kits').then(r => r.json()).then(kit => {
+        if (kit && !kit.error) setBrandKit(kit as BrandKit);
+      }).catch(console.error);
     };
     load();
   }, [supabase]);
@@ -81,6 +82,21 @@ export default function TestingPage() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     window.location.href = '/login';
+  };
+
+  const scrapeProduct = async () => {
+    if (!productUrl.trim()) return;
+    setScrapingUrl(true);
+    try {
+      const res = await fetch('/api/scrape-product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: productUrl }),
+      });
+      const data = await res.json();
+      if (data.clientRequest) setBrief(data.clientRequest);
+    } catch { /* keep existing brief */ }
+    finally { setScrapingUrl(false); }
   };
 
   const handleProductFile = async (file: File) => {
@@ -349,9 +365,35 @@ export default function TestingPage() {
                   onChange={e => { const f = e.target.files?.[0]; if (f) handleReferenceFile(f); e.target.value = ''; }} />
               </div>
 
+              {/* URL scraper */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  URL del producto <span className="text-xs font-normal text-gray-400">— opcional</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    value={productUrl}
+                    onChange={e => setProductUrl(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && scrapeProduct()}
+                    placeholder="https://tutienda.com/producto"
+                    className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#e42820]/30 focus:border-[#e42820]/50"
+                  />
+                  <button
+                    onClick={scrapeProduct}
+                    disabled={!productUrl.trim() || scrapingUrl}
+                    className="px-4 py-2.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-all whitespace-nowrap"
+                  >
+                    {scrapingUrl ? 'Analizando...' : 'Importar brief'}
+                  </button>
+                </div>
+              </div>
+
               {/* Brief */}
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">Brief del producto</label>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Describí el producto, la categoría o la oferta
+                </label>
                 <textarea
                   value={brief}
                   onChange={e => setBrief(e.target.value)}

@@ -274,13 +274,12 @@ export default function OneShootPage() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
       setUserEmail(session.user.email || '');
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('openai_api_key, brand_kit')
-        .eq('id', session.user.id)
-        .single();
-      setHasApiKey(!!profile?.openai_api_key);
-      if (profile?.brand_kit) setBrandKit(profile.brand_kit as BrandKit);
+      fetch('/api/profile').then(r => r.json()).then(data => {
+        setHasApiKey(!!data.openai_api_key);
+      }).catch(() => setHasApiKey(false));
+      fetch('/api/brand-kits').then(r => r.json()).then(kit => {
+        if (kit && !kit.error) setBrandKit(kit as BrandKit);
+      }).catch(console.error);
     };
     load();
   }, [supabase]);
@@ -894,7 +893,7 @@ export default function OneShootPage() {
                   onClick={() => { setPeopleMode('none'); setReferenceImages([]); }}
                   className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-medium border-2 transition-all ${
                     peopleMode === 'none'
-                      ? 'border-gray-800 bg-gray-800 text-white'
+                      ? 'border-[#e42820] bg-[#e42820]/10 text-[#e42820]'
                       : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
                   }`}
                 >
@@ -904,7 +903,7 @@ export default function OneShootPage() {
                   onClick={() => setPeopleMode('real')}
                   className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-medium border-2 transition-all ${
                     peopleMode === 'real'
-                      ? 'border-[#e42820] bg-[#e42820]/5 text-[#e42820]'
+                      ? 'border-[#e42820] bg-[#e42820]/10 text-[#e42820]'
                       : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
                   }`}
                 >
