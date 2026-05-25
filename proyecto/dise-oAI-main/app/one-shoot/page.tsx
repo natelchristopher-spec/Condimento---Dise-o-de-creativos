@@ -1073,14 +1073,16 @@ export default function OneShootPage() {
             </p>
             <p className="text-xs text-gray-400 mb-6">{fmtElapsed(p1Elapsed)}</p>
 
-            {p1Total > 0 && (
-              <div className="w-full bg-gray-200 rounded-full h-2 mb-4 overflow-hidden">
+            <div className="w-full bg-gray-200 rounded-full h-2 mb-4 overflow-hidden">
+              {p1Total > 0 ? (
                 <div
-                  className="h-2 bg-[#e42820] rounded-full transition-all duration-300"
+                  className="h-2 bg-[#e42820] rounded-full transition-all duration-500"
                   style={{ width: `${pct}%` }}
                 />
-              </div>
-            )}
+              ) : (
+                <div className="h-2 bg-[#e42820]/60 rounded-full animate-pulse" style={{ width: '30%' }} />
+              )}
+            </div>
 
             {/* Angle chips — product (blue) and category (orange) */}
             {p1Angles.length > 0 && (
