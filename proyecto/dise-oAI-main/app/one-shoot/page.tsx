@@ -874,16 +874,28 @@ export default function OneShootPage() {
               </div>
             )}
 
-            {/* New session button */}
-            <button
-              onClick={() => resetToSetup(false)}
-              className="w-full mb-6 flex items-center justify-center gap-2 bg-[#e42820] text-white font-semibold py-3 rounded-xl hover:bg-[#c82019] transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Nueva sesión
-            </button>
+            {/* New session button — blocked if there's an active session */}
+            {!loadingSessions && sessions.length > 0 ? (
+              <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+                <svg className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+                <div>
+                  <p className="text-sm font-semibold text-amber-800">Tenés un proyecto activo</p>
+                  <p className="text-xs text-amber-700 mt-0.5">Cerrá el proyecto actual antes de iniciar uno nuevo. Así las imágenes se limpian y no acumulás sesiones abiertas.</p>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => resetToSetup(false)}
+                className="w-full mb-6 flex items-center justify-center gap-2 bg-[#e42820] text-white font-semibold py-3 rounded-xl hover:bg-[#c82019] transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Nueva sesión
+              </button>
+            )}
 
             {/* Sessions list */}
             {loadingSessions ? (
@@ -904,34 +916,43 @@ export default function OneShootPage() {
                   <div
                     key={session.id}
                     onClick={() => resumeSession(session)}
-                    className="bg-white border border-gray-200 rounded-xl p-4 cursor-pointer hover:border-gray-300 hover:shadow-sm transition-all flex items-start gap-4"
+                    className="bg-white border border-gray-200 rounded-xl p-4 cursor-pointer hover:border-gray-300 hover:shadow-sm transition-all"
                   >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                          session.status === 'paso2_done'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-orange-100 text-orange-700'
-                        }`}>
-                          {session.status === 'paso2_done' ? 'Paso 2 listo' : 'Paso 1 listo'}
-                        </span>
-                        {session.is_fashion_product && (
-                          <span className="text-[10px] font-medium text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">Fashion</span>
-                        )}
+                    <div className="flex items-start gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                            session.status === 'paso2_done'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-orange-100 text-orange-700'
+                          }`}>
+                            {session.status === 'paso2_done' ? 'Paso 2 listo' : 'Paso 1 listo'}
+                          </span>
+                          {session.is_fashion_product && (
+                            <span className="text-[10px] font-medium text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">Fashion</span>
+                          )}
+                        </div>
+                        <p className="text-sm font-medium text-gray-900 truncate">{session.brief || 'Sin descripción'}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {session.angles?.length || 0} ángulos · {new Date(session.updated_at).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </p>
                       </div>
-                      <p className="text-sm font-medium text-gray-900 truncate">{session.brief || 'Sin descripción'}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {session.angles?.length || 0} ángulos · {new Date(session.updated_at).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </p>
-                    </div>
-                    <button
-                      onClick={e => deleteSession(session.id, e)}
-                      className="p-1.5 rounded-lg text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors shrink-0"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      <svg className="w-4 h-4 text-gray-300 shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
-                    </button>
+                    </div>
+                    {/* Close project button */}
+                    <div className="mt-3 pt-3 border-t border-gray-100 flex justify-end">
+                      <button
+                        onClick={e => deleteSession(session.id, e)}
+                        className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-red-500 transition-colors px-2 py-1 rounded-lg hover:bg-red-50"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        Cerrar proyecto
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1755,10 +1776,10 @@ export default function OneShootPage() {
                   Ver Paso 1
                 </button>
                 <button
-                  onClick={() => resetToSetup(false)}
+                  onClick={() => setView('sessions')}
                   className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-200 transition-colors"
                 >
-                  Nueva sesión
+                  Mis proyectos
                 </button>
               </div>
             </div>
@@ -2047,10 +2068,10 @@ export default function OneShootPage() {
             {/* Bottom CTAs */}
             <div className="mt-10 flex flex-col sm:flex-row gap-3">
               <button
-                onClick={() => resetToSetup(false)}
+                onClick={() => setView('sessions')}
                 className="flex-1 bg-white border border-gray-200 text-gray-700 font-semibold py-3 rounded-xl hover:border-gray-300 hover:bg-gray-50 transition-colors text-sm"
               >
-                Nueva sesión
+                Mis proyectos
               </button>
             </div>
           </div>
