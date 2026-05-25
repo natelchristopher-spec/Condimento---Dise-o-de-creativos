@@ -7,6 +7,17 @@ import { getUserContext } from '@/app/lib/get-user-context';
 
 export const maxDuration = 120;
 
+function getOpenAIErrorMessage(e: unknown): string {
+  const msg = e instanceof Error ? e.message : String(e);
+  if (msg.includes('401') || msg.includes('Incorrect API key') || msg.includes('invalid_api_key'))
+    return 'API key de OpenAI inválida. Verificá la clave en tu perfil.';
+  if (msg.includes('429') || msg.includes('rate limit') || msg.includes('quota'))
+    return 'Límite de uso de OpenAI alcanzado. Esperá unos minutos o revisá tu plan.';
+  if (msg.includes('insufficient_quota'))
+    return 'Sin crédito en tu cuenta de OpenAI. Recargá saldo en platform.openai.com.';
+  return 'Error al conectar con OpenAI. Intentá de nuevo.';
+}
+
 type PeopleMode = 'none' | 'real';
 type PdpMode = 'product' | 'fashion';
 
@@ -282,15 +293,20 @@ Respondé SOLO con JSON:
   ];
 
   // Step 1: GPT-4o plans all 6 slides with structured copy
-  const planResponse = await openai.chat.completions.create({
-    model: 'gpt-4o',
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userContent },
-    ],
-    response_format: { type: 'json_object' },
-    max_tokens: 2500,
-  });
+  let planResponse: Awaited<ReturnType<typeof openai.chat.completions.create>>;
+  try {
+    planResponse = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userContent },
+      ],
+      response_format: { type: 'json_object' },
+      max_tokens: 2500,
+    });
+  } catch (err) {
+    return NextResponse.json({ error: getOpenAIErrorMessage(err) }, { status: 500 });
+  }
 
   let parsed: Record<string, unknown>;
   try {
