@@ -70,38 +70,53 @@ function downloadImage(base64: string, name: string) {
 }
 
 const lsKey = (id: string) => `one_shoot_images_${id}`;
+const lsP2Key = (id: string) => `one_shoot_p2_${id}`;
 
 interface LsData {
   p1: AngleImage[];
-  p2: PECCreative[];
   angleStatuses: Record<string, AngleStatus>;
   launchDate: string;
 }
 
+// P1 images and angle statuses — stored separately from P2 to avoid hitting the 5MB localStorage limit
 function saveLsImages(
   id: string,
   p1: AngleImage[],
-  p2: PECCreative[],
   angleStatuses: Record<string, AngleStatus> = {},
   launchDate = ''
 ) {
   try {
-    localStorage.setItem(lsKey(id), JSON.stringify({ p1, p2, angleStatuses, launchDate }));
+    localStorage.setItem(lsKey(id), JSON.stringify({ p1, angleStatuses, launchDate }));
   } catch { /* storage full */ }
 }
 
 function loadLsImages(id: string): LsData {
   try {
     const raw = localStorage.getItem(lsKey(id));
-    if (!raw) return { p1: [], p2: [], angleStatuses: {}, launchDate: '' };
+    if (!raw) return { p1: [], angleStatuses: {}, launchDate: '' };
     const parsed = JSON.parse(raw);
     return {
       p1: parsed.p1 || [],
-      p2: parsed.p2 || [],
+      // legacy: some sessions stored p2 here before the split — ignored now
       angleStatuses: parsed.angleStatuses || {},
       launchDate: parsed.launchDate || '',
     };
-  } catch { return { p1: [], p2: [], angleStatuses: {}, launchDate: '' }; }
+  } catch { return { p1: [], angleStatuses: {}, launchDate: '' }; }
+}
+
+// P2 creatives stored in a dedicated key to avoid competing with P1 images for storage space
+function saveLsP2(id: string, p2: PECCreative[]) {
+  try {
+    localStorage.setItem(lsP2Key(id), JSON.stringify(p2));
+  } catch { /* storage full */ }
+}
+
+function loadLsP2(id: string): PECCreative[] {
+  try {
+    const raw = localStorage.getItem(lsP2Key(id));
+    if (!raw) return [];
+    return JSON.parse(raw) || [];
+  } catch { return []; }
 }
 
 // ─── Game Header Component ────────────────────────────────────────────────────
@@ -189,20 +204,75 @@ function GameHeader({ view }: GameHeaderProps) {
 
 // ─── Guidance logic ───────────────────────────────────────────────────────────
 
-function getGuidanceMessage(days: number, purchases: number): { text: string; color: string } | null {
-  if (isNaN(days) || isNaN(purchases)) return null;
-  if (purchases === 0 && days < 15) {
-    return { text: '⏳ Muy temprano. Esperá 15-20 días sin compras antes de decidir.', color: 'text-amber-700 bg-amber-50 border-amber-200' };
+type GuidanceAction = 'regenerate' | null;
+
+interface GuidanceResult {
+  text: string;
+  color: string;
+  action: GuidanceAction;
+}
+
+function getGuidanceMessage(
+  days: number,
+  purchases: number,
+  accountType: 'new' | 'established',
+  totalSpend: string,
+  targetCpa: string,
+  angleCount: number,
+): GuidanceResult | null {
+  if (isNaN(days)) return null;
+
+  const dayThreshold = accountType === 'new' ? 15 : 7;
+  const daysOk = days >= dayThreshold;
+  const spendNum = parseFloat(totalSpend.replace(/\./g, '').replace(',', '.'));
+  const cpaNum = parseFloat(targetCpa.replace(/\./g, '').replace(',', '.'));
+  const spendPerAngle = (!isNaN(spendNum) && angleCount > 0) ? spendNum / angleCount : NaN;
+
+  // Regla 2x CPA: gastaste el doble del CPA objetivo por ángulo sin ninguna compra
+  if (!isNaN(spendPerAngle) && !isNaN(cpaNum) && cpaNum > 0 && purchases === 0 && spendPerAngle >= cpaNum * 2) {
+    return {
+      text: `🔴 Gastaste ${Math.round(spendPerAngle / cpaNum)}x el CPA objetivo por ángulo sin compras. Recomendamos apagar estos ángulos y probar mensajes nuevos.`,
+      color: 'text-red-700 bg-red-50 border-red-200',
+      action: 'regenerate',
+    };
   }
-  if (purchases === 0 && days >= 15) {
-    return { text: '⚠️ Ningún ángulo convierte. Revisá producto, precio o audiencia.', color: 'text-red-700 bg-red-50 border-red-200' };
+
+  // Tiempo mínimo superado sin compras
+  if (purchases === 0 && daysOk) {
+    return {
+      text: `⚠️ ${days} días sin compras. Estos mensajes no están convirtiendo. Probá nuevos ángulos.`,
+      color: 'text-red-700 bg-red-50 border-red-200',
+      action: 'regenerate',
+    };
   }
-  if (purchases > 0 && purchases < 40 && days < 7) {
-    return { text: '⏳ Pocos datos. Esperá 7+ días y 40+ compras.', color: 'text-amber-700 bg-amber-50 border-amber-200' };
+
+  // Muy temprano aún
+  if (!daysOk && (isNaN(purchases) || purchases < 40)) {
+    return {
+      text: `⏳ Muy temprano. Esperá al menos ${dayThreshold} días${purchases > 0 ? ' y 40+ compras' : ''} antes de decidir.`,
+      color: 'text-amber-700 bg-amber-50 border-amber-200',
+      action: null,
+    };
   }
-  if (purchases >= 40 || (days >= 7 && purchases > 0)) {
-    return { text: '✅ Tenés datos suficientes para decidir.', color: 'text-green-700 bg-green-50 border-green-200' };
+
+  // Días ok, compras suficientes
+  if (daysOk && purchases >= 40) {
+    return {
+      text: '✅ Datos suficientes para decidir el ángulo ganador.',
+      color: 'text-green-700 bg-green-50 border-green-200',
+      action: null,
+    };
   }
+
+  // Días ok, pocas compras
+  if (daysOk && purchases > 0 && purchases < 40) {
+    return {
+      text: `⏳ ${purchases} compras — seguí esperando hasta 40+ para mayor confianza estadística.`,
+      color: 'text-amber-700 bg-amber-50 border-amber-200',
+      action: null,
+    };
+  }
+
   return null;
 }
 
@@ -255,6 +325,10 @@ export default function OneShootPage() {
   const [angleStatuses, setAngleStatuses] = useState<Record<string, AngleStatus>>({});
   const [daysRunning, setDaysRunning] = useState('');
   const [totalPurchases, setTotalPurchases] = useState('');
+  const [accountType, setAccountType] = useState<'new' | 'established'>('new');
+  const [totalSpend, setTotalSpend] = useState('');
+  const [targetCpa, setTargetCpa] = useState('');
+  const [excludeAngles, setExcludeAngles] = useState<MessageAngle[]>([]);
 
   // Winners
   const [winnerKeys, setWinnerKeys] = useState<string[]>([]);
@@ -403,6 +477,7 @@ export default function OneShootPage() {
           productCount,
           categoryCount,
           peopleMode,
+          excludeAngles: excludeAngles.length > 0 ? excludeAngles : undefined,
         }),
       });
 
@@ -477,7 +552,7 @@ export default function OneShootPage() {
           const { id } = await saveRes.json();
           setSessionId(id);
           // Store images + product/ref images in localStorage only
-          saveLsImages(id, finalImages, [], {}, '');
+          saveLsImages(id, finalImages, {}, '');
           // Also store product/ref images for P2 generation
           try {
             if (productImagesCompressed.length > 0) {
@@ -530,9 +605,9 @@ export default function OneShootPage() {
       if (refImgs) setReferenceImages(JSON.parse(refImgs));
     } catch { /* ok */ }
 
-    if (session.status === 'paso2_done' && stored.p2.length > 0) {
-      setP2Creatives(stored.p2);
-      // Restore winner keys from angle statuses if possible
+    const storedP2 = loadLsP2(session.id);
+    if (session.status === 'paso2_done' && storedP2.length > 0) {
+      setP2Creatives(storedP2);
       const wk = Object.entries(stored.angleStatuses || {})
         .filter(([, s]) => s === 'winner')
         .map(([k]) => k);
@@ -656,7 +731,8 @@ export default function OneShootPage() {
                   body: JSON.stringify({ status: 'paso2_done', pecResults: pecMeta }),
                 });
                 const stored = loadLsImages(sessionId);
-                saveLsImages(sessionId, stored.p1, collectedCreatives, stored.angleStatuses, stored.launchDate);
+                saveLsImages(sessionId, stored.p1, stored.angleStatuses, stored.launchDate);
+                saveLsP2(sessionId, collectedCreatives);
                 await loadSessions();
               }
             }
@@ -683,6 +759,8 @@ export default function OneShootPage() {
     await fetch(`/api/one-shoot-sessions/${id}`, { method: 'DELETE' });
     try {
       localStorage.removeItem(lsKey(id));
+      localStorage.removeItem(lsP2Key(id));
+      localStorage.removeItem(`one_shoot_product_imgs_${id}`);
       localStorage.removeItem(`one_shoot_product_img_${id}`);
       localStorage.removeItem(`one_shoot_ref_imgs_${id}`);
     } catch { /* ok */ }
@@ -724,7 +802,7 @@ export default function OneShootPage() {
     if (p3AdaptFormats.length === 0 || creativesToAdapt.length === 0) return;
     setP3Generating(true);
     const FORMAT_LABELS: Record<string, string> = {
-      story: 'Story 9:16', feed45: 'Feed 4:5', square: 'Cuadrado 1:1', landscape: 'Landscape 16:9',
+      instant_exp: 'Exp. Instantánea', square: 'Cuadrado 1:1', landscape: 'Landscape 16:9',
     };
     const allResults: { format: string; label: string; creativeId: string; base64: string }[] = [];
     try {
@@ -888,6 +966,18 @@ export default function OneShootPage() {
               <h1 className="text-xl font-bold text-gray-900">¿Qué querés testear?</h1>
               <p className="text-sm text-gray-500 mt-1">Una sesión = un producto o categoría. Encontrá el mensaje que convierte.</p>
             </div>
+
+            {excludeAngles.length > 0 && (
+              <div className="mb-5 bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-blue-800 flex items-start gap-2">
+                <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>
+                  Se van a generar ángulos distintos a los {excludeAngles.length} que ya probaste y no convirtieron.{' '}
+                  <button onClick={() => setExcludeAngles([])} className="underline font-medium">Cancelar exclusión</button>
+                </span>
+              </div>
+            )}
 
             {brandKitLoaded && !brandKit && (
               <div className="mb-5 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800">
@@ -1319,8 +1409,15 @@ export default function OneShootPage() {
 
     const daysNum = parseInt(daysRunning, 10);
     const purchasesNum = parseInt(totalPurchases, 10);
-    const guidance = (daysRunning !== '' && totalPurchases !== '')
-      ? getGuidanceMessage(isNaN(daysNum) ? 0 : daysNum, isNaN(purchasesNum) ? 0 : purchasesNum)
+    const guidance = daysRunning !== ''
+      ? getGuidanceMessage(
+          isNaN(daysNum) ? 0 : daysNum,
+          isNaN(purchasesNum) ? 0 : purchasesNum,
+          accountType,
+          totalSpend,
+          targetCpa,
+          p1Angles.length,
+        )
       : null;
 
     const setStatus = (key: string, status: AngleStatus) => {
@@ -1329,7 +1426,7 @@ export default function OneShootPage() {
         // Persist to localStorage
         if (sessionId) {
           const stored = loadLsImages(sessionId);
-          saveLsImages(sessionId, stored.p1, stored.p2, next, stored.launchDate);
+          saveLsImages(sessionId, stored.p1, next, stored.launchDate);
         }
         return next;
       });
@@ -1437,34 +1534,66 @@ export default function OneShootPage() {
             {/* Stats panel */}
             <div className="mb-6 bg-white border border-gray-200 rounded-2xl p-4">
               <h3 className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-3">Resultados de la campaña</h3>
+
+              {/* Account type toggle */}
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={() => setAccountType('new')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${accountType === 'new' ? 'bg-[#e42820]/10 border-[#e42820] text-[#e42820]' : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'}`}
+                >
+                  Cuenta nueva <span className="font-normal opacity-70">(15 días mín.)</span>
+                </button>
+                <button
+                  onClick={() => setAccountType('established')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${accountType === 'established' ? 'bg-[#e42820]/10 border-[#e42820] text-[#e42820]' : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'}`}
+                >
+                  Con historial <span className="font-normal opacity-70">(7 días mín.)</span>
+                </button>
+              </div>
+
               <div className="flex flex-wrap gap-4 items-end">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Días corriendo</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={daysRunning}
-                    onChange={e => setDaysRunning(e.target.value)}
-                    placeholder="0"
-                    className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]"
-                  />
+                  <input type="number" min={0} value={daysRunning} onChange={e => setDaysRunning(e.target.value)} placeholder="0"
+                    className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]" />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Compras totales</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={totalPurchases}
-                    onChange={e => setTotalPurchases(e.target.value)}
-                    placeholder="0"
-                    className="w-24 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]"
-                  />
+                  <input type="number" min={0} value={totalPurchases} onChange={e => setTotalPurchases(e.target.value)} placeholder="0"
+                    className="w-24 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Gasto total ($)</label>
+                  <input type="text" value={totalSpend} onChange={e => setTotalSpend(e.target.value)} placeholder="0"
+                    className="w-28 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">CPA objetivo ($)</label>
+                  <input type="text" value={targetCpa} onChange={e => setTargetCpa(e.target.value)} placeholder="0"
+                    className="w-28 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]" />
                 </div>
               </div>
+
               {guidance && (
-                <div className={`mt-3 text-sm px-3 py-2 rounded-lg border ${guidance.color}`}>
+                <div className={`mt-3 text-sm px-3 py-2.5 rounded-lg border font-medium ${guidance.color}`}>
                   {guidance.text}
                 </div>
+              )}
+
+              {guidance?.action === 'regenerate' && (
+                <button
+                  onClick={() => {
+                    const failedAngles = p1Angles.filter(a => (angleStatuses[a.key] || 'active') !== 'winner');
+                    setExcludeAngles(failedAngles);
+                    resetToSetup(true);
+                  }}
+                  className="mt-3 flex items-center gap-2 text-sm font-semibold text-[#e42820] border border-[#e42820]/30 bg-[#e42820]/5 hover:bg-[#e42820]/10 px-4 py-2 rounded-xl transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Probar nuevos ángulos (distintos a los que no funcionaron)
+                </button>
               )}
             </div>
 
@@ -1726,8 +1855,7 @@ export default function OneShootPage() {
   if (view === 'p3') {
     const FORMAT_GROUPS = [
       { group: 'RRSS', items: [
-        { key: 'story', label: 'Story 9:16', desc: 'Instagram / TikTok' },
-        { key: 'feed45', label: 'Feed 4:5', desc: 'Instagram / Facebook' },
+        { key: 'instant_exp', label: 'Experiencia Instantánea', desc: 'Facebook Canvas · Full screen' },
         { key: 'square', label: 'Cuadrado 1:1', desc: 'Instagram / Facebook' },
         { key: 'landscape', label: 'Landscape 16:9', desc: 'Facebook / YouTube' },
       ]},

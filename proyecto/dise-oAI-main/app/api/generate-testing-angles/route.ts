@@ -96,6 +96,7 @@ export async function POST(req: NextRequest) {
     productCount,
     categoryCount,
     peopleMode = 'auto',
+    excludeAngles = [],
   }: {
     brief?: string;
     brandKit: BrandKit;
@@ -105,6 +106,7 @@ export async function POST(req: NextRequest) {
     productCount?: number;
     categoryCount?: number;
     peopleMode?: 'none' | 'real' | 'auto';
+    excludeAngles?: MessageAngle[];
   } = await req.json();
 
   // Resolve counts: if productCount/categoryCount provided use them, else split count 50/50
@@ -208,12 +210,16 @@ export async function POST(req: NextRequest) {
     async start(controller) {
       try {
         // Step 3: generate product + category angles (text only) with GPT-4o
+        const excludeNotice = excludeAngles.length > 0
+          ? `\nÁNGULOS YA PROBADOS — NO REPETIR NI HACER VARIACIONES SIMILARES: ${excludeAngles.map(a => `"${a.name}" (hook: "${a.hook}")`).join(', ')}. Generá ángulos genuinamente distintos en enfoque y argumento.`
+          : '';
+
         const anglesPrompt = `Sos un estratega de publicidad directa para e-commerce.
 Analizá este producto y generá ángulos de mensaje para anuncios de respuesta directa, divididos en dos categorías.
 
 PRODUCTO: ${productDescription}
 BRIEF: ${brief || '(sin brief adicional)'}
-MARCA: ${brandKit.name}${brandKit.clientRequest ? ` — ${brandKit.clientRequest}` : ''}
+MARCA: ${brandKit.name}${brandKit.clientRequest ? ` — ${brandKit.clientRequest}` : ''}${excludeNotice}
 
 Necesito EXACTAMENTE:
 - ${resolvedProductCount} ÁNGULOS DE PRODUCTO: el argumento habla DEL PRODUCTO ESPECÍFICO (características, materiales, precio, diferenciador). El hook habla SOBRE EL PRODUCTO.
