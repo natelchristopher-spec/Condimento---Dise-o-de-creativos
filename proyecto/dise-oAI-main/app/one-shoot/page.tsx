@@ -715,7 +715,7 @@ export default function OneShootPage() {
             {/* Header */}
             <div className="mb-8">
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-bold uppercase tracking-widest text-[#e42820]">ONE SHOOT</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-[#e42820]">AD FORMULA</span>
               </div>
               <h1 className="text-2xl font-bold text-gray-900">Spicy Ad Formula</h1>
               <p className="text-gray-500 text-sm mt-1">Paso 1: testeá ángulos de mensaje → Paso 2: escalá el ganador en campaña PEC</p>

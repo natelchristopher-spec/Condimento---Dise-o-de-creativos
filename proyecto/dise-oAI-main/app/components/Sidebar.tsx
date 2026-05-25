@@ -80,7 +80,7 @@ export default function Sidebar({ active, onLogout, userEmail }: SidebarProps) {
             active={active === '/one-shoot'}
             badge="Nuevo"
           >
-            ONE SHOOT
+            AD FORMULA
           </NavItem>
           <NavItem
             href="/anuncios"
@@ -235,7 +235,7 @@ export default function Sidebar({ active, onLogout, userEmail }: SidebarProps) {
                 badge="Nuevo"
                 onClick={closeDrawer}
               >
-                ONE SHOOT
+                AD FORMULA
               </NavItem>
               <NavItem
                 href="/anuncios"
