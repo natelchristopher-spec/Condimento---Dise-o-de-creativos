@@ -297,48 +297,82 @@ Respondé SOLO con JSON:
         send(controller, { angles });
 
         // Step 4: generate one image per angle
-        // Composition differs by level: product angles → product hero, category angles → lifestyle/context
-        const productConstraint = productDataUrl && productDataUrl.length > 100
-          ? `THE REFERENCE PHOTO SHOWS THE EXACT PRODUCT — reproduce it with zero modifications: same shape, same color, same packaging, same proportions. Supplementary description: ${productDescription}`
-          : `PRODUCT: ${productDescription}.`;
+        const hasProductPhoto = productDataUrl && productDataUrl.length > 100;
+        const refImageUrls = referenceImages.slice(0, 2).map(img =>
+          img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`
+        );
 
         await Promise.allSettled(
           angles.map(async (angle) => {
             const isCategory = angle.level === 'category';
 
-            let compositionInstruction: string;
-            if (isFashionProduct) {
-              compositionInstruction = isCategory
-                ? `CREATIVE FORMAT: Lifestyle fashion. A scene or context where someone would wear this type of garment — focus on the lifestyle, occasion, or emotion. The garment is present but the SCENE and CONTEXT are the visual hero. Aspirational and relatable. ONE bold headline displaying the hook, large and prominent.`
-                : `CREATIVE FORMAT: Directo fashion. A person wearing the exact garment in a direct-response style — aspirational and confident, not pure editorial. The garment must be the visual hero. Clean background or minimal setting. ONE bold headline displaying the hook, large and prominent.`;
-            } else {
-              compositionInstruction = isCategory
-                ? `CREATIVE FORMAT: Lifestyle/context. Show the context, lifestyle, or situation where this product is used. Focus on the scene, the person, or the occasion — the product is present but the CONTEXT is the visual hero. ONE bold headline displaying the hook, large and prominent. One short supporting subline.`
-                : `CREATIVE FORMAT: Directo. Product occupies 60-70% of the frame, prominent and clear. No lifestyle, no editorial — pure direct response. ONE bold headline displaying the hook, large and prominent. One short supporting subline.`;
-            }
+            let fullPrompt: string;
 
-            const fullPrompt = [
-              productConstraint,
-              compositionInstruction,
-              `HEADLINE (display this exact text, large and bold): "${angle.hook}"`,
-              `MESSAGE EMPHASIS: ${angle.emphasis}.`,
-              `Brand: ${brandKit.name}. Colors: ${brandKit.primary1}, ${brandKit.primary2}, ${brandKit.primary3}. Typography: ${brandKit.typography || 'bold sans-serif'}.`,
-              isFashionProduct
-                ? `COLOR ACCURACY CRITICAL: replicate the exact garment color from the reference photo — do NOT shift, lighten, darken, or desaturate. For warm neutrals (beige, sand, khaki): preserve the warm undertone, never render as white or gray.`
-                : `COLOR ACCURACY CRITICAL: reproduce the product color exactly — do NOT shift, lighten, darken, or desaturate.`,
-              `Brand context: ${brandKitContext}`,
-              'Portrait 1024x1536. ALL text in Spanish. Professional agency quality.',
-              'ANTI-HALLUCINATION: Do NOT invent prices, discounts, metrics, phone numbers, URLs, or statistics not in the brief.',
-              'Do NOT include button-style CTAs in the image.',
-            ].filter(Boolean).join(' ');
+            if (isFashionProduct) {
+              const garmentSection = hasProductPhoto
+                ? [
+                    'PRENDA A MOSTRAR — Las imágenes adjuntas son la FUENTE PRIMARIA DE VERDAD VISUAL. Tomalos directamente de los píxeles de la foto — no los interpetes, no los idealices, no los simplifiques.',
+                    productDescription ? `Descripción técnica de respaldo (usala solo para reforzar lo que ves en la foto): ${productDescription}` : '',
+                    'REGLAS DE COLOR — CRÍTICO: tomá el valor de color directamente de los píxeles de la referencia. NO aclarar, NO oscurecer, NO desaturar, NO cambiar temperatura de color.',
+                    'Para neutros cálidos (beige, arena, tostado, camel, crudo, khaki): NUNCA renderices como blanco ni gris claro. Mantené la temperatura cálida exacta de la foto.',
+                    'Para colores oscuros (negro, azul marino, marrón): NUNCA los ilumines ni aclarés.',
+                    'PANTALONES Y PRENDAS INFERIORES — DOBLE ATENCIÓN: el color es donde el modelo tiende a fallar más. Telas lisas: superficie uniforme, sin texturas artificiales ni arrugas exageradas. Replicá largo, ancho de pierna y tiro tal cual aparecen en la foto.',
+                    'Mismo estampado pixel-perfect, misma silueta, mismo tejido, mismas proporciones que en la referencia visual.',
+                  ].filter(Boolean).join(' ')
+                : `PRENDA: ${productDescription}.`;
+
+              const personSection = personDescription
+                ? `PERSONA: ${personDescription}. La persona lleva puesta exactamente esta prenda.`
+                : 'Persona: modelo fashion aspiracional, actitud natural y confiada.';
+
+              const compositionSection = isCategory
+                ? 'COMPOSICIÓN: Lifestyle fashion. Escena o contexto donde se usaría esta prenda — el foco es el lifestyle, la ocasión o la emoción. La escena es aspiracional y relatable. LA PRENDA SE MUESTRA PUESTA CON FIDELIDAD EXACTA — misma prenda de la foto, mismo color pixel-perfect, aunque el contexto sea aspiracional.'
+                : 'COMPOSICIÓN: Fashion direct-response. La persona lleva puesta la prenda exacta. La prenda es el héroe visual. Fondo limpio o setting mínimo. Actitud aspiracional y directa, no editorial puro.';
+
+              fullPrompt = [
+                garmentSection,
+                personSection,
+                compositionSection,
+                `HEADLINE (mostrá este texto exacto, grande y en negrita): "${angle.hook}"`,
+                `ÉNFASIS DEL MENSAJE: ${angle.emphasis}.`,
+                `Marca: ${brandKit.name}. Colores de marca: ${brandKit.primary1}, ${brandKit.primary2}, ${brandKit.primary3}. Tipografía: ${brandKit.typography || 'bold sans-serif'}.`,
+                `Contexto de marca: ${brandKitContext}`,
+                'Portrait 1024x1536. Todo el texto en español. Calidad agencia profesional.',
+                'ANTI-ALUCINACIÓN: NO inventés precios, descuentos, métricas, teléfonos, URLs ni estadísticas que no estén en el brief.',
+                'NO incluyas botones CTA en la imagen.',
+              ].filter(Boolean).join(' ');
+
+            } else {
+              const productConstraint = hasProductPhoto
+                ? `THE REFERENCE PHOTO SHOWS THE EXACT PRODUCT — reproduce with zero modifications: same shape, same color, same packaging, same proportions. Description: ${productDescription}`
+                : `PRODUCT: ${productDescription}.`;
+
+              const compositionInstruction = isCategory
+                ? 'CREATIVE FORMAT: Lifestyle/context. Show the context, lifestyle, or situation where this product is used. The product is present but the CONTEXT is the visual hero. ONE bold headline, large and prominent. One short supporting subline.'
+                : 'CREATIVE FORMAT: Direct response. Product occupies 60-70% of the frame, prominent and clear. No lifestyle, no editorial — pure direct response. ONE bold headline, large and prominent. One short supporting subline.';
+
+              fullPrompt = [
+                productConstraint,
+                compositionInstruction,
+                `HEADLINE (display this exact text, large and bold): "${angle.hook}"`,
+                `MESSAGE EMPHASIS: ${angle.emphasis}.`,
+                `Brand: ${brandKit.name}. Colors: ${brandKit.primary1}, ${brandKit.primary2}, ${brandKit.primary3}. Typography: ${brandKit.typography || 'bold sans-serif'}.`,
+                'COLOR ACCURACY CRITICAL: reproduce the product color exactly — do NOT shift, lighten, darken, or desaturate.',
+                `Brand context: ${brandKitContext}`,
+                'Portrait 1024x1536. ALL text in Spanish. Professional agency quality.',
+                'ANTI-HALLUCINATION: Do NOT invent prices, discounts, metrics, phone numbers, URLs, or statistics not in the brief.',
+                'Do NOT include button-style CTAs in the image.',
+              ].filter(Boolean).join(' ');
+            }
 
             let base64 = '';
 
+            // For fashion (both product and category angles): product photo + all person reference images
+            // The garment must be reproduced faithfully in both composition types
+            // For non-fashion: product photo only
             const inputImages = [
-              ...(productDataUrl && productDataUrl.length > 100 ? [productDataUrl] : []),
-              ...(isFashionProduct && referenceImages.length > 0
-                ? referenceImages.slice(0, 1).map(img => img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`)
-                : []),
+              ...(hasProductPhoto ? [productDataUrl] : []),
+              ...(isFashionProduct && refImageUrls.length > 0 ? refImageUrls : []),
             ];
 
             const inputContent = [
