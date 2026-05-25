@@ -38,8 +38,6 @@ export async function POST(req: NextRequest) {
       user_id: userId,
       status: body.status ?? 'paso1_done',
       brief: body.brief ?? '',
-      product_image: body.productImage ?? '',
-      reference_images: body.referenceImages ?? [],
       count: body.count ?? 4,
       is_fashion_product: body.isFashionProduct ?? false,
       product_description: body.productDescription ?? '',
@@ -47,6 +45,8 @@ export async function POST(req: NextRequest) {
       angles: body.angles ?? [],
       winning_angle_keys: body.winningAngleKeys ?? [],
       pec_results: body.pecResults ?? [],
+      // NOTE: product_image and reference_images are intentionally omitted —
+      // they are stored in localStorage only, never in the database.
     })
     .select('id')
     .single();

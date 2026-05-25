@@ -31,6 +31,7 @@ export interface MessageAngle {
   name: string;
   hook: string;
   emphasis: string;
+  level?: 'product' | 'category';
 }
 
 const CLOTHING_TERMS = /\b(prenda|vestido|pantalón|remera|camiseta|camisa|campera|buzo|short|pollera|falda|indumentaria|calzado|zapatilla|zapato|tela|tejido|outfit|jean|jogger|bikini|traje|garment|clothing|apparel|fabric|dress|shirt|pants|jacket|hoodie|sneaker|shoe|top|blouse|skirt|coat|sleeve|collar|hem|knit|denim|cotton|polyester)\b/i;
@@ -87,17 +88,33 @@ export async function POST(req: NextRequest) {
     productImage = '',
     referenceImages = [],
     count = 4,
+    productCount,
+    categoryCount,
   }: {
     brief?: string;
     brandKit: BrandKit;
     productImage?: string;
     referenceImages?: string[];
     count?: number;
+    productCount?: number;
+    categoryCount?: number;
   } = await req.json();
+
+  // Resolve counts: if productCount/categoryCount provided use them, else split count 50/50
+  let resolvedProductCount: number;
+  let resolvedCategoryCount: number;
+  if (productCount !== undefined && categoryCount !== undefined) {
+    resolvedProductCount = Math.max(1, Math.min(productCount, 4));
+    resolvedCategoryCount = Math.max(1, Math.min(categoryCount, 4));
+  } else {
+    const half = Math.max(1, Math.floor(count / 2));
+    resolvedProductCount = half;
+    resolvedCategoryCount = Math.max(1, count - half);
+  }
+  const targetCount = resolvedProductCount + resolvedCategoryCount;
 
   const openai = new OpenAI({ apiKey: ctx.openaiApiKey });
   const brandKitContext = buildBrandKitContext(brandKit);
-  const targetCount = Math.max(2, Math.min(count, 6));
 
   const productDataUrl = productImage
     ? (productImage.startsWith('data:') ? productImage : `data:image/jpeg;base64,${productImage}`)
@@ -183,13 +200,17 @@ export async function POST(req: NextRequest) {
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        // Step 3: generate N message angles (text only) with GPT-4o
+        // Step 3: generate product + category angles (text only) with GPT-4o
         const anglesPrompt = `Sos un estratega de publicidad directa para e-commerce.
-Analizá este producto y generá exactamente ${targetCount} ángulos de mensaje distintos para anuncios de respuesta directa.
+Analizá este producto y generá ángulos de mensaje para anuncios de respuesta directa, divididos en dos categorías.
 
 PRODUCTO: ${productDescription}
 BRIEF: ${brief || '(sin brief adicional)'}
 MARCA: ${brandKit.name}${brandKit.clientRequest ? ` — ${brandKit.clientRequest}` : ''}
+
+Necesito EXACTAMENTE:
+- ${resolvedProductCount} ÁNGULOS DE PRODUCTO: el argumento habla DEL PRODUCTO ESPECÍFICO (características, materiales, precio, diferenciador). El hook habla SOBRE EL PRODUCTO.
+- ${resolvedCategoryCount} ÁNGULOS DE CATEGORÍA: el argumento habla del contexto, necesidad, estilo de vida u ocasión. El hook habla del CONTEXTO o de QUIÉN lo usa, NO del producto en sí.
 
 Cada ángulo debe:
 - Apuntar a una motivación, problema o segmento de audiencia DIFERENTE
@@ -199,7 +220,10 @@ Cada ángulo debe:
 
 Respondé SOLO con JSON:
 {
-  "angles": [
+  "product_angles": [
+    { "name": "nombre corto del ángulo (3-4 palabras)", "hook": "titular que detiene el scroll", "emphasis": "qué beneficio o razón de compra enfatiza en una oración" }
+  ],
+  "category_angles": [
     { "name": "nombre corto del ángulo (3-4 palabras)", "hook": "titular que detiene el scroll", "emphasis": "qué beneficio o razón de compra enfatiza en una oración" }
   ]
 }`;
@@ -214,12 +238,42 @@ Respondé SOLO con JSON:
             temperature: 0.9,
           });
           const parsed = JSON.parse(anglesRes.choices[0].message.content || '{}');
-          angles = (parsed.angles || []).slice(0, targetCount).map((a: Omit<MessageAngle, 'key'>, i: number) => ({
-            key: `angle-${i}`,
-            name: a.name || `Ángulo ${i + 1}`,
-            hook: a.hook || '',
-            emphasis: a.emphasis || '',
-          }));
+
+          let idx = 0;
+          const productAngles: MessageAngle[] = (parsed.product_angles || [])
+            .slice(0, resolvedProductCount)
+            .map((a: Omit<MessageAngle, 'key' | 'level'>) => ({
+              key: `angle-${idx++}`,
+              name: a.name || `Ángulo Producto ${idx}`,
+              hook: a.hook || '',
+              emphasis: a.emphasis || '',
+              level: 'product' as const,
+            }));
+
+          const categoryAngles: MessageAngle[] = (parsed.category_angles || [])
+            .slice(0, resolvedCategoryCount)
+            .map((a: Omit<MessageAngle, 'key' | 'level'>) => ({
+              key: `angle-${idx++}`,
+              name: a.name || `Ángulo Categoría ${idx}`,
+              hook: a.hook || '',
+              emphasis: a.emphasis || '',
+              level: 'category' as const,
+            }));
+
+          angles = [...productAngles, ...categoryAngles];
+
+          // Fallback: if API didn't split properly, treat all as legacy (product)
+          if (angles.length === 0 && parsed.angles) {
+            angles = (parsed.angles as Omit<MessageAngle, 'key'>[])
+              .slice(0, targetCount)
+              .map((a, i) => ({
+                key: `angle-${i}`,
+                name: a.name || `Ángulo ${i + 1}`,
+                hook: a.hook || '',
+                emphasis: a.emphasis || '',
+                level: 'product' as const,
+              }));
+          }
         } catch (err) {
           console.error('testing-angles: angle generation failed:', err);
           send(controller, { error: 'Error al generar ángulos. Intentá de nuevo.' });
@@ -236,17 +290,27 @@ Respondé SOLO con JSON:
         // Stream angles immediately so UI shows labels while images generate
         send(controller, { angles });
 
-        // Step 4: generate one image per angle in Directo format
-        const compositionInstruction = isFashionProduct
-          ? `CREATIVE FORMAT: Directo fashion. A person wearing the exact garment in a direct-response style — aspirational and confident, not pure editorial. The garment must be the visual hero. Clean background or minimal setting. ONE bold headline displaying the hook, large and prominent.`
-          : `CREATIVE FORMAT: Directo. Product occupies 60-70% of the frame, prominent and clear. No lifestyle, no editorial — pure direct response. ONE bold headline displaying the hook, large and prominent. One short supporting subline.`;
-
+        // Step 4: generate one image per angle
+        // Composition differs by level: product angles → product hero, category angles → lifestyle/context
         const productConstraint = productDataUrl && productDataUrl.length > 100
           ? `THE REFERENCE PHOTO SHOWS THE EXACT PRODUCT — reproduce it with zero modifications: same shape, same color, same packaging, same proportions. Supplementary description: ${productDescription}`
           : `PRODUCT: ${productDescription}.`;
 
         await Promise.allSettled(
           angles.map(async (angle) => {
+            const isCategory = angle.level === 'category';
+
+            let compositionInstruction: string;
+            if (isFashionProduct) {
+              compositionInstruction = isCategory
+                ? `CREATIVE FORMAT: Lifestyle fashion. A scene or context where someone would wear this type of garment — focus on the lifestyle, occasion, or emotion. The garment is present but the SCENE and CONTEXT are the visual hero. Aspirational and relatable. ONE bold headline displaying the hook, large and prominent.`
+                : `CREATIVE FORMAT: Directo fashion. A person wearing the exact garment in a direct-response style — aspirational and confident, not pure editorial. The garment must be the visual hero. Clean background or minimal setting. ONE bold headline displaying the hook, large and prominent.`;
+            } else {
+              compositionInstruction = isCategory
+                ? `CREATIVE FORMAT: Lifestyle/context. Show the context, lifestyle, or situation where this product is used. Focus on the scene, the person, or the occasion — the product is present but the CONTEXT is the visual hero. ONE bold headline displaying the hook, large and prominent. One short supporting subline.`
+                : `CREATIVE FORMAT: Directo. Product occupies 60-70% of the frame, prominent and clear. No lifestyle, no editorial — pure direct response. ONE bold headline displaying the hook, large and prominent. One short supporting subline.`;
+            }
+
             const fullPrompt = [
               productConstraint,
               compositionInstruction,
@@ -327,6 +391,7 @@ Respondé SOLO con JSON:
                   angleName: angle.name,
                   hook: angle.hook,
                   emphasis: angle.emphasis,
+                  level: angle.level,
                 },
               });
             } else {
