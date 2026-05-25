@@ -6,6 +6,7 @@ import { BrandKit } from '@/app/types';
 import { useRequireAuth } from '@/app/lib/use-auth';
 import { createSupabaseBrowser } from '@/app/lib/supabase-browser';
 import Sidebar from '@/app/components/Sidebar';
+import { readAsImage } from '@/app/lib/image-utils';
 
 async function extractTextFromPdf(file: File): Promise<string> {
   const pdfjsLib = await import('pdfjs-dist');
@@ -108,41 +109,12 @@ export default function ConfigPage() {
     }
   };
 
-  const compressImage = (file: File): Promise<string> =>
-    new Promise(resolve => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result as string;
-        const img = new Image();
-        img.onload = () => {
-          const MAX = 1024;
-          let { naturalWidth: w, naturalHeight: h } = img;
-          if (!w || !h) { resolve(dataUrl); return; }
-          if (w > MAX || h > MAX) {
-            if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-            else { w = Math.round(w * MAX / h); h = MAX; }
-          }
-          try {
-            const canvas = document.createElement('canvas');
-            canvas.width = w; canvas.height = h;
-            canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
-            const result = canvas.toDataURL('image/jpeg', 0.75);
-            resolve(result.length > 100 ? result : dataUrl);
-          } catch { resolve(dataUrl); }
-        };
-        img.onerror = () => resolve(dataUrl);
-        img.src = dataUrl;
-      };
-      reader.onerror = () => resolve('');
-      reader.readAsDataURL(file);
-    });
-
   const handleReferencePiecesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
     setAnalyzingRefs(true);
     try {
-      const newImages: string[] = await Promise.all(files.slice(0, 5).map(file => compressImage(file)));
+      const newImages: string[] = await Promise.all(files.slice(0, 5).map(readAsImage));
       const allImages = [...(form.referencePiecesThumbnails || []), ...newImages].slice(0, 5);
       const res = await fetch('/api/analyze-references', {
         method: 'POST',
@@ -183,12 +155,12 @@ export default function ConfigPage() {
     }
   };
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setForm(f => ({ ...f, logoBase64: reader.result as string, logoColorBase64: reader.result as string }));
-    reader.readAsDataURL(file);
+    const compressed = await readAsImage(file);
+    if (compressed) setForm(f => ({ ...f, logoBase64: compressed, logoColorBase64: compressed }));
+    e.target.value = '';
   };
 
   const handleSave = async () => {

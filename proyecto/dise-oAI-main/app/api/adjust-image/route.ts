@@ -32,10 +32,11 @@ export async function POST(req: NextRequest) {
   const ctx = await getUserContext();
   if (!ctx) return NextResponse.json({ error: 'Configurá tu API key de OpenAI en el perfil.' }, { status: 401 });
 
-  const { imageBase64, instruction, productDetailImages = [] }: {
+  const { imageBase64, instruction, productDetailImages = [], size = '1024x1536' }: {
     imageBase64: string;
     instruction: string;
     productDetailImages: string[];
+    size?: string;
   } = await req.json();
 
   const openai = new OpenAI({ apiKey: ctx.openaiApiKey });
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
       model: 'gpt-image-2',
       image: imageFile,
       prompt: EDIT_PROMPT(instruction),
-      size: '1024x1536',
+      size: size as Parameters<typeof openai.images.edit>[0]['size'],
       quality: 'medium',
     });
     const base64 = response.data?.[0]?.b64_json || '';
@@ -75,7 +76,7 @@ export async function POST(req: NextRequest) {
     const response = await (openai.responses.create as any)({
       model: 'gpt-4o',
       input: [{ role: 'user', content }],
-      tools: [{ type: 'image_generation', model: 'gpt-image-2', quality: 'medium', size: '1024x1536' }],
+      tools: [{ type: 'image_generation', model: 'gpt-image-2', quality: 'medium', size }],
     });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     for (const block of (response.output || [])) {

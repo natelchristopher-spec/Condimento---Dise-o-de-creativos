@@ -75,6 +75,14 @@ export default function Sidebar({ active, onLogout, userEmail }: SidebarProps) {
           </NavItem>
           <p className="px-3 pb-1 pt-3 text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Módulos</p>
           <NavItem
+            href="/one-shoot"
+            icon="M13 10V3L4 14h7v7l9-11h-7z"
+            active={active === '/one-shoot'}
+            badge="Nuevo"
+          >
+            ONE SHOOT
+          </NavItem>
+          <NavItem
             href="/anuncios"
             icon="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
             active={active === '/anuncios'}
@@ -94,13 +102,6 @@ export default function Sidebar({ active, onLogout, userEmail }: SidebarProps) {
             active={active === '/pdp'}
           >
             PDP
-          </NavItem>
-          <NavItem
-            href="/testing"
-            icon="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-            active={active === '/testing'}
-          >
-            Test de Ángulos
           </NavItem>
           <NavItem
             href="/email"
@@ -228,6 +229,15 @@ export default function Sidebar({ active, onLogout, userEmail }: SidebarProps) {
               </NavItem>
               <p className="px-3 pb-1 pt-3 text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Módulos</p>
               <NavItem
+                href="/one-shoot"
+                icon="M13 10V3L4 14h7v7l9-11h-7z"
+                active={active === '/one-shoot'}
+                badge="Nuevo"
+                onClick={closeDrawer}
+              >
+                ONE SHOOT
+              </NavItem>
+              <NavItem
                 href="/anuncios"
                 icon="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
                 active={active === '/anuncios'}
@@ -250,14 +260,6 @@ export default function Sidebar({ active, onLogout, userEmail }: SidebarProps) {
                 onClick={closeDrawer}
               >
                 PDP
-              </NavItem>
-              <NavItem
-                href="/testing"
-                icon="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-                active={active === '/testing'}
-                onClick={closeDrawer}
-              >
-                Test de Ángulos
               </NavItem>
               <NavItem
                 href="/email"

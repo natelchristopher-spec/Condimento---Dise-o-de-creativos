@@ -475,6 +475,7 @@ Respondé SOLO con JSON: { "pdp_images": [ { "type": "hero|benefit|lifestyle|aut
               'Professional e-commerce product photography or high-end retail graphic design. Square 1:1 format for Shopify / Tienda Nube. Premium quality, clean, conversion-focused.',
               'BRAND COLORS ARE FOR DESIGN ELEMENTS ONLY — never apply brand colors to the product. The product color is fixed by the reference photos.',
               'COLOR ACCURACY — CRITICAL: replicate the product color with pixel-level accuracy from the reference photos. Do NOT shift, lighten, darken, or desaturate.',
+              isFashion ? 'PANTALONES Y PRENDAS INFERIORES — DOBLE ATENCIÓN: si la prenda es un pantalón, prestá máxima atención al color — es donde el modelo tiende a fallar más. Telas lisas (twill, gabardina, cotton chino): superficie uniforme y suave, sin texturas artificiales ni arrugas exageradas. Replicá largo, ancho de pierna y tiro tal cual se ven en la referencia.' : '',
               'Do NOT reproduce any brand logos or marks from the reference photos.',
               'Do NOT include invented trust badges, button-style CTAs, prices, discounts, or false metrics.',
               'IDIOMA — CRÍTICO: TODO el texto generado (títulos, beneficios, pasos, callouts, labels) debe estar en ESPAÑOL. Solo se permite inglés si es parte del nombre de marca o producto.',

@@ -9,6 +9,7 @@ import ImageCard from '@/app/components/ImageCard';
 import StepIndicator from '@/app/components/StepIndicator';
 import LoadingGrid from '@/app/components/LoadingGrid';
 import Sidebar from '@/app/components/Sidebar';
+import { readAsImage, compressImage } from '@/app/lib/image-utils';
 
 export default function Home() {
   const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
@@ -21,6 +22,7 @@ export default function Home() {
   const [scrapingUrl, setScrapingUrl] = useState(false);
 
   const [adaptFormats, setAdaptFormats] = useState<string[]>([]);
+  const [adaptSourceIds, setAdaptSourceIds] = useState<string[]>([]);
   const [adaptedImages, setAdaptedImages] = useState<{ format: string; label: string; conceptId: string; base64: string }[]>([]);
   const [generatingAdaptations, setGeneratingAdaptations] = useState(false);
   const [step, setStep] = useState<Step>('brief');
@@ -115,59 +117,10 @@ export default function Home() {
     window.location.href = '/login';
   };
 
-  const compressToJpeg = (base64: string, maxDim = 1024, quality = 0.82): Promise<string> =>
-    new Promise(resolve => {
-      const img = new Image();
-      img.onload = () => {
-        let { naturalWidth: w, naturalHeight: h } = img;
-        if (w > maxDim || h > maxDim) {
-          if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
-          else { w = Math.round(w * maxDim / h); h = maxDim; }
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL('image/jpeg', quality).split(',')[1]);
-      };
-      img.onerror = () => resolve(base64);
-      img.src = base64.startsWith('data:') ? base64 : `data:image/png;base64,${base64}`;
-    });
-
-  const readAsPng = (file: File): Promise<string> =>
-    new Promise(resolve => {
-      // blob URL avoids loading the entire file as base64 in memory before touching canvas
-      const blobUrl = URL.createObjectURL(file);
-      const img = new Image();
-      img.onload = () => {
-        URL.revokeObjectURL(blobUrl);
-        const tryAt = (maxDim: number, quality: number): string | null => {
-          try {
-            let { naturalWidth: w, naturalHeight: h } = img;
-            if (!w || !h) return null;
-            if (w > maxDim || h > maxDim) {
-              if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
-              else { w = Math.round(w * maxDim / h); h = maxDim; }
-            }
-            const canvas = document.createElement('canvas');
-            canvas.width = w; canvas.height = h;
-            const ctx = canvas.getContext('2d')!;
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, w, h);
-            ctx.drawImage(img, 0, 0, w, h);
-            const out = canvas.toDataURL('image/jpeg', quality);
-            return out.length > 100 ? out : null;
-          } catch { return null; }
-        };
-        resolve(tryAt(1024, 0.82) || tryAt(768, 0.75) || tryAt(512, 0.65) || '');
-      };
-      img.onerror = () => { URL.revokeObjectURL(blobUrl); resolve(''); };
-      img.src = blobUrl;
-    });
-
   const handleProductDetailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    const imgs = await Promise.all(files.slice(0, 2 - productDetailImages.length).map(readAsPng));
+    const imgs = await Promise.all(files.slice(0, 2 - productDetailImages.length).map(readAsImage));
     setProductDetailImages(prev => [...prev, ...imgs].slice(0, 2));
     e.target.value = '';
   };
@@ -175,7 +128,7 @@ export default function Home() {
   const handleReferenceImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    const imgs = await Promise.all(files.slice(0, 2 - referenceImages.length).map(readAsPng));
+    const imgs = await Promise.all(files.slice(0, 2 - referenceImages.length).map(readAsImage));
     setReferenceImages(prev => [...prev, ...imgs.map(d => d.startsWith('data:') ? d : `data:image/png;base64,${d}`)].slice(0, 2));
     e.target.value = '';
   };
@@ -341,6 +294,9 @@ export default function Home() {
         body: JSON.stringify({
           imageBase64: concept.base64,
           instruction: input,
+          productDetailImages: productDetailImages.length > 0
+            ? await Promise.all(productDetailImages.map(img => compressImage(img)))
+            : [],
         }),
       });
       if (!res.ok) throw new Error(await res.text());
@@ -392,7 +348,7 @@ export default function Home() {
 
     const CLOTHING_TERMS = /\b(prenda|vestido|pantalón|remera|camiseta|camisa|campera|buzo|short|pollera|falda|indumentaria|calzado|zapatilla|zapato|tela|tejido|outfit|jean|jogger|bikini|traje|garment|clothing|apparel|fabric|dress|shirt|pants|jacket|hoodie|sneaker|shoe|top|blouse|skirt|coat|sleeve|collar|hem|knit|denim|cotton|polyester)\b/i;
     const isClothingProduct = CLOTHING_TERMS.test(productDescription + ' ' + brief + ' ' + (brandKit?.styleDescription || ''));
-    if (productDetailImages.length > 0 && peopleMode === 'real' && isClothingProduct) {
+    if (productDetailImages.length > 0 && (peopleMode === 'real' || peopleMode === 'ai') && isClothingProduct) {
       const statuses: Array<'pending' | 'applying' | 'done'> = Array(n).fill('pending');
       setApplyStatuses([...statuses]);
       setStep('refine');
@@ -402,8 +358,8 @@ export default function Home() {
         statuses[i] = 'applying';
         setApplyStatuses([...statuses]);
         try {
-          const compressedConcept = await compressToJpeg(applied[i].base64);
-          const compressedProducts = await Promise.all(productDetailImages.map(img => compressToJpeg(img)));
+          const compressedConcept = await compressImage(applied[i].base64);
+          const compressedProducts = await Promise.all(productDetailImages.map(img => compressImage(img)));
           const res = await fetch('/api/apply-product', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -421,7 +377,10 @@ export default function Home() {
             applied[i] = { ...applied[i], base64 };
             setSelectedConcepts(prev => prev.map((c, idx) => idx === i ? applied[i] : c));
           }
-        } catch { /* keep original */ }
+        } catch (e) {
+          setError(`Concepto ${i + 1}: no se pudo aplicar el producto. Se conserva el original.`);
+          console.error('apply-product catch:', e);
+        }
         statuses[i] = 'done';
         setApplyStatuses([...statuses]);
       }
@@ -440,7 +399,16 @@ export default function Home() {
     setRefineImage(selectedConcepts[nextIndex]);
   };
 
-  const finishRefine = () => setStep('done');
+  const finishRefine = () => {
+    setAdaptSourceIds(selectedConcepts.map(c => c.id));
+    setStep('done');
+  };
+
+  const removeSelectedConcept = (id: string) => {
+    setSelectedConcepts(prev => prev.filter(c => c.id !== id));
+    setAdaptSourceIds(prev => prev.filter(x => x !== id));
+    setAdaptedImages(prev => prev.filter(img => img.conceptId !== id));
+  };
 
   const downloadAllSelected = () => {
     selectedConcepts.forEach((img, i) => {
@@ -452,7 +420,8 @@ export default function Home() {
   };
 
   const generateAdaptations = async () => {
-    if (adaptFormats.length === 0 || selectedConcepts.length === 0) return;
+    const conceptsToAdapt = selectedConcepts.filter(c => adaptSourceIds.includes(c.id));
+    if (adaptFormats.length === 0 || conceptsToAdapt.length === 0) return;
     setGeneratingAdaptations(true);
     const FORMAT_LABELS: Record<string, string> = {
       story: 'Story 9:16', feed45: 'Feed 4:5', square: 'Cuadrado 1:1', landscape: 'Landscape 16:9',
@@ -463,7 +432,7 @@ export default function Home() {
     try {
       // Process concepts sequentially to avoid rate-limiting OpenAI with too many parallel calls.
       // Formats within each concept still run in parallel (same base image, manageable load).
-      for (const concept of selectedConcepts) {
+      for (const concept of conceptsToAdapt) {
         const results = await Promise.all(
           adaptFormats.map(async format => {
             for (let attempt = 0; attempt < 2; attempt++) {
@@ -508,6 +477,7 @@ export default function Home() {
     setProductDetailImages([]);
     setReferenceImages([]);
     setAdaptFormats([]);
+    setAdaptSourceIds([]);
     setAdaptedImages([]);
     setApplyStatuses([]);
     setRefineInputs([]);
@@ -520,6 +490,7 @@ export default function Home() {
     setSelectedConcepts([]);
     setRefineIndex(0);
     setAdaptFormats([]);
+    setAdaptSourceIds([]);
     setAdaptedImages([]);
     setApplyStatuses([]);
     setRefineInputs([]);
@@ -1120,8 +1091,19 @@ export default function Home() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {selectedConcepts.map((img, i) => (
                 <div key={img.id} className="space-y-2">
-                  <div className="rounded-xl overflow-hidden border border-gray-200">
+                  <div className="relative rounded-xl overflow-hidden border border-gray-200">
                     <img src={`data:image/png;base64,${img.base64}`} alt={img.conceptName} className="w-full" />
+                    {selectedConcepts.length > 1 && (
+                      <button
+                        onClick={() => removeSelectedConcept(img.id)}
+                        title="Quitar variante"
+                        className="absolute top-2 right-2 w-6 h-6 bg-black/60 hover:bg-black/80 rounded-full flex items-center justify-center transition-colors"
+                      >
+                        <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
                   </div>
                   <p className="text-xs text-gray-500 text-center truncate">{img.conceptName}</p>
                   <button
@@ -1166,6 +1148,40 @@ export default function Home() {
                 <h3 className="text-base font-semibold mb-1">Adaptaciones de tamaño</h3>
                 <p className="text-gray-500 text-sm">Generá los mismos conceptos en otros formatos.</p>
               </div>
+
+              {/* Source concept selector (only when > 1 concept) */}
+              {selectedConcepts.length > 1 && (
+                <div className="space-y-2">
+                  <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Adaptar desde</p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedConcepts.map(c => {
+                      const isSelected = adaptSourceIds.includes(c.id);
+                      return (
+                        <button
+                          key={c.id}
+                          onClick={() => setAdaptSourceIds(prev =>
+                            isSelected && prev.length > 1
+                              ? prev.filter(x => x !== c.id)
+                              : isSelected
+                                ? prev
+                                : [...prev, c.id]
+                          )}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm transition-all ${isSelected ? 'border-[#e42820] bg-[#e42820]/10' : 'border-gray-200 bg-white opacity-50 hover:opacity-80'}`}
+                        >
+                          <img src={`data:image/png;base64,${c.base64}`} alt="" className="w-8 h-8 rounded object-cover shrink-0" />
+                          <span className="text-xs font-medium truncate max-w-[100px] text-gray-700">{c.conceptName}</span>
+                          {isSelected && (
+                            <svg className="w-3.5 h-3.5 text-[#e42820] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {[
                 { group: 'RRSS', items: [
                   { key: 'story', label: 'Story 9:16', desc: 'Instagram / TikTok' },
@@ -1207,7 +1223,7 @@ export default function Home() {
               ))}
               <button
                 onClick={generateAdaptations}
-                disabled={adaptFormats.length === 0 || generatingAdaptations}
+                disabled={adaptFormats.length === 0 || adaptSourceIds.length === 0 || generatingAdaptations}
                 className="bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed text-gray-900 font-medium px-5 py-2.5 rounded-xl transition-colors flex items-center gap-2 text-sm"
               >
                 {generatingAdaptations ? (
@@ -1217,7 +1233,7 @@ export default function Home() {
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
                     </svg>
-                    Generar {adaptFormats.length > 0 ? `${adaptFormats.length} formato${adaptFormats.length > 1 ? 's' : ''} × ${selectedConcepts.length} concepto${selectedConcepts.length > 1 ? 's' : ''}` : 'adaptaciones'}
+                    Generar {adaptFormats.length > 0 ? `${adaptFormats.length} formato${adaptFormats.length > 1 ? 's' : ''} × ${adaptSourceIds.length} concepto${adaptSourceIds.length > 1 ? 's' : ''}` : 'adaptaciones'}
                   </>
                 )}
               </button>
