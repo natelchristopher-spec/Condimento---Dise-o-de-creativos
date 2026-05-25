@@ -107,10 +107,21 @@ export default function PerfilPage() {
         </div>
 
         {!savedKey && (
-          <div className="bg-[#e42820]/5 border border-[#e42820]/20 rounded-2xl p-5 space-y-1">
+          <div className="bg-[#e42820]/5 border border-[#e42820]/20 rounded-2xl p-5 space-y-2">
             <span className="bg-[#e42820] text-white text-xs font-bold px-2 py-0.5 rounded-md">Paso 1 de 2</span>
             <p className="text-sm font-semibold text-gray-900 mt-2">Conectá tu cuenta de OpenAI</p>
             <p className="text-xs text-gray-500">Condimento automatiza la producción de tu marca usando la IA de OpenAI. Necesitás una cuenta con al menos $5 de crédito.</p>
+            <a
+              href="https://www.loom.com/share/a2017d5a785b47299ce3ecd994df1909"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#e42820] hover:text-[#c82019] transition-colors mt-1"
+            >
+              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-1.5 14.5v-9l7 4.5-7 4.5z"/>
+              </svg>
+              Ver tutorial en video
+            </a>
           </div>
         )}
 
@@ -189,6 +200,17 @@ export default function PerfilPage() {
               <li>Create new secret key</li>
               <li>Cargá crédito en Settings → Billing (mínimo $5)</li>
             </ol>
+            <a
+              href="https://www.loom.com/share/a2017d5a785b47299ce3ecd994df1909"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#e42820] hover:text-[#c82019] transition-colors pt-1"
+            >
+              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-1.5 14.5v-9l7 4.5-7 4.5z"/>
+              </svg>
+              Ver tutorial paso a paso en video
+            </a>
           </div>
         </div>
 
