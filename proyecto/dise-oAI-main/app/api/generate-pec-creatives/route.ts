@@ -159,7 +159,14 @@ Respondé SOLO con JSON válido:
                   : '';
 
                 const productConstraint = productDataUrl
-                  ? `THE REFERENCE PHOTO SHOWS THE EXACT PRODUCT — reproduce with zero modifications: same color, shape, texture, proportions. Product description for reference: ${productDescription}`
+                  ? [
+                      'Las imágenes adjuntas son la FUENTE PRIMARIA DE VERDAD VISUAL — tomá color, forma, textura y proporciones directamente de los píxeles, no los interpretes.',
+                      productDescription ? `Descripción técnica de respaldo: ${productDescription}` : '',
+                      'REGLAS DE COLOR — CRÍTICO: color idéntico al de la foto de referencia. NO aclarar, NO oscurecer, NO desaturar, NO cambiar temperatura.',
+                      'Para neutros cálidos (beige, arena, tostado, camel, crudo, khaki): NUNCA renderices como blanco ni gris claro.',
+                      'Para colores oscuros (negro, azul marino, marrón): NUNCA los ilumines.',
+                      isFashionProduct ? 'PANTALONES Y PRENDAS INFERIORES — DOBLE ATENCIÓN: si la prenda es un pantalón, prestá máxima atención al color. Telas lisas (twill, gabardina, cotton chino): superficie uniforme y suave, sin texturas artificiales ni arrugas exageradas. Replicá largo, ancho de pierna y tiro tal cual se ven en la referencia.' : '',
+                    ].filter(Boolean).join(' ')
                   : `PRODUCT: ${productDescription}.`;
 
                 const imagePrompt = [
@@ -170,9 +177,6 @@ Respondé SOLO con JSON válido:
                   `SUBLINE: "${stagePlan.subline}"`,
                   personPart,
                   `Brand: ${brandKit.name}. Colors: ${brandKit.primary1}, ${brandKit.primary2}, ${brandKit.primary3}. Typography: ${brandKit.typography || 'bold sans-serif'}.`,
-                  isFashionProduct
-                    ? 'COLOR ACCURACY CRITICAL: replicate exact garment color from reference — no shifting, lightening, desaturation. Warm neutrals: never render as white or gray.'
-                    : 'COLOR ACCURACY CRITICAL: reproduce product color exactly.',
                   `Brand context: ${brandKitContext}`,
                   'Portrait 1024x1536. ALL text in Spanish. Professional agency quality.',
                   'ANTI-HALLUCINATION: Do NOT invent prices, discounts, metrics, phone numbers, URLs, or statistics not in the brief.',
@@ -182,7 +186,7 @@ Respondé SOLO con JSON válido:
                 const inputImages = [
                   ...(productDataUrl ? [productDataUrl] : []),
                   ...(isFashionProduct && referenceImages.length > 0
-                    ? referenceImages.slice(0, 1).map(img => img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`)
+                    ? referenceImages.slice(0, 2).map(img => img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`)
                     : []),
                 ];
 

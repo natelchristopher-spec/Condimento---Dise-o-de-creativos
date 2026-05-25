@@ -316,7 +316,7 @@ Respondé SOLO con JSON:
                     'REGLAS DE COLOR — CRÍTICO: tomá el valor de color directamente de los píxeles de la referencia. NO aclarar, NO oscurecer, NO desaturar, NO cambiar temperatura de color.',
                     'Para neutros cálidos (beige, arena, tostado, camel, crudo, khaki): NUNCA renderices como blanco ni gris claro. Mantené la temperatura cálida exacta de la foto.',
                     'Para colores oscuros (negro, azul marino, marrón): NUNCA los ilumines ni aclarés.',
-                    'PANTALONES Y PRENDAS INFERIORES — DOBLE ATENCIÓN: el color es donde el modelo tiende a fallar más. Telas lisas: superficie uniforme, sin texturas artificiales ni arrugas exageradas. Replicá largo, ancho de pierna y tiro tal cual aparecen en la foto.',
+                    'PANTALONES Y PRENDAS INFERIORES — DOBLE ATENCIÓN: si la prenda es un pantalón, prestá máxima atención al color — es donde el modelo tiende a fallar más. Telas lisas (twill, gabardina, cotton chino): superficie uniforme y suave, sin texturas artificiales ni arrugas exageradas. Replicá largo, ancho de pierna y tiro tal cual se ven en la referencia.',
                     'Mismo estampado pixel-perfect, misma silueta, mismo tejido, mismas proporciones que en la referencia visual.',
                   ].filter(Boolean).join(' ')
                 : `PRENDA: ${productDescription}.`;
