@@ -449,6 +449,7 @@ export default function Home() {
   const removeSelectedConcept = (id: string) => {
     setSelectedConcepts(prev => prev.filter(c => c.id !== id));
     setAdaptSourceIds(prev => prev.filter(x => x !== id));
+    setAdaptedImages(prev => prev.filter(img => img.conceptId !== id));
   };
 
   const downloadAllSelected = () => {
@@ -1264,7 +1265,7 @@ export default function Home() {
               ))}
               <button
                 onClick={generateAdaptations}
-                disabled={adaptFormats.length === 0 || generatingAdaptations}
+                disabled={adaptFormats.length === 0 || adaptSourceIds.length === 0 || generatingAdaptations}
                 className="bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed text-gray-900 font-medium px-5 py-2.5 rounded-xl transition-colors flex items-center gap-2 text-sm"
               >
                 {generatingAdaptations ? (

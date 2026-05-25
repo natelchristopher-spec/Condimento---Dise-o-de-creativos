@@ -85,7 +85,9 @@ REGLAS de producto:
     : `data:image/png;base64,${conceptImageBase64}`;
 
   const productImageContent = productDetailImages.map(img => ({
-    type: 'input_image' as const, image_url: img, detail: 'high' as const,
+    type: 'input_image' as const,
+    image_url: img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`,
+    detail: 'high' as const,
   }));
 
   // PRIMARY: Responses API — gpt-4o ve concepto + fotos del producto simultáneamente

@@ -192,6 +192,9 @@ export default function TestingPage() {
         return;
       }
 
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5 * 60 * 1000);
+
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
@@ -200,17 +203,18 @@ export default function TestingPage() {
       let prodDesc = '';
       let personDesc = '';
 
+      try {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() || '';
 
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
+        for (const part of parts) {
+          if (!part.startsWith('data: ')) continue;
           try {
-            const data = JSON.parse(line.slice(6));
+            const data = JSON.parse(part.slice(6));
             if (data.error) { setError(data.error); setStep('idle'); return; }
             if (data.angles) setAngles(data.angles);
             if (data.image) {
@@ -228,6 +232,10 @@ export default function TestingPage() {
             }
           } catch { /* malformed chunk */ }
         }
+      }
+
+      } finally {
+        clearTimeout(timeout);
       }
 
       if (collected.length === 0) {
@@ -248,8 +256,12 @@ export default function TestingPage() {
       }
 
       setStep('results');
-    } catch {
-      setError('Error de conexión. Verificá tu red e intentá de nuevo.');
+    } catch (e) {
+      if (e instanceof Error && e.name === 'AbortError') {
+        setError('La generación tardó demasiado. Intentá de nuevo.');
+      } else {
+        setError('Error de conexión. Verificá tu red e intentá de nuevo.');
+      }
       setStep('idle');
     }
   };

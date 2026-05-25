@@ -501,7 +501,7 @@ export default function RedesPage() {
 
               {selectedTopic && (
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${FUNNEL_LABELS[selectedTopic.funnel].color}`}>{selectedTopic.funnel}</span>
+                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${FUNNEL_LABELS[selectedTopic.funnel].color}`}>{FUNNEL_LABELS[selectedTopic.funnel].label}</span>
                   <span className="text-sm font-semibold text-gray-700">{selectedTopic.title}</span>
                 </div>
               )}

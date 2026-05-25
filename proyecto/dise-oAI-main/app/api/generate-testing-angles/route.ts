@@ -223,11 +223,13 @@ Respondé SOLO con JSON:
         } catch (err) {
           console.error('testing-angles: angle generation failed:', err);
           send(controller, { error: 'Error al generar ángulos. Intentá de nuevo.' });
+          send(controller, { done: true, isFashionProduct, productDescription, personDescription });
           return;
         }
 
         if (angles.length === 0) {
           send(controller, { error: 'No se pudieron generar ángulos. Agregá más contexto en el brief.' });
+          send(controller, { done: true, isFashionProduct, productDescription, personDescription });
           return;
         }
 
@@ -338,7 +340,7 @@ Respondé SOLO con JSON:
       } catch (err) {
         send(controller, { error: getOpenAIErrorMessage(err) });
       } finally {
-        if (!controller.desiredSize === null) {
+        if (controller.desiredSize !== null) {
           try { controller.close(); } catch { /* already closed */ }
         }
       }

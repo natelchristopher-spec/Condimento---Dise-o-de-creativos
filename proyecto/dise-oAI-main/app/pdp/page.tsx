@@ -67,8 +67,8 @@ export default function PdpPage() {
   const [msgIdx, setMsgIdx] = useState(0);
   const [refineOpenIdx, setRefineOpenIdx] = useState<number | null>(null);
   const [refineInputs, setRefineInputs] = useState<string[]>(Array(6).fill(''));
-  const [refineHistories, setRefineHistories] = useState<string[][]>(Array(6).fill([]));
-  const [refineImageHistories, setRefineImageHistories] = useState<string[][]>(Array(6).fill([]));
+  const [refineHistories, setRefineHistories] = useState<string[][]>(Array.from({ length: 6 }, () => []));
+  const [refineImageHistories, setRefineImageHistories] = useState<string[][]>(Array.from({ length: 6 }, () => []));
   const [refiningIdx, setRefiningIdx] = useState<number | null>(null);
   const [planLoading, setPlanLoading] = useState(false);
   const [plans, setPlans] = useState<PdpPlan[]>([]);
@@ -335,6 +335,7 @@ export default function PdpPage() {
           imageBase64: img.base64,
           instruction: input,
           productDetailImages: compressedProducts,
+          size: '1024x1024',
         }),
       });
       if (!res.ok) throw new Error(await res.text());
@@ -387,8 +388,8 @@ export default function PdpPage() {
     setProductDescription('');
     setRefineOpenIdx(null);
     setRefineInputs(Array(6).fill(''));
-    setRefineHistories(Array(6).fill([]));
-    setRefineImageHistories(Array(6).fill([]));
+    setRefineHistories(Array.from({ length: 6 }, () => []));
+    setRefineImageHistories(Array.from({ length: 6 }, () => []));
     setRefiningIdx(null);
   };
 
@@ -422,7 +423,7 @@ export default function PdpPage() {
                 {step === 'generating' && (
                   <div className="w-3.5 h-3.5 border-2 border-gray-200 border-t-[#e42820] rounded-full animate-spin" />
                 )}
-                <span>{step === 'generating' ? `${generatedCount}/6` : '6/6'}</span>
+                <span>{step === 'generating' ? `${generatedCount}/6` : `${pdpImages.filter(Boolean).length}/6`}</span>
               </div>
             )}
           </div>
@@ -1048,7 +1049,7 @@ export default function PdpPage() {
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
-                    Descargar todas (6)
+                    Descargar todas ({pdpImages.filter(Boolean).length})
                   </button>
                   <button
                     onClick={reset}
