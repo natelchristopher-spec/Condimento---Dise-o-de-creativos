@@ -953,16 +953,16 @@ export default function OneShootPage() {
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-sm font-semibold text-blue-800">Ángulos de Producto</label>
-                  <span className="text-lg font-bold text-blue-700">{productCount}</span>
+                  <span className="text-lg font-bold text-blue-700">{productCount === 0 ? '0 — omitir' : productCount}</span>
                 </div>
                 <p className="text-xs text-blue-600 mb-3">El argumento habla del producto (características, materiales, precio)</p>
                 <input
-                  type="range" min={1} max={4} value={productCount}
+                  type="range" min={0} max={4} value={productCount}
                   onChange={e => setProductCount(Number(e.target.value))}
                   className="w-full accent-blue-600"
                 />
                 <div className="flex justify-between text-xs text-blue-400 mt-1">
-                  <span>1</span><span>2</span><span>3</span><span>4</span>
+                  <span>0</span><span>1</span><span>2</span><span>3</span><span>4</span>
                 </div>
               </div>
 
@@ -970,16 +970,16 @@ export default function OneShootPage() {
               <div className="bg-orange-50 border border-orange-100 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-sm font-semibold text-orange-800">Ángulos de Categoría</label>
-                  <span className="text-lg font-bold text-orange-700">{categoryCount}</span>
+                  <span className="text-lg font-bold text-orange-700">{categoryCount === 0 ? '0 — omitir' : categoryCount}</span>
                 </div>
                 <p className="text-xs text-orange-600 mb-3">El argumento habla del contexto, necesidad o estilo de vida</p>
                 <input
-                  type="range" min={1} max={4} value={categoryCount}
+                  type="range" min={0} max={4} value={categoryCount}
                   onChange={e => setCategoryCount(Number(e.target.value))}
                   className="w-full accent-orange-500"
                 />
                 <div className="flex justify-between text-xs text-orange-400 mt-1">
-                  <span>1</span><span>2</span><span>3</span><span>4</span>
+                  <span>0</span><span>1</span><span>2</span><span>3</span><span>4</span>
                 </div>
               </div>
 
@@ -990,7 +990,7 @@ export default function OneShootPage() {
 
             <button
               onClick={generateP1}
-              disabled={!brief.trim() || !brandKit}
+              disabled={!brief.trim() || !brandKit || (productCount === 0 && categoryCount === 0)}
               className="w-full bg-[#e42820] text-white font-semibold py-3 rounded-xl hover:bg-[#c82019] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               Generar ángulos
