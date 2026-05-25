@@ -342,6 +342,9 @@ export default function Home() {
         body: JSON.stringify({
           imageBase64: concept.base64,
           instruction: input,
+          productDetailImages: productDetailImages.length > 0
+            ? await Promise.all(productDetailImages.map(img => compressToJpeg(img)))
+            : [],
         }),
       });
       if (!res.ok) throw new Error(await res.text());
@@ -422,7 +425,10 @@ export default function Home() {
             applied[i] = { ...applied[i], base64 };
             setSelectedConcepts(prev => prev.map((c, idx) => idx === i ? applied[i] : c));
           }
-        } catch { /* keep original */ }
+        } catch (e) {
+          setError(`Concepto ${i + 1}: no se pudo aplicar el producto. Se conserva el original.`);
+          console.error('apply-product catch:', e);
+        }
         statuses[i] = 'done';
         setApplyStatuses([...statuses]);
       }
