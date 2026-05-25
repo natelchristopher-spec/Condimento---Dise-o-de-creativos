@@ -65,6 +65,11 @@ export default function PdpPage() {
   const [generatedCount, setGeneratedCount] = useState(0);
   const [error, setError] = useState('');
   const [msgIdx, setMsgIdx] = useState(0);
+  const [refineOpenIdx, setRefineOpenIdx] = useState<number | null>(null);
+  const [refineInputs, setRefineInputs] = useState<string[]>(Array(6).fill(''));
+  const [refineHistories, setRefineHistories] = useState<string[][]>(Array(6).fill([]));
+  const [refineImageHistories, setRefineImageHistories] = useState<string[][]>(Array(6).fill([]));
+  const [refiningIdx, setRefiningIdx] = useState<number | null>(null);
   const [planLoading, setPlanLoading] = useState(false);
   const [plans, setPlans] = useState<PdpPlan[]>([]);
   const [productDescription, setProductDescription] = useState('');
@@ -312,6 +317,64 @@ export default function PdpPage() {
     }
   };
 
+  const applyPdpRefinement = async (slotIdx: number) => {
+    const input = refineInputs[slotIdx]?.trim();
+    const img = pdpImages[slotIdx];
+    if (!input || !img) return;
+    setRefiningIdx(slotIdx);
+    setRefineInputs(prev => { const n = [...prev]; n[slotIdx] = ''; return n; });
+    setError('');
+    try {
+      const compressedProducts = await Promise.all(
+        productImages.map(i => compressToJpeg(i.includes(',') ? i.split(',')[1] : i))
+      );
+      const res = await fetch('/api/adjust-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageBase64: img.base64,
+          instruction: input,
+          productDetailImages: compressedProducts,
+        }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const { base64, error: apiError } = await res.json();
+      if (apiError) throw new Error(apiError);
+      setRefineImageHistories(prev => {
+        const n = prev.map(h => [...h]);
+        n[slotIdx] = [...n[slotIdx], img.base64];
+        return n;
+      });
+      setRefineHistories(prev => {
+        const n = prev.map(h => [...h]);
+        n[slotIdx] = [...n[slotIdx], input];
+        return n;
+      });
+      setPdpImages(prev => prev.map((p, i) => i === slotIdx && p ? { ...p, base64 } : p));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error aplicando ajuste');
+    } finally {
+      setRefiningIdx(null);
+    }
+  };
+
+  const undoPdpRefinement = (slotIdx: number) => {
+    const imageHistory = refineImageHistories[slotIdx];
+    if (!imageHistory?.length) return;
+    const prevBase64 = imageHistory[imageHistory.length - 1];
+    setRefineImageHistories(prev => {
+      const n = prev.map(h => [...h]);
+      n[slotIdx] = n[slotIdx].slice(0, -1);
+      return n;
+    });
+    setRefineHistories(prev => {
+      const n = prev.map(h => [...h]);
+      n[slotIdx] = n[slotIdx].slice(0, -1);
+      return n;
+    });
+    setPdpImages(prev => prev.map((p, i) => i === slotIdx && p ? { ...p, base64: prevBase64 } : p));
+  };
+
   const reset = () => {
     setStep('brief');
     setBrief('');
@@ -322,6 +385,11 @@ export default function PdpPage() {
     setError('');
     setPlans([]);
     setProductDescription('');
+    setRefineOpenIdx(null);
+    setRefineInputs(Array(6).fill(''));
+    setRefineHistories(Array(6).fill([]));
+    setRefineImageHistories(Array(6).fill([]));
+    setRefiningIdx(null);
   };
 
   const downloadImage = (img: PdpImage) => {
@@ -802,19 +870,26 @@ export default function PdpPage() {
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {PDP_SLOTS.map((slot, i) => {
                   const img = pdpImages[i];
+                  const isRefining = refiningIdx === i;
+                  const isOpen = refineOpenIdx === i;
                   return (
                     <div key={slot.type} className="space-y-2">
-                      <div className="aspect-square rounded-xl overflow-hidden border border-gray-200 bg-gray-100 relative">
+                      <div className={`aspect-square rounded-xl overflow-hidden border bg-gray-100 relative transition-all ${isOpen ? 'border-[#e42820] ring-2 ring-[#e42820]/20' : 'border-gray-200'}`}>
                         {img ? (
                           <img
                             src={`data:image/png;base64,${img.base64}`}
                             alt={slot.label}
-                            className="w-full h-full object-cover"
+                            className={`w-full h-full object-cover transition-all duration-300 ${isRefining ? 'blur-sm' : ''}`}
                           />
                         ) : (
                           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
                             <div className="w-5 h-5 border-2 border-gray-200 border-t-[#e42820] rounded-full animate-spin" />
                             <p className="text-xs text-gray-400">Generando...</p>
+                          </div>
+                        )}
+                        {isRefining && (
+                          <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+                            <div className="w-6 h-6 border-2 border-[#e42820] border-t-transparent rounded-full animate-spin" />
                           </div>
                         )}
                       </div>
@@ -825,20 +900,143 @@ export default function PdpPage() {
                       </div>
 
                       {img && step === 'done' && (
-                        <button
-                          onClick={() => downloadImage(img)}
-                          className="w-full bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 hover:text-gray-900 text-xs px-3 py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                          </svg>
-                          Descargar
-                        </button>
+                        <div className="flex gap-1.5">
+                          <button
+                            onClick={() => downloadImage(img)}
+                            className="flex-1 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 hover:text-gray-900 text-xs px-2 py-2 rounded-lg transition-colors flex items-center justify-center gap-1"
+                          >
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            Descargar
+                          </button>
+                          <button
+                            onClick={() => setRefineOpenIdx(isOpen ? null : i)}
+                            className={`flex-1 border text-xs px-2 py-2 rounded-lg transition-colors flex items-center justify-center gap-1 ${isOpen ? 'bg-[#e42820]/10 border-[#e42820]/30 text-[#e42820]' : 'bg-white hover:bg-gray-50 border-gray-200 text-gray-700'}`}
+                          >
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            Afinar
+                          </button>
+                        </div>
                       )}
                     </div>
                   );
                 })}
               </div>
+
+              {/* Inline refinement panel */}
+              {refineOpenIdx !== null && pdpImages[refineOpenIdx] && step === 'done' && (() => {
+                const slotIdx = refineOpenIdx;
+                const img = pdpImages[slotIdx]!;
+                const slot = PDP_SLOTS[slotIdx];
+                const isBusy = refiningIdx === slotIdx;
+                const history = refineHistories[slotIdx] || [];
+                const imageHistory = refineImageHistories[slotIdx] || [];
+                const input = refineInputs[slotIdx] || '';
+                const pdpPresets = ['Fondo más oscuro', 'Fondo blanco limpio', 'Más contraste', 'Iluminación más suave', 'Colores más vibrantes', 'Producto más grande'];
+                const allPresets = [...(brandKit?.quickAdjustments || []), ...pdpPresets];
+                const clientPresetCount = brandKit?.quickAdjustments?.length || 0;
+                return (
+                  <div className="bg-white border border-[#e42820]/30 rounded-2xl overflow-hidden">
+                    <div className="flex flex-col md:flex-row">
+                      {/* Image preview */}
+                      <div className="relative md:w-48 shrink-0">
+                        <img
+                          src={`data:image/png;base64,${img.base64}`}
+                          alt={slot.label}
+                          className={`w-full h-full object-cover transition-all duration-300 ${isBusy ? 'blur-sm' : ''}`}
+                          style={{ maxHeight: '260px' }}
+                        />
+                        {isBusy && (
+                          <div className="absolute inset-0 bg-white/70 flex flex-col items-center justify-center gap-2">
+                            <div className="w-7 h-7 border-[3px] border-[#e42820] border-t-transparent rounded-full animate-spin" />
+                            <p className="text-xs text-gray-600 font-medium">Aplicando...</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Controls */}
+                      <div className="flex-1 p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <p className="font-semibold text-gray-900 text-sm">{slot.label}</p>
+                          <button
+                            onClick={() => setRefineOpenIdx(null)}
+                            className="text-gray-400 hover:text-gray-600 transition-colors"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+
+                        {history.length > 0 && (
+                          <div className="space-y-1 max-h-14 overflow-y-auto">
+                            {history.map((h, j) => (
+                              <div key={j} className="bg-gray-50 rounded-lg px-3 py-1 text-xs text-gray-500 flex items-center gap-1.5">
+                                <span className="text-[#e42820]">✓</span>{h}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="space-y-1.5">
+                          <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">Ajustes rápidos</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {allPresets.map((preset, j) => {
+                              const isClientPreset = j < clientPresetCount;
+                              return (
+                                <button
+                                  key={`${preset}-${j}`}
+                                  onClick={() => { if (!isBusy) setRefineInputs(prev => { const n = [...prev]; n[slotIdx] = preset; return n; }); }}
+                                  disabled={isBusy}
+                                  className={`text-xs px-2.5 py-1 rounded-lg border transition-colors disabled:opacity-40 ${isClientPreset ? 'bg-[#e42820]/10 border-[#e42820]/30 text-[#e42820] hover:bg-[#e42820]/20' : 'bg-white hover:bg-gray-100 border-gray-200 text-gray-500 hover:text-gray-900'}`}
+                                >
+                                  {preset}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <input
+                            type="text"
+                            value={input}
+                            onChange={e => { if (!isBusy) setRefineInputs(prev => { const n = [...prev]; n[slotIdx] = e.target.value; return n; }); }}
+                            onKeyDown={e => { if (e.key === 'Enter' && !isBusy && input.trim()) applyPdpRefinement(slotIdx); }}
+                            placeholder="O escribí tu ajuste..."
+                            disabled={isBusy}
+                            className="flex-1 bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] text-sm disabled:opacity-50"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => applyPdpRefinement(slotIdx)}
+                              disabled={!input.trim() || isBusy}
+                              className="flex-1 sm:flex-none bg-[#e42820] hover:bg-[#c41f18] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-4 py-2.5 rounded-xl transition-colors text-sm"
+                            >
+                              {isBusy ? 'Aplicando...' : 'Aplicar'}
+                            </button>
+                            {imageHistory.length > 0 && (
+                              <button
+                                onClick={() => undoPdpRefinement(slotIdx)}
+                                disabled={isBusy}
+                                className="bg-white hover:bg-gray-100 border border-gray-200 disabled:opacity-40 text-gray-500 hover:text-gray-900 px-3 py-2.5 rounded-xl transition-colors"
+                                title="Deshacer"
+                              >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Download all */}
               {step === 'done' && (
