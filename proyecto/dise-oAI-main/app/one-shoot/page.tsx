@@ -229,6 +229,8 @@ export default function OneShootPage() {
 
   // Setup
   const [brief, setBrief] = useState('');
+  const [productUrl, setProductUrl] = useState('');
+  const [scrapingUrl, setScrapingUrl] = useState(false);
   const [productImage, setProductImage] = useState('');
   const [productPreview, setProductPreview] = useState('');
   const [referenceImages, setReferenceImages] = useState<string[]>([]);
@@ -341,6 +343,21 @@ export default function OneShootPage() {
   const handleReferenceFile = async (file: File) => {
     const b64 = await readAsImage(file);
     if (b64) setReferenceImages(prev => [...prev.slice(0, 2), b64]);
+  };
+
+  const scrapeProduct = async () => {
+    if (!productUrl.trim()) return;
+    setScrapingUrl(true);
+    try {
+      const res = await fetch('/api/scrape-product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: productUrl }),
+      });
+      const data = await res.json();
+      if (data.clientRequest) setBrief(data.clientRequest);
+    } catch { /* keep existing brief */ }
+    finally { setScrapingUrl(false); }
   };
 
   // ── P1 Generation ─────────────────────────────────────────────────────────
@@ -833,6 +850,30 @@ export default function OneShootPage() {
             {error && (
               <div className="mb-5 bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700">{error}</div>
             )}
+
+            {/* URL scraper */}
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                URL del producto <span className="text-gray-400 font-normal">(opcional)</span>
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={productUrl}
+                  onChange={e => setProductUrl(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && scrapeProduct()}
+                  placeholder="https://tutienda.com/producto"
+                  className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]"
+                />
+                <button
+                  onClick={scrapeProduct}
+                  disabled={!productUrl.trim() || scrapingUrl}
+                  className="px-4 py-2.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-all whitespace-nowrap"
+                >
+                  {scrapingUrl ? 'Analizando...' : 'Importar brief'}
+                </button>
+              </div>
+            </div>
 
             {/* Brief */}
             <div className="mb-5">
