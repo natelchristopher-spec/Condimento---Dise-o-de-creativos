@@ -6,7 +6,7 @@ import { useRequireAuth } from '@/app/lib/use-auth';
 import { BrandKit } from '@/app/types';
 import Sidebar from '@/app/components/Sidebar';
 import { MessageAngle } from '@/app/api/generate-testing-angles/route';
-import { readAsImage, compressImage } from '@/app/lib/image-utils';
+import { readAsImage, compressImage, downloadExact } from '@/app/lib/image-utils';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -2123,10 +2123,8 @@ export default function OneShootPage() {
                     onClick={() => {
                       p3AdaptedImages.forEach((img, i) => {
                         const creative = p2Creatives.find(c => c.id === img.creativeId);
-                        const a = document.createElement('a');
-                        a.href = `data:image/png;base64,${img.base64}`;
-                        a.download = `pec-${creative?.stage || ''}-${img.label.replace(/\s+/g, '-')}-${i + 1}.png`;
-                        a.click();
+                        const filename = `pec-${creative?.stage || ''}-${img.label.replace(/\s+/g, '-')}-${i + 1}.png`;
+                        downloadExact(img.base64, filename, img.format);
                       });
                     }}
                     className="flex items-center gap-1.5 text-xs text-[#e42820] hover:text-[#c82019] font-medium transition-colors"
@@ -2151,7 +2149,7 @@ export default function OneShootPage() {
                           <span className="text-gray-400">{creative?.stage} · {creative?.angleName}</span>
                         </p>
                         <button
-                          onClick={() => downloadImage(img.base64, `pec-${creative?.stage || ''}-${img.label.replace(/\s+/g, '-')}-${i + 1}.png`)}
+                          onClick={() => downloadExact(img.base64, `pec-${creative?.stage || ''}-${img.label.replace(/\s+/g, '-')}-${i + 1}.png`, img.format)}
                           className="w-full bg-white hover:bg-gray-100 border border-gray-200 text-gray-500 hover:text-gray-900 text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1.5"
                         >
                           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">

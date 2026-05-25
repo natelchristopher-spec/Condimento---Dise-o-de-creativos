@@ -9,7 +9,7 @@ import ImageCard from '@/app/components/ImageCard';
 import StepIndicator from '@/app/components/StepIndicator';
 import LoadingGrid from '@/app/components/LoadingGrid';
 import Sidebar from '@/app/components/Sidebar';
-import { readAsImage, compressImage } from '@/app/lib/image-utils';
+import { readAsImage, compressImage, downloadExact } from '@/app/lib/image-utils';
 
 export default function Home() {
   const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
@@ -1257,14 +1257,8 @@ export default function Home() {
                       onClick={() => {
                         adaptedImages.forEach((img, i) => {
                           const concept = selectedConcepts.find(c => c.id === img.conceptId);
-                          const url = URL.createObjectURL(new Blob([Uint8Array.from(atob(img.base64), c => c.charCodeAt(0))], { type: 'image/png' }));
-                          const a = document.createElement('a');
-                          a.href = url;
-                          a.download = `${brandKit?.name || 'concepto'}-${img.label.replace(/\s+/g, '-')}-${concept?.conceptName?.replace(/\s+/g, '-') || i + 1}.png`;
-                          document.body.appendChild(a);
-                          a.click();
-                          document.body.removeChild(a);
-                          setTimeout(() => URL.revokeObjectURL(url), 5000);
+                          const filename = `${brandKit?.name || 'concepto'}-${img.label.replace(/\s+/g, '-')}-${concept?.conceptName?.replace(/\s+/g, '-') || i + 1}.png`;
+                          downloadExact(img.base64, filename, img.format);
                         });
                       }}
                       className="flex items-center gap-1.5 text-xs text-[#e42820] hover:text-[#c41f18] font-medium transition-colors"
@@ -1286,14 +1280,8 @@ export default function Home() {
                           <p className="text-xs text-gray-500 text-center">{img.label} · {concept?.conceptName || ''}</p>
                           <button
                             onClick={() => {
-                              const url = URL.createObjectURL(new Blob([Uint8Array.from(atob(img.base64), c => c.charCodeAt(0))], { type: 'image/png' }));
-                              const a = document.createElement('a');
-                              a.href = url;
-                              a.download = `${brandKit?.name || 'concepto'}-${img.label.replace(/\s+/g, '-')}-${i + 1}.png`;
-                              document.body.appendChild(a);
-                              a.click();
-                              document.body.removeChild(a);
-                              setTimeout(() => URL.revokeObjectURL(url), 5000);
+                              const filename = `${brandKit?.name || 'concepto'}-${img.label.replace(/\s+/g, '-')}-${i + 1}.png`;
+                              downloadExact(img.base64, filename, img.format);
                             }}
                             className="w-full bg-white hover:bg-gray-100 border border-gray-200 text-gray-500 hover:text-gray-900 text-xs px-3 py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5"
                           >
