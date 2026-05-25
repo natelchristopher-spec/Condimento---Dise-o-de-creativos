@@ -124,7 +124,7 @@ Respondé SOLO con JSON válido:
 
             try {
               const planRes = await openai.chat.completions.create({
-                model: 'gpt-4o',
+                model: 'gpt-4o-mini',
                 messages: [{ role: 'user', content: planPrompt }],
                 response_format: { type: 'json_object' },
                 max_tokens: 600,
