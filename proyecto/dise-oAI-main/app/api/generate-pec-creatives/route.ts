@@ -20,7 +20,7 @@ function getOpenAIErrorMessage(e: unknown): string {
 
 const P_FORMATS = ['Aspiracional', 'Fundador', 'Editorial'];
 const E_FORMATS = ['Testimonial', 'Beneficios', 'How-to'];
-const C_FORMATS = ['Oferta/Precio', 'Prueba Social', 'Garantía'];
+const C_FORMATS = ['Urgencia', 'Prueba Social', 'Garantía'];
 
 const STAGE_STYLES: Record<string, string> = {
   Aspiracional: 'Lifestyle imagery. Person embodying the aspirational identity the product enables. Natural, candid energy. The garment/product is the visual hero in context.',
@@ -29,8 +29,8 @@ const STAGE_STYLES: Record<string, string> = {
   Testimonial: 'Real-looking customer. Genuine, relatable expression. Quote or review text prominently featured. Trust-focused composition.',
   Beneficios: 'Product hero shot with benefit callouts. Clean, informative layout. Features labeled or visually highlighted.',
   'How-to': 'Step-by-step or process visual. Product shown in use. Educational, clear, sequential feel.',
-  'Oferta/Precio': 'Product prominently featured with price/offer element. Bold, high-contrast. Urgency and value communicated visually.',
-  'Prueba Social': 'Social proof focus. Star ratings, review count, or sales volume prominently displayed. Numbers and credibility markers.',
+  Urgencia: 'Product hero with urgency cues. Bold, high-contrast, conversion-focused composition. No invented prices, discounts, or promotions.',
+  'Prueba Social': 'Social proof focus. Customer trust and satisfaction cues. Trust-focused composition. Do NOT invent star ratings, counts, or statistics not in the brief.',
   'Garantía': 'Trust and confidence imagery. Quality, safety, and risk-reversal cues. Clean, reassuring, premium feel.',
 };
 
@@ -104,31 +104,41 @@ export async function POST(req: NextRequest) {
             let plan: PECPlan | null = null;
             const planPrompt = `Sos director creativo de performance marketing para e-commerce.
 
-Tenés el siguiente ángulo de mensaje ganador de Paso 1:
-- Nombre del ángulo: "${angle.name}"
-- Hook (ganador de atención): "${angle.hook}"
+ÁNGULO GANADOR (el mensaje que conectó con la audiencia):
+- Nombre: "${angle.name}"
+- Hook: "${angle.hook}"
 - Énfasis: "${angle.emphasis}"
 
 Producto: ${productDescription || brief}
 Marca: ${brandKit.name}${brandKit.clientRequest ? ` — ${brandKit.clientRequest}` : ''}
 
-Creá el brief creativo para escalar este ángulo en las 3 etapas del funnel PEC.
+Tu trabajo: escalar este ángulo en las 3 etapas PEC con DIVERSIDAD CREATIVA REAL.
+El hook es el eje del ángulo — lo que VARÍA por etapa es el CONCEPTO VISUAL y el FORMATO DE EJECUCIÓN.
+NO es cambiar solo el copy sobre el mismo layout. Cada etapa debe verse y sentirse diferente visualmente.
 
 Para PROSPECCIÓN (P): elegí el formato más adecuado de: ${P_FORMATS.join(' / ')}
+→ Objetivo: capturar atención de quien no conoce el producto. Enfocá en el problema o la aspiración, no en vender.
+
 Para EVALUACIÓN (E): elegí el formato más adecuado de: ${E_FORMATS.join(' / ')}
+→ Objetivo: convencer a quien ya consideró. Mostrá prueba, proceso o beneficio concreto.
+
 Para CONVERSIÓN (C): elegí el formato más adecuado de: ${C_FORMATS.join(' / ')}
+→ Objetivo: cerrar a quien está listo para comprar. Usá urgencia, prueba social o garantía — SOLO con datos del brief.
 
 Reglas:
-- Cada etapa mantiene el MISMO ángulo de mensaje pero adapta el formato al momento del funnel
-- headlines y sublines en español, max 8 palabras cada uno
-- concept describe SOLO la composición visual y estilo (no el copy)
-- NO inventés precios, descuentos, métricas o garantías no mencionados
+- Las 3 etapas deben tener conceptos visuales GENUINAMENTE DISTINTOS — no el mismo layout con distinto texto
+- headlines y sublines en español, max 8 palabras cada uno, alineados al ángulo ganador
+- concept: describí la ejecución visual específica (composición, elementos, mood) — no el copy
+
+ANTI-ALUCINACIÓN — REGLA ABSOLUTA:
+PROHIBIDO inventar o incluir en headline/subline/concept: precios ($), porcentajes de descuento (50% OFF), cantidades de ventas, ratings con estrellas (4.8/5), testimonios específicos, fechas límite, cuotas o mecánicas promocionales que NO estén explícitamente mencionados en el brief o brand kit.
+Si el brief no menciona un precio → no pongas ningún precio.
 
 Respondé SOLO con JSON válido:
 {
-  "p": { "format": "nombre del formato elegido", "headline": "titular para la imagen", "subline": "subtitulo corto", "concept": "descripción del concepto visual" },
-  "e": { "format": "nombre del formato elegido", "headline": "titular para la imagen", "subline": "subtitulo corto", "concept": "descripción del concepto visual" },
-  "c": { "format": "nombre del formato elegido", "headline": "titular para la imagen", "subline": "subtitulo corto", "concept": "descripción del concepto visual" }
+  "p": { "format": "nombre del formato elegido", "headline": "titular para la imagen", "subline": "subtitulo corto", "concept": "descripción del concepto visual específico" },
+  "e": { "format": "nombre del formato elegido", "headline": "titular para la imagen", "subline": "subtitulo corto", "concept": "descripción del concepto visual específico" },
+  "c": { "format": "nombre del formato elegido", "headline": "titular para la imagen", "subline": "subtitulo corto", "concept": "descripción del concepto visual específico" }
 }`;
 
             try {
