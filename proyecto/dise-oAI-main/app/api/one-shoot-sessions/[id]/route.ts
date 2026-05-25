@@ -44,6 +44,8 @@ export async function PATCH(
 
   const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (body.status !== undefined) update.status = body.status;
+  if (body.brief !== undefined) update.brief = body.brief;
+  if (body.count !== undefined) update.count = body.count;
   if (body.angles !== undefined) update.angles = body.angles;
   if (body.winningAngleKeys !== undefined) update.winning_angle_keys = body.winningAngleKeys;
   if (body.pecResults !== undefined) update.pec_results = body.pecResults;

@@ -9,9 +9,9 @@ export const maxDuration = 300;
 
 function getOpenAIErrorMessage(e: unknown): string {
   const msg = e instanceof Error ? e.message : String(e);
-  if (msg.includes('401') || msg.includes('invalid_api_key'))
+  if (msg.includes('401') || msg.includes('Incorrect API key') || msg.includes('invalid_api_key'))
     return 'API key de OpenAI inválida. Verificá la clave en tu perfil.';
-  if (msg.includes('429') || msg.includes('quota') || msg.includes('rate_limit'))
+  if (msg.includes('429') || msg.includes('rate limit') || msg.includes('rate_limit') || msg.includes('quota'))
     return 'Límite de uso de OpenAI alcanzado. Esperá unos minutos o revisá tu plan.';
   if (msg.includes('insufficient_quota'))
     return 'Sin crédito en tu cuenta de OpenAI. Recargá saldo en platform.openai.com.';
@@ -197,7 +197,7 @@ Respondé SOLO con JSON válido:
                   try {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const response = await (openai.responses.create as any)({
-                      model: 'gpt-4o',
+                      model: 'gpt-image-2',
                       input: [{ role: 'user', content: inputContent }],
                       tools: [{
                         type: 'image_generation',
@@ -258,10 +258,10 @@ Respondé SOLO con JSON válido:
           })
         );
 
-        send(controller, { done: true });
       } catch (err) {
         send(controller, { error: getOpenAIErrorMessage(err) });
       } finally {
+        send(controller, { done: true });
         if (controller.desiredSize !== null) {
           try { controller.close(); } catch { /* already closed */ }
         }

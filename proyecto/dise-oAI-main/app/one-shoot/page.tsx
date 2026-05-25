@@ -52,6 +52,8 @@ interface SessionRow {
   brief: string;
   count: number;
   is_fashion_product: boolean;
+  product_description: string;
+  person_description: string;
   angles: MessageAngle[];
   winning_angle_keys: string[];
   pec_results: Omit<PECCreative, 'base64'>[];
@@ -276,6 +278,7 @@ export default function OneShootPage() {
   const [referenceImages, setReferenceImages] = useState<string[]>([]);
   const [productCount, setProductCount] = useState(2);
   const [categoryCount, setCategoryCount] = useState(2);
+  const [peopleMode, setPeopleMode] = useState<'none' | 'real'>('none');
   const productFileRef = useRef<HTMLInputElement>(null);
   const referenceFileRef = useRef<HTMLInputElement>(null);
 
@@ -424,6 +427,7 @@ export default function OneShootPage() {
           referenceImages: refImagesCompressed,
           productCount,
           categoryCount,
+          peopleMode,
         }),
       });
 
@@ -530,6 +534,8 @@ export default function OneShootPage() {
     setSessionId(session.id);
     setBrief(session.brief);
     setIsFashionProduct(session.is_fashion_product);
+    setProductDescription(session.product_description || '');
+    setPersonDescription(session.person_description || '');
     setP1Angles(session.angles);
     setWinnerKeys(session.winning_angle_keys || []);
 
@@ -705,8 +711,13 @@ export default function OneShootPage() {
     setReferenceImages([]);
     setProductCount(2);
     setCategoryCount(2);
+    setPeopleMode('none');
     setP1Angles([]);
     setP1Images([]);
+    setP1Done(0);
+    setP1Total(0);
+    setP2Done(0);
+    setP2Total(0);
     setAngleStatuses({});
     setDaysRunning('');
     setTotalPurchases('');
@@ -918,11 +929,42 @@ export default function OneShootPage() {
                 onChange={e => { const f = e.target.files?.[0]; if (f) handleProductFile(f); e.target.value = ''; }} />
             </div>
 
-            {/* Reference images */}
+            {/* People mode toggle */}
+            <div className="mb-5">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                ¿Aparecen personas usando el producto?
+              </label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setPeopleMode('none'); setReferenceImages([]); }}
+                  className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-medium border-2 transition-all ${
+                    peopleMode === 'none'
+                      ? 'border-gray-800 bg-gray-800 text-white'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                  }`}
+                >
+                  No — solo producto
+                </button>
+                <button
+                  onClick={() => setPeopleMode('real')}
+                  className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-medium border-2 transition-all ${
+                    peopleMode === 'real'
+                      ? 'border-[#e42820] bg-[#e42820]/5 text-[#e42820]'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                  }`}
+                >
+                  Sí — con modelo
+                </button>
+              </div>
+            </div>
+
+            {/* Reference images — only when peopleMode is real */}
+            {peopleMode === 'real' && (
             <div className="mb-5">
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                Foto de referencia de persona <span className="text-gray-400 font-normal">(opcional, indumentaria)</span>
+                Foto de referencia de persona <span className="text-gray-400 font-normal">(opcional)</span>
               </label>
+              <p className="text-xs text-gray-400 mb-2">El sistema usará estas fotos para mantener el perfil de la persona en los creativos</p>
               <div className="flex gap-2">
                 {referenceImages.map((img, i) => (
                   <div key={i} className="relative">
@@ -948,6 +990,7 @@ export default function OneShootPage() {
               <input ref={referenceFileRef} type="file" accept="image/*" className="hidden"
                 onChange={e => { const f = e.target.files?.[0]; if (f) handleReferenceFile(f); e.target.value = ''; }} />
             </div>
+            )}
 
             {/* Sliders */}
             <div className="mb-7 space-y-5">
@@ -1007,7 +1050,7 @@ export default function OneShootPage() {
   if (view === 'p1-generating') {
     const pct = p1Total > 0 ? Math.round((p1Done / p1Total) * 100) : 0;
     const productAngles = p1Angles.filter(a => a.level === 'product');
-    const categoryAngles = p1Angles.filter(a => a.level !== 'product' && a.level === 'category');
+    const categoryAngles = p1Angles.filter(a => a.level === 'category');
 
     return (
       <div className="flex min-h-screen bg-gray-50">

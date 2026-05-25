@@ -20,7 +20,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('one_shoot_sessions')
-    .select('id, created_at, updated_at, status, brief, count, is_fashion_product, angles, winning_angle_keys, pec_results')
+    .select('id, created_at, updated_at, status, brief, count, is_fashion_product, product_description, person_description, angles, winning_angle_keys, pec_results')
     .eq('user_id', userId)
     .order('updated_at', { ascending: false });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
