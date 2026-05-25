@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
     winningAngles,
     brandKit,
     productImageBase64 = '',
+    productImages = [],
     referenceImages = [],
   }: {
     brief?: string;
@@ -69,15 +70,23 @@ export async function POST(req: NextRequest) {
     winningAngles: MessageAngle[];
     brandKit: BrandKit;
     productImageBase64?: string;
+    productImages?: string[];
     referenceImages?: string[];
   } = await req.json();
 
   const openai = new OpenAI({ apiKey: ctx.openaiApiKey });
   const brandKitContext = buildBrandKitContext(brandKit);
 
-  const productDataUrl = productImageBase64
-    ? (productImageBase64.startsWith('data:') ? productImageBase64 : `data:image/jpeg;base64,${productImageBase64}`)
-    : '';
+  // Support both legacy single image and new multi-image array
+  const allProductImages = productImages.length > 0
+    ? productImages
+    : (productImageBase64 ? [productImageBase64] : []);
+
+  const productDataUrls = allProductImages.map(img =>
+    img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`
+  ).filter(url => url.length > 100);
+
+  const productDataUrl = productDataUrls[0] || '';
 
   const encoder = new TextEncoder();
   const send = (controller: ReadableStreamDefaultController, data: object) =>
@@ -184,7 +193,7 @@ Respondé SOLO con JSON válido:
                 ].filter(Boolean).join(' ');
 
                 const inputImages = [
-                  ...(productDataUrl ? [productDataUrl] : []),
+                  ...productDataUrls.slice(0, 3),
                   ...(isFashionProduct && referenceImages.length > 0
                     ? referenceImages.slice(0, 2).map(img => img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`)
                     : []),

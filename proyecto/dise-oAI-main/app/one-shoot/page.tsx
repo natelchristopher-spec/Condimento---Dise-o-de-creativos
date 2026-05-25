@@ -231,8 +231,7 @@ export default function OneShootPage() {
   const [brief, setBrief] = useState('');
   const [productUrl, setProductUrl] = useState('');
   const [scrapingUrl, setScrapingUrl] = useState(false);
-  const [productImage, setProductImage] = useState('');
-  const [productPreview, setProductPreview] = useState('');
+  const [productImages, setProductImages] = useState<string[]>([]);
   const [referenceImages, setReferenceImages] = useState<string[]>([]);
   const [productCount, setProductCount] = useState(2);
   const [categoryCount, setCategoryCount] = useState(2);
@@ -337,7 +336,7 @@ export default function OneShootPage() {
   // ── File handlers ─────────────────────────────────────────────────────────
   const handleProductFile = async (file: File) => {
     const b64 = await readAsImage(file);
-    if (b64) { setProductImage(b64); setProductPreview(b64); }
+    if (b64) setProductImages(prev => [...prev, b64].slice(0, 3));
   };
 
   const handleReferenceFile = async (file: File) => {
@@ -377,9 +376,7 @@ export default function OneShootPage() {
     setTotalPurchases('');
     setView('p1-generating');
 
-    const productImageCompressed = productImage
-      ? await compressImage(productImage, 1024)
-      : '';
+    const productImagesCompressed = await Promise.all(productImages.map(img => compressImage(img, 1024)));
     const refImagesCompressed = await Promise.all(
       referenceImages.map(img => compressImage(img, 768))
     );
@@ -395,7 +392,7 @@ export default function OneShootPage() {
         body: JSON.stringify({
           brief,
           brandKit,
-          productImage: productImageCompressed,
+          productImage: productImagesCompressed[0] || '',
           referenceImages: refImagesCompressed,
           productCount,
           categoryCount,
@@ -477,8 +474,8 @@ export default function OneShootPage() {
           saveLsImages(id, finalImages, [], {}, '');
           // Also store product/ref images for P2 generation
           try {
-            if (productImageCompressed) {
-              localStorage.setItem(`one_shoot_product_img_${id}`, productImageCompressed);
+            if (productImagesCompressed.length > 0) {
+              localStorage.setItem(`one_shoot_product_imgs_${id}`, JSON.stringify(productImagesCompressed));
             }
             if (refImagesCompressed.length > 0) {
               localStorage.setItem(`one_shoot_ref_imgs_${id}`, JSON.stringify(refImagesCompressed));
@@ -515,10 +512,14 @@ export default function OneShootPage() {
     setP1Images(stored.p1);
     setAngleStatuses(stored.angleStatuses || {});
 
-    // Restore product image from localStorage
+    // Restore product images from localStorage
     try {
-      const prodImg = localStorage.getItem(`one_shoot_product_img_${session.id}`);
-      if (prodImg) { setProductImage(prodImg); setProductPreview(prodImg); }
+      const prodImgs = localStorage.getItem(`one_shoot_product_imgs_${session.id}`);
+      if (prodImgs) setProductImages(JSON.parse(prodImgs));
+      else {
+        const legacy = localStorage.getItem(`one_shoot_product_img_${session.id}`);
+        if (legacy) setProductImages([legacy]);
+      }
       const refImgs = localStorage.getItem(`one_shoot_ref_imgs_${session.id}`);
       if (refImgs) setReferenceImages(JSON.parse(refImgs));
     } catch { /* ok */ }
@@ -561,19 +562,24 @@ export default function OneShootPage() {
     }
 
     // Load product images from localStorage
-    let prodImg = productImage;
+    let prodImgs = productImages;
     let refImgs = referenceImages;
 
-    if (!prodImg && sessionId) {
+    if (prodImgs.length === 0 && sessionId) {
       try {
-        const stored = localStorage.getItem(`one_shoot_product_img_${sessionId}`);
-        if (stored) prodImg = stored;
+        const stored = localStorage.getItem(`one_shoot_product_imgs_${sessionId}`);
+        if (stored) prodImgs = JSON.parse(stored);
+        // legacy single-image key
+        else {
+          const storedSingle = localStorage.getItem(`one_shoot_product_img_${sessionId}`);
+          if (storedSingle) prodImgs = [storedSingle];
+        }
         const storedRef = localStorage.getItem(`one_shoot_ref_imgs_${sessionId}`);
         if (storedRef) refImgs = JSON.parse(storedRef);
       } catch { /* ok */ }
     }
 
-    const productImageCompressed = prodImg ? await compressImage(prodImg, 1024) : '';
+    const prodImgsCompressed = await Promise.all(prodImgs.map(img => compressImage(img, 1024)));
     const refImagesCompressed = await Promise.all(refImgs.map(img => compressImage(img, 768)));
 
     const controller = new AbortController();
@@ -591,7 +597,8 @@ export default function OneShootPage() {
           isFashionProduct,
           winningAngles: winners,
           brandKit,
-          productImageBase64: productImageCompressed,
+          productImageBase64: prodImgsCompressed[0] || '',
+          productImages: prodImgsCompressed,
           referenceImages: refImagesCompressed,
         }),
       });
@@ -678,8 +685,7 @@ export default function OneShootPage() {
 
   const resetToSetup = (keepBrief = false) => {
     if (!keepBrief) setBrief('');
-    setProductImage('');
-    setProductPreview('');
+    setProductImages([]);
     setReferenceImages([]);
     setProductCount(2);
     setCategoryCount(2);
@@ -699,6 +705,7 @@ export default function OneShootPage() {
     setIsFashionProduct(false);
     setProductDescription('');
     setPersonDescription('');
+    setProductImages([]);
     setP1Error('');
     setP2Error('');
     setError('');
@@ -889,36 +896,35 @@ export default function OneShootPage() {
               />
             </div>
 
-            {/* Product image */}
+            {/* Product images */}
             <div className="mb-5">
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                Foto del producto <span className="text-gray-400 font-normal">(opcional)</span>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Fotos del producto <span className="text-gray-400 font-normal">(opcional · hasta 3)</span>
               </label>
-              <div
-                onClick={() => productFileRef.current?.click()}
-                className="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center cursor-pointer hover:border-gray-300 transition-colors"
-              >
-                {productPreview ? (
-                  <div className="relative inline-block">
+              <p className="text-xs text-gray-400 mb-2">Para ropa: subí frente, espalda y detalle del estampado para mejor fidelidad.</p>
+              <div className="flex gap-2 flex-wrap">
+                {productImages.map((img, i) => (
+                  <div key={i} className="relative w-20 h-20">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={productPreview.startsWith('data:') ? productPreview : `data:image/jpeg;base64,${productPreview}`}
-                      alt="Producto"
-                      className="max-h-40 rounded-lg object-cover mx-auto"
+                      src={img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`}
+                      alt={`Producto ${i + 1}`}
+                      className="w-20 h-20 object-cover rounded-xl border border-gray-200"
                     />
                     <button
-                      onClick={e => { e.stopPropagation(); setProductImage(''); setProductPreview(''); }}
-                      className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center"
+                      onClick={() => setProductImages(prev => prev.filter((_, j) => j !== i))}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center"
                     >×</button>
                   </div>
-                ) : (
-                  <div>
-                    <svg className="w-8 h-8 text-gray-300 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <p className="text-sm text-gray-400">Subí una foto del producto</p>
-                    <p className="text-xs text-gray-300 mt-0.5">JPG, PNG · hasta 10 MB</p>
-                  </div>
+                ))}
+                {productImages.length < 3 && (
+                  <button
+                    onClick={() => productFileRef.current?.click()}
+                    className="w-20 h-20 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center text-gray-400 hover:border-gray-300 hover:text-gray-500 transition-colors"
+                  >
+                    <svg className="w-5 h-5 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                    <span className="text-xs">Agregar</span>
+                  </button>
                 )}
               </div>
               <input ref={productFileRef} type="file" accept="image/*" className="hidden"
