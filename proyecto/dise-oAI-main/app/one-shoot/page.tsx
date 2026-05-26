@@ -1989,8 +1989,16 @@ export default function OneShootPage() {
                     className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">CPA objetivo ($)</label>
-                  <input type="text" value={targetCpa} onChange={e => setTargetCpa(e.target.value)} placeholder="0"
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">
+                    CPA objetivo ($)
+                    <span className="ml-1 group relative inline-block cursor-help">
+                      <span className="text-gray-400 text-[11px] border border-gray-300 rounded-full px-1">?</span>
+                      <span className="hidden group-hover:block absolute left-0 bottom-full mb-1.5 w-56 bg-gray-900 text-white text-[11px] rounded-lg p-2.5 z-10 leading-relaxed shadow-lg">
+                        Lo máximo que querés pagar por cada venta. Si tu producto vale $10.000 y tenés buen margen, podría ser $3.000–$4.000. Si no lo sabés, usá el 30–40% del precio de venta.
+                      </span>
+                    </span>
+                  </label>
+                  <input type="text" value={targetCpa} onChange={e => setTargetCpa(e.target.value)} placeholder="ej: 3000"
                     className="w-28 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]" />
                 </div>
                 {hasAnyMetrics && (
