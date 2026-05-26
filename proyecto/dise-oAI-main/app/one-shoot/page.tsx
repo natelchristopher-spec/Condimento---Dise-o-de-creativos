@@ -962,8 +962,7 @@ export default function OneShootPage() {
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ status: 'paso2_done', pecResults: pecMeta }),
                 });
-                const stored = loadLsImages(sessionId);
-                saveLsImages(sessionId, stored.p1, stored.angleStatuses, stored.launchDate);
+                saveLsImages(sessionId, p1Images, angleStatuses, launchDate);
                 saveLsP2(sessionId, collectedCreatives);
                 if (userId) {
                   void Promise.allSettled(
@@ -1903,10 +1902,10 @@ export default function OneShootPage() {
     const setStatus = (key: string, status: AngleStatus) => {
       setAngleStatuses(prev => {
         const next = { ...prev, [key]: status };
-        // Persist to localStorage
+        // Use in-memory p1Images as source of truth — stored.p1 may be empty
+        // if the initial localStorage save failed silently (quota exceeded).
         if (sessionId) {
-          const stored = loadLsImages(sessionId);
-          saveLsImages(sessionId, stored.p1, next, stored.launchDate);
+          saveLsImages(sessionId, p1Images, next, launchDate);
         }
         return next;
       });
@@ -2127,8 +2126,7 @@ export default function OneShootPage() {
                       const d = e.target.value ? new Date(e.target.value + 'T12:00:00').toISOString() : '';
                       setLaunchDate(d);
                       if (sessionId) {
-                        const stored = loadLsImages(sessionId);
-                        saveLsImages(sessionId, stored.p1, stored.angleStatuses, d);
+                        saveLsImages(sessionId, p1Images, angleStatuses, d);
                       }
                     }}
                     className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]"
