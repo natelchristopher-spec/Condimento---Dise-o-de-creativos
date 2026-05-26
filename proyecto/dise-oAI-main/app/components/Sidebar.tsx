@@ -78,7 +78,7 @@ export default function Sidebar({ active, onLogout, userEmail }: SidebarProps) {
             href="/one-shoot"
             icon="M13 10V3L4 14h7v7l9-11h-7z"
             active={active === '/one-shoot'}
-            badge="Nuevo"
+            badge="BETA"
           >
             AD FORMULA
           </NavItem>
