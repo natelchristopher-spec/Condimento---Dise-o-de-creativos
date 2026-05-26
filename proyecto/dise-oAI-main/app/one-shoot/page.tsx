@@ -283,7 +283,7 @@ function getGuidanceMessage(
   // Tight budget = ≤$20/day → kill at 2x CPA. More budget → allow 3x.
   const killMultiplier = (!isNaN(dailyBudget) && dailyBudget > 0 && dailyBudget <= 20) ? 2 : 3;
   // New account = < 40 total purchases → needs more time even with high CPA
-  const isNewAccount = accountType === 'new' || totalAccountPurchases < 40;
+  const isNewAccount = accountType === 'new' || (accountType === 'established' && totalAccountPurchases > 0 && totalAccountPurchases < 40);
 
   if (!isNaN(spendPerAngle) && !isNaN(cpaNum) && cpaNum > 0 && purchases === 0 && spendPerAngle >= cpaNum * killMultiplier) {
     return {
@@ -362,7 +362,7 @@ function getAngleRec(
 ): AngleRec | null {
   if (!hasData) return null;
   const dayThreshold = accountType === 'new' ? 15 : 7;
-  const isNewAccount = accountType === 'new' || totalAccountPurchases < 40;
+  const isNewAccount = accountType === 'new' || (accountType === 'established' && totalAccountPurchases > 0 && totalAccountPurchases < 40);
   const killMultiplier = (!isNaN(dailyBudget) && dailyBudget > 0 && dailyBudget <= 20) ? 2 : 3;
   const burnPct = (targetCpa > 0 && spend > 0) ? Math.round((spend / targetCpa) * 100) : undefined;
 
@@ -382,8 +382,8 @@ function getAngleRec(
     burnPct,
   };
 
-  // Red: CPA too high — only kill fast if established account
-  if (targetCpa > 0 && purchases > 0 && spend / purchases > targetCpa * killMultiplier && !isNewAccount) return {
+  // Red: CPA too high — hard cap at 3x even for new accounts
+  if (targetCpa > 0 && purchases > 0 && spend / purchases > targetCpa * 3) return {
     type: 'off', light: 'red',
     label: `Costo por venta muy alto ($${(spend / purchases).toFixed(0)}). No es rentable — apagalo.`,
     color: 'bg-red-50 text-red-700 border-red-200',
@@ -407,9 +407,9 @@ function getAngleRec(
   };
 
   // Yellow: new account with high CPA but has purchases → needs time
-  if (isNewAccount && purchases > 0 && targetCpa > 0 && spend / purchases > targetCpa) return {
+  if (isNewAccount && purchases > 0 && targetCpa > 0 && spend / purchases > targetCpa && spend / purchases <= targetCpa * 3) return {
     type: 'wait', light: 'yellow',
-    label: `Cuenta en aprendizaje. Dale más tiempo antes de apagar.`,
+    label: `Cuenta en aprendizaje — CPA alto pero dentro del rango. Dale más tiempo.`,
     color: 'bg-amber-50 text-amber-700 border-amber-200',
     burnPct,
   };
