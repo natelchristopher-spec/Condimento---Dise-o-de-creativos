@@ -469,10 +469,14 @@ export default function OneShootPage() {
       if (!session) return;
       setUserEmail(session.user.email || '');
       setUserId(session.user.id);
-      fetch('/api/profile').then(r => r.json()).then(data => {
+      fetch('/api/profile').then(async r => {
+        if (!r.ok) { setHasApiKey(false); return; }
+        const data = await r.json();
         setHasApiKey(!!data.openai_api_key);
       }).catch(() => setHasApiKey(false));
-      fetch('/api/brand-kits').then(r => r.json()).then(kit => {
+      fetch('/api/brand-kits').then(async r => {
+        if (!r.ok) { setBrandKitLoaded(true); return; }
+        const kit = await r.json();
         if (kit && !kit.error) setBrandKit(kit as BrandKit);
       }).catch(console.error).finally(() => setBrandKitLoaded(true));
     };
@@ -534,7 +538,7 @@ export default function OneShootPage() {
 
   const handleReferenceFile = async (file: File) => {
     const b64 = await readAsImage(file);
-    if (b64) setReferenceImages(prev => [...prev.slice(0, 2), b64]);
+    if (b64) setReferenceImages(prev => [...prev, b64].slice(0, 2));
   };
 
   const scrapeProduct = async () => {
@@ -780,7 +784,7 @@ export default function OneShootPage() {
   // ── P2 Generation ─────────────────────────────────────────────────────────
   const generateP2 = async () => {
     if (winnerKeys.length === 0) return;
-    if (!brandKit) return;
+    if (!brandKit) { setP2Error('Configurá tu marca en "Mi marca" antes de continuar.'); return; }
 
     const winners = p1Angles.filter(a => winnerKeys.includes(a.key));
     const totalCreatives = winners.length * 3;

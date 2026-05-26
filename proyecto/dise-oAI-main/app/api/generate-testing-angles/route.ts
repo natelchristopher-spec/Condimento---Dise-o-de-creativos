@@ -384,7 +384,7 @@ Respondé SOLO con JSON:
                 compositionSection,
                 `HEADLINE (mostrá este texto exacto, grande y en negrita): "${angle.hook}"`,
                 `ÉNFASIS DEL MENSAJE: ${angle.emphasis}.`,
-                `Marca: ${brandKit.name}. Colores de marca: ${brandKit.primary1}, ${brandKit.primary2}, ${brandKit.primary3}. Tipografía: ${brandKit.typography || 'bold sans-serif'}.`,
+                `Marca: ${brandKit.name}. Colores de marca (SOLO para fondos, textos y elementos gráficos — NUNCA aplicar al producto): ${brandKit.primary1}, ${brandKit.primary2}, ${brandKit.primary3}. Tipografía: ${brandKit.typography || 'bold sans-serif'}.`,
                 `Contexto de marca: ${brandKitContext}`,
                 'Portrait 1024x1536. Todo el texto en español. Calidad agencia profesional.',
                 'ANTI-ALUCINACIÓN: NO inventés precios, descuentos, métricas, teléfonos, URLs ni estadísticas que no estén en el brief.',
