@@ -1499,41 +1499,41 @@ export default function OneShootPage() {
               )}
             </div>
 
-            {/* Angle chips — product (blue) and category (orange) */}
+            {/* Progressive image grid — skeleton until each image arrives */}
             {p1Angles.length > 0 && (
-              <div className="mt-4 space-y-3">
-                {productAngles.length > 0 && (
-                  <div>
-                    <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Producto</p>
-                    <div className="flex flex-wrap gap-2 justify-center">
-                      {productAngles.map(a => (
-                        <span key={a.key} className={`text-xs px-2.5 py-1 rounded-full border font-medium ${
-                          p1Images.some(i => i.angleKey === a.key)
-                            ? 'bg-blue-100 border-blue-300 text-blue-700'
-                            : 'bg-gray-100 border-gray-200 text-gray-500'
-                        }`}>
-                          {a.name}
-                        </span>
-                      ))}
+              <div className="mt-6 grid grid-cols-2 gap-3 w-full max-w-sm mx-auto">
+                {p1Angles.map(a => {
+                  const img = p1Images.find(i => i.angleKey === a.key);
+                  const isProduct = a.level === 'product';
+                  return (
+                    <div key={a.key} className="relative rounded-xl overflow-hidden aspect-[2/3] bg-gray-100 shadow-sm">
+                      {img ? (
+                        <>
+                          <img
+                            src={`data:image/png;base64,${img.base64}`}
+                            alt={a.name}
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent px-2 py-1.5">
+                            <p className="text-white text-[10px] font-semibold leading-tight truncate">{a.name}</p>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-full h-full animate-pulse bg-gradient-to-br from-gray-200 to-gray-300" />
+                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5">
+                            <svg className="w-5 h-5 text-gray-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                            </svg>
+                            <p className="text-[10px] text-gray-400 font-medium px-2 text-center leading-tight">{a.name}</p>
+                          </div>
+                          <div className={`absolute top-1.5 right-1.5 w-2 h-2 rounded-full ${isProduct ? 'bg-blue-400' : 'bg-orange-400'}`} />
+                        </>
+                      )}
                     </div>
-                  </div>
-                )}
-                {categoryAngles.length > 0 && (
-                  <div>
-                    <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Categoría</p>
-                    <div className="flex flex-wrap gap-2 justify-center">
-                      {categoryAngles.map(a => (
-                        <span key={a.key} className={`text-xs px-2.5 py-1 rounded-full border font-medium ${
-                          p1Images.some(i => i.angleKey === a.key)
-                            ? 'bg-orange-100 border-orange-300 text-orange-700'
-                            : 'bg-gray-100 border-gray-200 text-gray-500'
-                        }`}>
-                          {a.name}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                  );
+                })}
               </div>
             )}
           </div>
