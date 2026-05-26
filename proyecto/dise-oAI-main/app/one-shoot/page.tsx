@@ -1674,7 +1674,7 @@ export default function OneShootPage() {
                 <button
                   onClick={generateP1Adaptations}
                   disabled={p1AdaptFormats.length === 0 || p1Adapting}
-                  className="text-sm font-semibold px-4 py-2 rounded-xl bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  className="text-sm font-semibold px-4 py-2 rounded-xl bg-purple-600 text-white hover:bg-purple-700 disabled:bg-purple-200 disabled:text-purple-400 disabled:cursor-not-allowed transition-colors"
                 >
                   {p1Adapting ? 'Generando adaptaciones...' : 'Generar adaptaciones'}
                 </button>

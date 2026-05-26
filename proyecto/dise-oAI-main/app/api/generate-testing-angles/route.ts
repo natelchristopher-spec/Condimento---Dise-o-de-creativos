@@ -31,6 +31,7 @@ function isRefusal(text: string): boolean {
 export interface MessageAngle {
   key: string;
   name: string;
+  angle?: string;
   hook: string;
   emphasis: string;
   level?: 'product' | 'category';
@@ -190,6 +191,10 @@ export async function POST(req: NextRequest) {
   // Detect health/wellness product (text-based only — no vision needed)
   const isHealthProduct = HEALTH_TERMS.test(brief + ' ' + (brandKit.clientRequest || '') + ' ' + (brandKit.styleDescription || ''));
 
+  // Detect discount/offer in brief
+  const DISCOUNT_TERMS = /(\d+\s*%\s*(off|desc(uento)?|de\s+descuento)|2x1|3x2|cuotas?\s+sin\s+inter[eé]s|envío\s+(gratis|gratuito|libre)|free\s+shipping|promo(ción)?|oferta|liquidaci[oó]n|precio\s+especial|hasta\s+\d+%|bundle|combo|\$\s*\d|\d+\s*pesos?\s+de\s+desc)/i;
+  const hasDiscount = DISCOUNT_TERMS.test(brief + ' ' + (brandKit.clientRequest || ''));
+
   // Step 1: describe the product
   let productDescription = brief;
   if (productDataUrl && productDataUrl.length > 100) {
@@ -285,6 +290,12 @@ Generá EXACTAMENTE:
 
 Cada ángulo debe apuntar a una tensión GENUINAMENTE DISTINTA — no el mismo argumento redactado diferente.
 PROHIBIDO inventar precios, métricas, descuentos o resultados que no estén en el brief.
+${hasDiscount ? `
+OFERTA / DESCUENTO DETECTADO EN EL BRIEF:
+El brief menciona una oferta concreta. Si esa oferta resuelve una tensión real (ej: "quería comprarlo pero el precio frenaba la decisión"), dedicá al menos 1 ángulo de producto a esa tensión de precio/valor. El descuento no es el ángulo en sí — es el resolutor de la tensión. La persona ya quería el producto, el precio era la barrera, y la oferta la derriba.
+❌ NO: "Ahora con 20% off" (descripción de oferta, no ángulo)
+✅ SÍ: "Personas que posponían la compra porque les parecía caro, esperando el momento justo — ese momento es ahora"
+Si la oferta no encaja naturalmente con ninguna tensión real, no la fuerces — priorizá los ángulos más sólidos.` : ''}
 ${isHealthProduct ? `
 RESTRICCIÓN LEGAL — NICHO SALUD Y BIENESTAR:
 Este es un producto de salud/nutrición. Los ángulos DEBEN respetar estas reglas sin excepción:
@@ -324,6 +335,7 @@ Respondé SOLO con JSON:
             .map((a) => ({
               key: `angle-${idx++}`,
               name: a.name || `Ángulo Producto ${idx}`,
+              angle: a.angle || '',
               hook: a.hook || '',
               emphasis: a.emphasis || '',
               level: 'product' as const,
@@ -333,6 +345,7 @@ Respondé SOLO con JSON:
             .map((a) => ({
               key: `angle-${idx++}`,
               name: a.name || `Ángulo Categoría ${idx}`,
+              angle: a.angle || '',
               hook: a.hook || '',
               emphasis: a.emphasis || '',
               level: 'category' as const,
@@ -437,6 +450,7 @@ Respondé SOLO con JSON:
                 personSection,
                 compositionSection,
                 `HEADLINE (mostrá este texto exacto, grande y en negrita): "${angle.hook}"`,
+                angle.angle ? `ESTRATEGIA DEL ÁNGULO (contexto para el visual): ${angle.angle}` : '',
                 `ÉNFASIS DEL MENSAJE: ${angle.emphasis}.`,
                 `Marca: ${brandKit.name}. Colores de marca (SOLO para fondos, textos y elementos gráficos — NUNCA aplicar al producto): ${brandKit.primary1}, ${brandKit.primary2}, ${brandKit.primary3}. Tipografía: ${brandKit.typography || 'bold sans-serif'}.`,
                 `Contexto de marca: ${brandKitContext}`,
@@ -466,6 +480,7 @@ Respondé SOLO con JSON:
                 productConstraint,
                 compositionInstruction,
                 `HEADLINE (display this exact text, large and bold): "${angle.hook}"`,
+                angle.angle ? `ANGLE STRATEGY (context for the visual): ${angle.angle}` : '',
                 `MESSAGE EMPHASIS: ${angle.emphasis}.`,
                 `Brand palette FOR TEXT AND BACKGROUNDS ONLY — do not apply to product: ${brandKit.name} — ${brandKit.primary1}, ${brandKit.primary2}, ${brandKit.primary3}. Typography: ${brandKit.typography || 'bold sans-serif'}.`,
                 `Brand context: ${brandKitContext}`,
