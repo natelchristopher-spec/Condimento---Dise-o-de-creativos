@@ -75,6 +75,17 @@ PANTALONES Y PRENDAS INFERIORES — DOBLE ATENCIÓN:
 - Telas lisas (twill, gabardina, cotton chino): superficie uniforme y suave, sin texturas artificiales ni arrugas exageradas.
 - Replicá largo, ancho de pierna y tiro tal cual se ven en la referencia.
 
+ESTAMPADO / PRINT — POSICIÓN Y TAMAÑO CRÍTICOS:
+- Si la prenda tiene un gráfico, logo, ilustración o print, replicá su posición exacta (centrado en el pecho, esquina inferior, etc.), el tamaño relativo que ocupa respecto al área total de la prenda, y la distancia a los bordes.
+- NO reubiques ni redimensiones el estampado. Si está en el centro del pecho, va en el centro del pecho — no arriba, no abajo, no más grande ni más chico.
+- Para prints all-over (repetitivos), replicá la escala del módulo exactamente como se ve en la referencia.
+
+TERMINACIONES DE PRENDAS — REPLICAR EXACTAMENTE:
+- Replicá cómo terminan todos los bordes visibles: tipo de ruedo (simple, doble, raw, ribete), grosor del doblez, si queda suelto o ajustado.
+- Pantalones: si el tobillo termina suelto, con puño doblado, con elástico o ajustado al tobillo — replicar exactamente.
+- Remeras/vestidos: si el borde inferior es recto, curvo, con doblez visible o cortado al ras.
+- Buzos/hoodies: replicar el estilo de los puños (elástico ancho, fino, ribete) y el borde inferior.
+
 REGLAS de producto:
 - Mismo color, mismo estampado, misma silueta, mismo tejido que la referencia visual
 - Si hay múltiples prendas, aplicá TODAS
