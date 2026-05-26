@@ -33,15 +33,20 @@ export async function POST(req: NextRequest) {
   const ctx = await getUserContext();
   if (!ctx) return NextResponse.json({ error: 'Configurá tu API key de OpenAI en el perfil.' }, { status: 401 });
 
-  const { brandKit, title, hook, funnel }: {
+  const { brandKit, title, hook, funnel, productImages = [] }: {
     brandKit: BrandKit;
     title: string;
     hook: string;
     funnel: FunnelStage;
+    productImages?: string[];
   } = await req.json();
 
   const openai = new OpenAI({ apiKey: ctx.openaiApiKey });
   const brandKitContext = buildBrandKitContext(brandKit);
+  const hasProduct = productImages.length > 0;
+  const productDataUrl = hasProduct
+    ? (productImages[0].startsWith('data:') ? productImages[0] : `data:image/jpeg;base64,${productImages[0]}`)
+    : '';
 
   const antiHallucinationRule = 'PROHIBIDO INVENTAR — REGLA ABSOLUTA para todas las etapas: NO agregar ningún dato que no esté explícitamente en el brief o brand kit: teléfonos, URLs, redes sociales (@handles), QR codes, ratings ("4.8/5"), reseñas, número de clientes, certificaciones, claims de ingredientes o materiales, fechas límite, descuentos, mecánicas promocionales, premios o cualquier estadística. Solo datos del brief.';
 
@@ -54,7 +59,9 @@ export async function POST(req: NextRequest) {
   const prompt = `Sos un copywriter y director creativo para Instagram.
 
 Planificá un carrusel de EXACTAMENTE 3 slides para esta marca Y el copy del post que lo acompaña.
-
+${hasProduct ? `
+PRODUCTO ESPECÍFICO — PRIORITARIO: Se adjunta imagen del producto. TODO el copy de los slides (títulos, subtítulos, items) debe hablar de ESTE PRODUCTO ESPECÍFICO. La marca es el contexto de estilo; el producto es el eje central del carrusel.
+` : ''}
 MARCA:
 ${brandKitContext}
 
@@ -99,9 +106,16 @@ Respondé SOLO con JSON válido:
 }`;
 
   try {
+    const userContent: Parameters<typeof openai.chat.completions.create>[0]['messages'][0]['content'] = hasProduct && productDataUrl
+      ? [
+          { type: 'text', text: prompt },
+          { type: 'image_url', image_url: { url: productDataUrl, detail: 'low' as const } },
+        ]
+      : prompt;
+
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ role: 'user', content: userContent }],
       response_format: { type: 'json_object' },
       max_tokens: 1200,
     });
