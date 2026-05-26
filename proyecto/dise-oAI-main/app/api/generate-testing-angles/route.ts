@@ -242,30 +242,62 @@ export async function POST(req: NextRequest) {
           ? `\nÁNGULOS YA PROBADOS — NO REPETIR NI HACER VARIACIONES SIMILARES: ${excludeAngles.map(a => `"${a.name}" (hook: "${a.hook}")`).join(', ')}. Generá ángulos genuinamente distintos en enfoque y argumento.`
           : '';
 
-        const anglesPrompt = `Sos un estratega de publicidad directa para e-commerce.
-Analizá este producto y generá ángulos de mensaje para anuncios de respuesta directa, divididos en dos categorías.
+        const anglesPrompt = `Sos un estratega de publicidad directa de performance para e-commerce. Tu especialidad es identificar ángulos publicitarios reales — no beneficios genéricos ni características del producto.
 
 PRODUCTO: ${productDescription}
 BRIEF: ${brief || '(sin brief adicional)'}
 MARCA: ${brandKit.name}${brandKit.clientRequest ? ` — ${brandKit.clientRequest}` : ''}${excludeNotice}
 
-Necesito EXACTAMENTE:
-- ${resolvedProductCount} ÁNGULOS DE PRODUCTO: el argumento habla DEL PRODUCTO ESPECÍFICO (características, materiales, precio, diferenciador). El hook habla SOBRE EL PRODUCTO.
-- ${resolvedCategoryCount} ÁNGULOS DE CATEGORÍA: el argumento habla del contexto, necesidad, estilo de vida u ocasión. El hook habla del CONTEXTO o de QUIÉN lo usa, NO del producto en sí.
+---
 
-Cada ángulo debe:
-- Apuntar a una motivación, problema o segmento de audiencia DIFERENTE
-- Tener un hook que detiene el scroll (max 8 palabras, en español, directo y concreto)
-- Enfatizar una razón de compra distinta — NO repetir el mismo argumento con otra redacción
-- Ser honesto — PROHIBIDO inventar precios, métricas, descuentos o resultados que no estén en el brief
+QUÉ ES UN ÁNGULO PUBLICITARIO — leé esto antes de responder:
+
+Un ángulo NO es un beneficio ni una característica del producto.
+Un ángulo ES la hipótesis estratégica que define por qué un grupo ESPECÍFICO de personas debería querer este producto, desde una situación, problema, deseo o creencia particular.
+
+Un ángulo tiene tres partes:
+1. PERSONA: quién es exactamente (específico, no genérico — no "personas que van al gym" sino "personas que ya entrenan hace meses pero no ven cambios en su cuerpo")
+2. TENSIÓN: qué problema concreto, frustración, deseo o creencia tiene esa persona que la tiene en modo de búsqueda
+3. HIPÓTESIS: por qué este producto resuelve exactamente esa tensión — el puente entre la tensión y el producto
+
+Ejemplos de lo que NO es un ángulo:
+❌ "Fuerza y Recuperación" → es una característica
+❌ "Calidad Premium" → es un atributo genérico
+❌ "Para quienes cuidan su alimentación" → es demasiado amplio, no hay tensión
+
+Ejemplos de ángulos reales:
+✅ "Personas que entrenan consistentemente pero no ven cambios porque no están llegando a su proteína diaria — no por falta de disciplina sino por falta de tiempo para preparar comidas extras"
+✅ "Compradores que ya quemaron plata en camperas baratas que se mojaron a los tres meses de lluvia, y ahora quieren comprar bien una sola vez"
+✅ "Mujeres urbanas que necesitan una campera impermeable pero rechazan todas las que encuentran porque parecen de trekking y no combinan con su estilo del día a día"
+
+El hook es la expresión del ángulo — cómo abrís el anuncio para que esa persona específica sienta que le estás hablando a ella.
+
+---
+
+Generá EXACTAMENTE:
+- ${resolvedProductCount} ÁNGULOS DE PRODUCTO: la tensión gira en torno a algo específico de ESTE producto — su diferenciador, formulación, precio, comparación con alternativas, o una objeción/duda concreta que tiene el comprador sobre este producto en particular.
+- ${resolvedCategoryCount} ÁNGULOS DE CATEGORÍA: la tensión gira en torno al estilo de vida, contexto u ocasión de uso. El producto aparece como solución a algo más amplio que tiene esa persona en su vida. El hook habla de la situación de la persona, NO del producto.
+
+Cada ángulo debe apuntar a una tensión GENUINAMENTE DISTINTA — no el mismo argumento redactado diferente.
+PROHIBIDO inventar precios, métricas, descuentos o resultados que no estén en el brief.
 
 Respondé SOLO con JSON:
 {
   "product_angles": [
-    { "name": "nombre corto del ángulo (3-4 palabras)", "hook": "titular que detiene el scroll", "emphasis": "qué beneficio o razón de compra enfatiza en una oración" }
+    {
+      "name": "nombre estratégico del ángulo (3-4 palabras que capturen la tensión)",
+      "angle": "descripción de la hipótesis estratégica completa: persona específica + tensión concreta + por qué este producto la resuelve (2-3 oraciones)",
+      "hook": "cómo abrís el anuncio para que esa persona sienta que le hablás a ella (max 8 palabras, español, directo, que detenga el scroll)",
+      "emphasis": "qué aspecto de la tensión debe dominar el visual — qué tiene que SENTIR o VER la persona al ver la imagen"
+    }
   ],
   "category_angles": [
-    { "name": "nombre corto del ángulo (3-4 palabras)", "hook": "titular que detiene el scroll", "emphasis": "qué beneficio o razón de compra enfatiza en una oración" }
+    {
+      "name": "nombre estratégico del ángulo (3-4 palabras que capturen la tensión)",
+      "angle": "descripción de la hipótesis estratégica completa: persona específica + tensión de estilo de vida + por qué esta categoría de producto aparece como la solución (2-3 oraciones)",
+      "hook": "cómo abrís el anuncio para que esa persona sienta que le hablás a ella (max 8 palabras, español, directo, que detenga el scroll)",
+      "emphasis": "qué aspecto de la tensión debe dominar el visual — qué tiene que SENTIR o VER la persona al ver la imagen"
+    }
   ]
 }`;
 
