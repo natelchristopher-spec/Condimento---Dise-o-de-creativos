@@ -1994,7 +1994,7 @@ export default function OneShootPage() {
                     <span className="ml-1 group relative inline-block cursor-help">
                       <span className="text-gray-400 text-[11px] border border-gray-300 rounded-full px-1">?</span>
                       <span className="hidden group-hover:block absolute left-0 bottom-full mb-1.5 w-56 bg-gray-900 text-white text-[11px] rounded-lg p-2.5 z-10 leading-relaxed shadow-lg">
-                        Lo máximo que querés pagar por cada venta. Si tu producto vale $10.000 y tenés buen margen, podría ser $3.000–$4.000. Si no lo sabés, usá el 30–40% del precio de venta.
+                        Lo máximo que querés gastar en publicidad para conseguir una venta. Ej: si tu producto vale $10.000, poné $3.000 o $4.000.
                       </span>
                     </span>
                   </label>
