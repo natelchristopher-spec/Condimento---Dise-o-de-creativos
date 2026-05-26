@@ -452,6 +452,7 @@ export default function OneShootPage() {
   const [p1AdaptFormats, setP1AdaptFormats] = useState<string[]>([]);
   const [p1AdaptedImages, setP1AdaptedImages] = useState<{ format: string; label: string; angleKey: string; base64: string }[]>([]);
   const [p1Adapting, setP1Adapting] = useState(false);
+  const [p1AdaptProgress, setP1AdaptProgress] = useState<{ done: number; total: number } | null>(null);
 
   // P3 format adaptation
   const [p3AdaptFormats, setP3AdaptFormats] = useState<string[]>([]);
@@ -1027,12 +1028,15 @@ export default function OneShootPage() {
   const generateP1Adaptations = async () => {
     if (p1AdaptFormats.length === 0 || p1Images.length === 0) return;
     setP1Adapting(true);
+    setP1AdaptProgress({ done: 0, total: p1Images.length });
     const FORMAT_LABELS: Record<string, string> = {
       story: 'Story / Reels (9:16)', square: 'Cuadrado 1:1',
     };
     const allResults: { format: string; label: string; angleKey: string; base64: string }[] = [];
     try {
-      for (const img of p1Images) {
+      for (let i = 0; i < p1Images.length; i++) {
+        const img = p1Images[i];
+        setP1AdaptProgress({ done: i, total: p1Images.length });
         const results = await Promise.all(
           p1AdaptFormats.map(async format => {
             for (let attempt = 0; attempt < 2; attempt++) {
@@ -1055,6 +1059,7 @@ export default function OneShootPage() {
       setP1AdaptedImages(allResults);
     } finally {
       setP1Adapting(false);
+      setP1AdaptProgress(null);
     }
   };
 
@@ -1674,9 +1679,23 @@ export default function OneShootPage() {
                 <button
                   onClick={generateP1Adaptations}
                   disabled={p1AdaptFormats.length === 0 || p1Adapting}
-                  className="text-sm font-semibold px-4 py-2 rounded-xl bg-purple-600 text-white hover:bg-purple-700 disabled:bg-purple-200 disabled:text-purple-400 disabled:cursor-not-allowed transition-colors"
+                  className={`text-sm font-semibold px-4 py-2 rounded-xl transition-colors ${
+                    p1Adapting
+                      ? 'bg-purple-600 text-white cursor-wait'
+                      : p1AdaptFormats.length === 0
+                        ? 'bg-purple-200 text-purple-400 cursor-not-allowed'
+                        : 'bg-purple-600 text-white hover:bg-purple-700'
+                  }`}
                 >
-                  {p1Adapting ? 'Generando adaptaciones...' : 'Generar adaptaciones'}
+                  {p1Adapting ? (
+                    <span className="flex items-center gap-2">
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                      </svg>
+                      {p1AdaptProgress ? `Procesando ángulo ${p1AdaptProgress.done + 1} de ${p1AdaptProgress.total}...` : 'Generando adaptaciones...'}
+                    </span>
+                  ) : 'Generar adaptaciones'}
                 </button>
                 {p1AdaptedImages.length > 0 && (
                   <div className="mt-5">
