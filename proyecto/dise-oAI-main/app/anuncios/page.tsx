@@ -288,6 +288,7 @@ export default function Home() {
     setError('');
     try {
       const concept = selectedConcepts[conceptIndex];
+      if (!concept) return;
       const res = await fetch('/api/adjust-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -341,8 +342,8 @@ export default function Home() {
     if (selectedConcepts.length === 0 || !brandKit) return;
     const n = selectedConcepts.length;
     setRefineInputs(Array(n).fill(''));
-    setRefineHistories(Array(n).fill([]));
-    setRefineImageHistories(Array(n).fill([]));
+    setRefineHistories(Array.from({ length: n }, () => []));
+    setRefineImageHistories(Array.from({ length: n }, () => []));
     setRefiningIndex(null);
     setError('');
 
@@ -371,6 +372,7 @@ export default function Home() {
               personDescription,
             }),
           });
+          if (!res.ok) throw new Error(await res.text());
           const { base64, error: apiError } = await res.json();
           if (apiError) setError(`Concepto ${i + 1}: ${apiError}`);
           if (base64) {
