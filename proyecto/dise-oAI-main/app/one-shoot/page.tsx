@@ -841,7 +841,7 @@ export default function OneShootPage() {
           winningAngles: winners,
           brandKit,
           productImageBase64: prodImgsCompressed[0] || '',
-          productImages: prodImgsCompressed,
+          productImages: prodImgsCompressed.slice(0, 2),
           referenceImages: refImagesCompressed,
         }),
       });
