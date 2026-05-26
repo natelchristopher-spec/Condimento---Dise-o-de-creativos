@@ -372,9 +372,11 @@ Respondé SOLO con JSON:
             } else {
               const productConstraint = hasProductPhoto
                 ? [
-                    '⚠️ PRODUCT COLOR LOCK — TOP PRIORITY: The reference photo is the absolute source of truth for the product. Reproduce the exact color, shape, packaging, and proportions pixel-perfect from the photo. Do NOT interpret, stylize, or adjust anything.',
+                    '⚠️ ABSOLUTE RULE — THE PRODUCT IN THE PHOTO IS THE EXACT PRODUCT BEING ADVERTISED. DO NOT recreate, reimagine, rebrand, or relabel it. Show the exact product from the reference photo as-is — its label text, brand name on packaging, colors, shape, and design are FIXED AND IMMUTABLE.',
+                    'DO NOT add, modify, or remove any text from the product label or packaging. DO NOT write the advertiser brand name on the product. The product label belongs to the manufacturer shown in the photo — leave it exactly as it appears.',
+                    'PRODUCT COLOR LOCK — TOP PRIORITY: The reference photo is the absolute source of truth. Reproduce the exact color, shape, packaging, and proportions pixel-perfect. Do NOT interpret, stylize, or adjust anything.',
                     productDescription ? `Technical description for backup (only use to reinforce what you see in the photo): ${productDescription}` : '',
-                    'CRITICAL: The brand palette listed below is ONLY for backgrounds, overlays, and text — NEVER apply brand colors to the product itself.',
+                    'CRITICAL: The brand palette listed below is ONLY for backgrounds, overlays, and ad copy text — NEVER apply brand colors to the product itself.',
                   ].filter(Boolean).join(' ')
                 : `PRODUCT: ${productDescription}.`;
 
@@ -442,7 +444,7 @@ Respondé SOLO con JSON:
               try {
                 const fallback = await openai.images.generate({
                   model: 'gpt-image-2',
-                  prompt: `Direct response ad for ${brandKit.name}. ${productDescription.slice(0, 200)}. Headline: "${angle.hook}". Colors: ${brandKit.primary1}. Portrait. Spanish text only.`,
+                  prompt: `Direct response ad. Product shown exactly as in reference photo — do NOT rebrand or recolor it. Background and text use brand colors: ${brandKit.primary1}. ${productDescription.slice(0, 150)}. Headline: "${angle.hook}". Portrait. Spanish text only.`,
                   size: '1024x1536',
                   quality: 'low',
                   n: 1,
