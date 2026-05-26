@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import OpenAI from 'openai';
+import OpenAI, { toFile } from 'openai';
 import { BrandKit } from '@/app/types';
 import { buildBrandKitContext } from '@/app/lib/brandKitContext';
 import { getUserContext } from '@/app/lib/get-user-context';
@@ -16,6 +16,33 @@ function getOpenAIErrorMessage(e: unknown): string {
   if (msg.includes('insufficient_quota'))
     return 'Sin crédito en tu cuenta de OpenAI. Recargá saldo en platform.openai.com.';
   return 'Error al conectar con OpenAI. Intentá de nuevo.';
+}
+
+async function editProductForCreative(
+  openai: OpenAI,
+  productDataUrls: string[],
+  editPrompt: string,
+): Promise<string> {
+  try {
+    const imageFiles = await Promise.all(
+      productDataUrls.map((url, i) => {
+        const base64Data = url.includes(',') ? url.split(',')[1] : url;
+        return toFile(Buffer.from(base64Data, 'base64'), `product-${i}.jpg`, { type: 'image/jpeg' });
+      })
+    );
+    const response = await openai.images.edit({
+      model: 'gpt-image-2',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      image: imageFiles.length === 1 ? imageFiles[0] : imageFiles as any,
+      prompt: editPrompt,
+      size: '1024x1536',
+      quality: 'high',
+    });
+    return response.data?.[0]?.b64_json || '';
+  } catch (err) {
+    console.error('editProductForCreative failed:', err);
+    return '';
+  }
 }
 
 const P_FORMATS = ['Aspiracional', 'Fundador', 'Editorial'];
@@ -145,7 +172,7 @@ Respondé SOLO con JSON válido:
 
             const runPlan = async () => {
               const res = await openai.chat.completions.create({
-                model: 'gpt-4o-mini',
+                model: 'gpt-4o',
                 messages: [{ role: 'user', content: planPrompt }],
                 response_format: { type: 'json_object' },
                 max_tokens: 800,
@@ -154,17 +181,16 @@ Respondé SOLO con JSON válido:
               return JSON.parse(res.choices[0].message.content || '{}') as PECPlan;
             };
 
-            try {
-              plan = await runPlan();
-              // Retry once if plan is missing required keys
-              if (!plan?.p || !plan?.e || !plan?.c) {
-                console.warn(`pec-creatives plan incomplete for "${angle.name}" — retrying`);
+            for (let planAttempt = 1; planAttempt <= 3; planAttempt++) {
+              try {
                 plan = await runPlan();
+                if (plan?.p && plan?.e && plan?.c) break;
+                console.warn(`pec-creatives plan incomplete for "${angle.name}" — attempt ${planAttempt}`);
+              } catch (err) {
+                console.error(`pec-creatives plan attempt ${planAttempt} failed for "${angle.name}":`, err);
+                if (planAttempt === 3) { send(controller, { angleError: angle.key }); return; }
+                await new Promise(r => setTimeout(r, planAttempt * 1000));
               }
-            } catch (err) {
-              console.error(`pec-creatives plan failed for angle "${angle.name}":`, err);
-              send(controller, { angleError: angle.key });
-              return;
             }
 
             if (!plan?.p || !plan?.e || !plan?.c) {
@@ -190,7 +216,7 @@ Respondé SOLO con JSON válido:
 
                 const productConstraint = productDataUrl
                   ? [
-                      'Las imágenes adjuntas son la FUENTE PRIMARIA DE VERDAD VISUAL — tomá color, forma, textura y proporciones directamente de los píxeles, no los interpretes.',
+                      'Las imágenes adjuntas son la FUENTE PRIMARIA DE VERDAD VISUAL — tomá color, forma, textura y proporciones directamente de los píxeles, no los interpretes, no los idealices.',
                       productDescription ? `Descripción técnica de respaldo: ${productDescription}` : '',
                       'REGLAS DE COLOR — CRÍTICO: color idéntico al de la foto de referencia. NO aclarar, NO oscurecer, NO desaturar, NO cambiar temperatura.',
                       'Para neutros cálidos (beige, arena, tostado, camel, crudo, khaki): NUNCA renderices como blanco ni gris claro.',
@@ -216,8 +242,9 @@ Respondé SOLO con JSON válido:
                   productDataUrl ? 'GARMENT COLOR FINAL CHECK — CRITICAL: the garment color in the generated image must exactly match the reference photo attached. Same hue, same saturation, same temperature. For warm neutrals (tostado, tan, camel, sand, beige): NEVER render as white or light gray — preserve the warm undertone from the reference.' : '',
                 ].filter(Boolean).join(' ');
 
+                const hasProductPhoto = productDataUrls.length > 0;
                 const inputImages = [
-                  ...productDataUrls.slice(0, 3),
+                  ...productDataUrls.slice(0, 2),
                   ...(isFashionProduct && referenceImages.length > 0
                     ? referenceImages.slice(0, 2).map(img => img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`)
                     : []),
@@ -230,45 +257,59 @@ Respondé SOLO con JSON válido:
 
                 let base64 = '';
 
-                for (let attempt = 1; attempt <= 2; attempt++) {
-                  try {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const response = await (openai.responses.create as any)({
-                      model: 'gpt-image-2',
-                      input: [{ role: 'user', content: inputContent }],
-                      tools: [{
-                        type: 'image_generation',
+                // Non-fashion with product photo: images.edit starting FROM the product photo
+                if (!isFashionProduct && hasProductPhoto) {
+                  base64 = await editProductForCreative(openai, productDataUrls.slice(0, 2), imagePrompt);
+                }
+
+                // Fashion or no product photo (or images.edit failed): Responses API
+                if (!base64) {
+                  for (let attempt = 1; attempt <= 3; attempt++) {
+                    try {
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      const response = await (openai.responses.create as any)({
                         model: 'gpt-image-2',
-                        quality: 'medium',
-                        size: '1024x1536',
-                      }],
-                    });
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    for (const block of (response.output || [])) {
-                      if (block.type === 'image_generation_call' && block.result) {
-                        base64 = block.result;
-                        break;
+                        input: [{ role: 'user', content: inputContent }],
+                        tools: [{
+                          type: 'image_generation',
+                          model: 'gpt-image-2',
+                          quality: 'high',
+                          size: '1024x1536',
+                        }],
+                      });
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      for (const block of (response.output || [])) {
+                        if (block.type === 'image_generation_call' && block.result) {
+                          base64 = block.result;
+                          break;
+                        }
                       }
+                      if (base64) break;
+                    } catch (err) {
+                      console.error(`pec-creatives "${angle.name}" stage ${stageCode} attempt ${attempt} failed:`, err);
+                      if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 1500));
                     }
-                    if (base64) break;
-                  } catch (err) {
-                    console.error(`pec-creatives "${angle.name}" stage ${stageCode} attempt ${attempt} failed:`, err);
-                    if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
                   }
                 }
 
                 if (!base64) {
-                  try {
-                    const fallback = await openai.images.generate({
-                      model: 'gpt-image-2',
-                      prompt: `${label} ad for ${brandKit.name}. ${productDescription.slice(0, 200)}. Format: ${stagePlan.format}. Headline: "${stagePlan.headline}". Colors: ${brandKit.primary1}. Portrait. Spanish text only.`,
-                      size: '1024x1536',
-                      quality: 'low',
-                      n: 1,
-                    });
-                    base64 = fallback.data?.[0]?.b64_json || '';
-                  } catch (err) {
-                    console.error(`pec-creatives "${angle.name}" stage ${stageCode} fallback failed:`, err);
+                  // Last resort: images.edit high if product photo available, else generate medium
+                  if (hasProductPhoto) {
+                    base64 = await editProductForCreative(openai, productDataUrls.slice(0, 2), imagePrompt);
+                  }
+                  if (!base64) {
+                    try {
+                      const fallback = await openai.images.generate({
+                        model: 'gpt-image-2',
+                        prompt: `${label} ad for ${brandKit.name}. Product shown exactly as in reference photo — do NOT rebrand or recolor it. ${productDescription.slice(0, 200)}. Format: ${stagePlan.format}. Headline: "${stagePlan.headline}". Colors (backgrounds/text only): ${brandKit.primary1}. Portrait. Spanish text only.`,
+                        size: '1024x1536',
+                        quality: 'medium',
+                        n: 1,
+                      });
+                      base64 = fallback.data?.[0]?.b64_json || '';
+                    } catch (err) {
+                      console.error(`pec-creatives "${angle.name}" stage ${stageCode} fallback failed:`, err);
+                    }
                   }
                 }
 
