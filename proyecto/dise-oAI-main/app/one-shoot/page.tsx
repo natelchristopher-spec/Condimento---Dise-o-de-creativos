@@ -267,7 +267,7 @@ function getGuidanceMessage(
   days: number,
   purchases: number,
   accountType: 'new' | 'established',
-  totalSpend: string,
+  totalSpend: number,
   targetCpa: string,
   angleCount: number,
 ): GuidanceResult | null {
@@ -275,7 +275,7 @@ function getGuidanceMessage(
 
   const dayThreshold = accountType === 'new' ? 15 : 7;
   const daysOk = days >= dayThreshold;
-  const spendNum = parseFloat(totalSpend.replace(/\./g, '').replace(',', '.'));
+  const spendNum = totalSpend;
   const cpaNum = parseFloat(targetCpa.replace(/\./g, '').replace(',', '.'));
   const spendPerAngle = (!isNaN(spendNum) && angleCount > 0) ? spendNum / angleCount : NaN;
 
@@ -1775,7 +1775,7 @@ export default function OneShootPage() {
           isNaN(daysNum) ? 0 : daysNum,
           totalPurchasesAgg,
           accountType,
-          totalSpendAgg.toString(),
+          totalSpendAgg,
           targetCpa,
           p1Angles.length,
         )
