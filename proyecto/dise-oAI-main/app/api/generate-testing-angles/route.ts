@@ -143,12 +143,12 @@ export async function POST(req: NextRequest) {
   let resolvedProductCount: number;
   let resolvedCategoryCount: number;
   if (productCount !== undefined && categoryCount !== undefined) {
-    resolvedProductCount = Math.max(1, Math.min(productCount, 4));
-    resolvedCategoryCount = Math.max(1, Math.min(categoryCount, 4));
+    resolvedProductCount = Math.max(0, Math.min(productCount, 4));
+    resolvedCategoryCount = Math.max(0, Math.min(categoryCount, 4));
   } else {
     const half = Math.max(1, Math.floor(count / 2));
     resolvedProductCount = half;
-    resolvedCategoryCount = Math.max(1, count - half);
+    resolvedCategoryCount = Math.max(0, count - half);
   }
   const targetCount = resolvedProductCount + resolvedCategoryCount;
 
@@ -285,8 +285,10 @@ El hook es la expresión del ángulo — cómo abrís el anuncio para que esa pe
 ---
 
 Generá EXACTAMENTE:
-- ${resolvedProductCount} ÁNGULOS DE PRODUCTO: la tensión gira en torno a algo específico de ESTE producto — su diferenciador, formulación, precio, comparación con alternativas, o una objeción/duda concreta que tiene el comprador sobre este producto en particular.
-- ${resolvedCategoryCount} ÁNGULOS DE CATEGORÍA: la tensión gira en torno al estilo de vida, contexto u ocasión de uso. El producto aparece como solución a algo más amplio que tiene esa persona en su vida. El hook habla de la situación de la persona, NO del producto.
+${resolvedProductCount > 0 ? `- ${resolvedProductCount} ÁNGULOS DE PRODUCTO: la tensión gira en torno a algo específico de ESTE producto — su diferenciador, formulación, precio, comparación con alternativas, o una objeción/duda concreta que tiene el comprador sobre este producto en particular.` : ''}
+${resolvedCategoryCount > 0 ? `- ${resolvedCategoryCount} ÁNGULOS DE CATEGORÍA: la tensión gira en torno al estilo de vida, contexto u ocasión de uso. El producto aparece como solución a algo más amplio que tiene esa persona en su vida. El hook habla de la situación de la persona, NO del producto.` : ''}
+${resolvedProductCount === 0 ? 'Generá SOLO ángulos de categoría. El array "product_angles" debe estar vacío [].' : ''}
+${resolvedCategoryCount === 0 ? 'Generá SOLO ángulos de producto. El array "category_angles" debe estar vacío [].' : ''}
 
 Cada ángulo debe apuntar a una tensión GENUINAMENTE DISTINTA — no el mismo argumento redactado diferente.
 PROHIBIDO inventar precios, métricas, descuentos o resultados que no estén en el brief.
