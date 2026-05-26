@@ -1553,16 +1553,19 @@ export default function OneShootPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
-            <h2 className="text-lg font-bold text-gray-900 mb-1">Investigando tu producto</h2>
+            <h2 className="text-lg font-bold text-gray-900 mb-1">
+              {p1Angles.length === 0 ? 'Investigando tu producto...' : 'Creando tus anuncios...'}
+            </h2>
             <p className="text-sm text-gray-500 mb-1">
               {p1Angles.length === 0
-                ? 'Analizando producto y generando ángulos de mensaje...'
+                ? 'Analizando el producto y definiendo los mejores ángulos de mensaje'
                 : `Generando imágenes · ${p1Done} de ${p1Total}`}
             </p>
             <p className="text-xs text-gray-400 mb-3">{fmtElapsed(p1Elapsed)}</p>
-            <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 mb-4 text-left">
-              <p className="text-xs text-blue-700 leading-relaxed">
-                <span className="font-semibold">¿Qué estamos haciendo?</span> Estamos probando múltiples ángulos de mensaje para tu producto — distintos enfoques de comunicación para descubrir cuál conecta mejor con tu audiencia. Cada imagen representa una hipótesis diferente que vas a poder testear en pauta.
+            <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 mb-4 text-left">
+              <p className="text-sm font-semibold text-amber-800 mb-1">☕ Esto tarda entre 2 y 4 minutos — buen momento para un café.</p>
+              <p className="text-xs text-amber-700 leading-relaxed">
+                No es lento por casualidad: primero analizamos tu producto en detalle, luego construimos estrategias de mensaje distintas, y después generamos cada imagen con IA de alta calidad. Todo eso junto lleva su tiempo, pero vale la pena.
               </p>
             </div>
 
