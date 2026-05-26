@@ -104,52 +104,63 @@ export async function POST(req: NextRequest) {
             let plan: PECPlan | null = null;
             const planPrompt = `Sos director creativo de performance marketing para e-commerce.
 
-ÁNGULO GANADOR (el mensaje que conectó con la audiencia):
+ÁNGULO GANADOR — este es el mensaje que conectó con la audiencia en el test:
 - Nombre: "${angle.name}"
 - Hook: "${angle.hook}"
-- Énfasis: "${angle.emphasis}"
+- Énfasis del mensaje: "${angle.emphasis}"
 
 Producto: ${productDescription || brief}
 Marca: ${brandKit.name}${brandKit.clientRequest ? ` — ${brandKit.clientRequest}` : ''}
 
-Tu trabajo: escalar este ángulo en las 3 etapas PEC con DIVERSIDAD CREATIVA REAL.
-El hook es el eje del ángulo — lo que VARÍA por etapa es el CONCEPTO VISUAL y el FORMATO DE EJECUCIÓN.
-NO es cambiar solo el copy sobre el mismo layout. Cada etapa debe verse y sentirse diferente visualmente.
+Tu tarea: adaptá ESTE MISMO ÁNGULO a las 3 etapas de consciencia del funnel (P/E/C).
+El hook y el eje del mensaje NO CAMBIAN — lo que cambia es el FORMATO CREATIVO y el CONCEPTO VISUAL según dónde está el cliente en su decisión de compra.
+Cada etapa debe verse y sentirse VISUALMENTE DISTINTA — composición, mood y elementos diferentes. No el mismo layout con distinto texto.
 
-Para PROSPECCIÓN (P): elegí el formato más adecuado de: ${P_FORMATS.join(' / ')}
-→ Objetivo: capturar atención de quien no conoce el producto. Enfocá en el problema o la aspiración, no en vender.
+PROSPECCIÓN (P) — Para quien no te conoce:
+Elegí el formato más adecuado de: ${P_FORMATS.join(' / ')}
+El concepto visual debe evocar la ASPIRACIÓN o el PROBLEMA que este ángulo resuelve. La marca aparece al final. NO vender directamente.
 
-Para EVALUACIÓN (E): elegí el formato más adecuado de: ${E_FORMATS.join(' / ')}
-→ Objetivo: convencer a quien ya consideró. Mostrá prueba, proceso o beneficio concreto.
+EVALUACIÓN (E) — Para quien ya te vio:
+Elegí el formato más adecuado de: ${E_FORMATS.join(' / ')}
+El concepto visual debe mostrar PRUEBA o PROCESO concreto del ángulo. El producto entra en foco.
 
-Para CONVERSIÓN (C): elegí el formato más adecuado de: ${C_FORMATS.join(' / ')}
-→ Objetivo: cerrar a quien está listo para comprar. Usá urgencia, prueba social o garantía — SOLO con datos del brief.
+CONVERSIÓN (C) — Para quien está listo para comprar:
+Elegí el formato más adecuado de: ${C_FORMATS.join(' / ')}
+El concepto visual debe cerrar la duda. Urgencia, garantía o prueba social. El producto es el héroe.
 
-Reglas:
-- Las 3 etapas deben tener conceptos visuales GENUINAMENTE DISTINTOS — no el mismo layout con distinto texto
-- headlines y sublines en español, max 8 palabras cada uno, alineados al ángulo ganador
+REGLAS:
+- headline y subline deben reflejar el ángulo "${angle.name}" — no genéricos
+- max 8 palabras cada uno, en español
 - concept: describí la ejecución visual específica (composición, elementos, mood) — no el copy
 
 ANTI-ALUCINACIÓN — REGLA ABSOLUTA:
 PROHIBIDO inventar o incluir en headline/subline/concept: precios ($), porcentajes de descuento (50% OFF), cantidades de ventas, ratings con estrellas (4.8/5), testimonios específicos, fechas límite, cuotas o mecánicas promocionales que NO estén explícitamente mencionados en el brief o brand kit.
-Si el brief no menciona un precio → no pongas ningún precio.
 
 Respondé SOLO con JSON válido:
 {
-  "p": { "format": "nombre del formato elegido", "headline": "titular para la imagen", "subline": "subtitulo corto", "concept": "descripción del concepto visual específico" },
-  "e": { "format": "nombre del formato elegido", "headline": "titular para la imagen", "subline": "subtitulo corto", "concept": "descripción del concepto visual específico" },
-  "c": { "format": "nombre del formato elegido", "headline": "titular para la imagen", "subline": "subtitulo corto", "concept": "descripción del concepto visual específico" }
+  "p": { "format": "nombre del formato elegido", "headline": "titular directo del ángulo", "subline": "subtítulo corto", "concept": "descripción específica del concepto visual — composición, mood, elementos principales" },
+  "e": { "format": "nombre del formato elegido", "headline": "titular directo del ángulo", "subline": "subtítulo corto", "concept": "descripción específica del concepto visual — composición, mood, elementos principales" },
+  "c": { "format": "nombre del formato elegido", "headline": "titular directo del ángulo", "subline": "subtítulo corto", "concept": "descripción específica del concepto visual — composición, mood, elementos principales" }
 }`;
 
-            try {
-              const planRes = await openai.chat.completions.create({
+            const runPlan = async () => {
+              const res = await openai.chat.completions.create({
                 model: 'gpt-4o-mini',
                 messages: [{ role: 'user', content: planPrompt }],
                 response_format: { type: 'json_object' },
-                max_tokens: 600,
-                temperature: 0.8,
+                max_tokens: 800,
+                temperature: 0.7,
               });
-              plan = JSON.parse(planRes.choices[0].message.content || '{}') as PECPlan;
+              return JSON.parse(res.choices[0].message.content || '{}') as PECPlan;
+            };
+
+            try {
+              plan = await runPlan();
+              // Retry once if plan is missing required keys
+              if (!plan?.p || !plan?.e || !plan?.c) {
+                console.warn(`pec-creatives plan incomplete for "${angle.name}" — retrying`);
+                plan = await runPlan();
+              }
             } catch (err) {
               console.error(`pec-creatives plan failed for angle "${angle.name}":`, err);
               send(controller, { angleError: angle.key });
@@ -189,6 +200,7 @@ Respondé SOLO con JSON válido:
                   : `PRODUCT: ${productDescription}.`;
 
                 const imagePrompt = [
+                  `THIS CREATIVE IS EXCLUSIVELY FOR ANGLE: "${angle.name}" — Hook: "${angle.hook}" — Emphasis: "${angle.emphasis}". Every visual element must reflect THIS specific angle's message. Do NOT mix with other angles.`,
                   productConstraint,
                   `CREATIVE FORMAT — ${stagePlan.format}: ${styleNote}`,
                   `FUNNEL STAGE: ${label}. ${stagePlan.concept}`,
@@ -197,6 +209,7 @@ Respondé SOLO con JSON válido:
                   personPart,
                   `Brand: ${brandKit.name}. Colors: ${brandKit.primary1}, ${brandKit.primary2}, ${brandKit.primary3}. Typography: ${brandKit.typography || 'bold sans-serif'}.`,
                   `Brand context: ${brandKitContext}`,
+                  'MOBILE-FIRST TEXT RULE: keep text minimal and large enough to read on a phone screen. Avoid dense paragraphs or excessive copy. For formats like Beneficios or How-to, short bullet points are fine — but never more text than what fits comfortably without squinting on mobile.',
                   'Portrait 1024x1536. ALL text in Spanish. Professional agency quality.',
                   'ANTI-HALLUCINATION: Do NOT invent prices, discounts, metrics, phone numbers, URLs, or statistics not in the brief.',
                   'Do NOT include button-style CTAs in the image.',

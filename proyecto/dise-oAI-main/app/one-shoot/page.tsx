@@ -298,16 +298,16 @@ function getGuidanceMessage(
   }
 
   // Muy temprano aún
-  if (!daysOk && (isNaN(purchases) || purchases < 40)) {
+  if (!daysOk && (isNaN(purchases) || purchases < 4)) {
     return {
-      text: `⏳ Muy temprano. Esperá al menos ${dayThreshold} días${purchases > 0 ? ' y 40+ compras' : ''} antes de decidir.`,
+      text: `⏳ Muy temprano. Esperá al menos ${dayThreshold} días${purchases > 0 ? ' y 4+ compras' : ''} antes de decidir.`,
       color: 'text-amber-700 bg-amber-50 border-amber-200',
       action: null,
     };
   }
 
   // Días ok, compras suficientes
-  if (daysOk && purchases >= 40) {
+  if (daysOk && purchases >= 4) {
     return {
       text: '✅ Datos suficientes para decidir el ángulo ganador.',
       color: 'text-green-700 bg-green-50 border-green-200',
@@ -316,9 +316,9 @@ function getGuidanceMessage(
   }
 
   // Días ok, pocas compras
-  if (daysOk && purchases > 0 && purchases < 40) {
+  if (daysOk && purchases > 0 && purchases < 4) {
     return {
-      text: `⏳ ${purchases} compras — seguí esperando hasta 40+ para mayor confianza estadística.`,
+      text: `⏳ ${purchases} compra${purchases > 1 ? 's' : ''} — seguí esperando hasta 4+ para decidir.`,
       color: 'text-amber-700 bg-amber-50 border-amber-200',
       action: null,
     };
@@ -344,10 +344,15 @@ function getAngleRec(
   if (!hasData) return null;
   const dayThreshold = accountType === 'new' ? 15 : 7;
 
-  if (purchases >= 7) return {
+  if (!isNaN(days) && days >= dayThreshold && purchases >= 4) return {
     type: 'scale',
-    label: `${purchases} compras — potencial de escalado`,
+    label: `${purchases} compras tras ${days} días — potencial de escalado`,
     color: 'bg-green-50 text-green-700 border-green-200',
+  };
+  if (!isNaN(targetCpa) && targetCpa > 0 && purchases > 0 && spend / purchases > targetCpa * 3) return {
+    type: 'off',
+    label: `CPA real $${(spend / purchases).toFixed(0)} (${Math.round(spend / purchases / targetCpa)}x objetivo) — apagar`,
+    color: 'bg-red-50 text-red-700 border-red-200',
   };
   if (!isNaN(targetCpa) && targetCpa > 0 && spend >= targetCpa * 2 && purchases === 0) return {
     type: 'off',
@@ -359,7 +364,7 @@ function getAngleRec(
     label: `${days} días sin compras — mensaje nuevo`,
     color: 'bg-orange-50 text-orange-700 border-orange-200',
   };
-  if (purchases > 0 && purchases < 7) return {
+  if (purchases > 0 && purchases < 4) return {
     type: 'wait',
     label: `${purchases} compra${purchases > 1 ? 's' : ''} — acumulando datos`,
     color: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -442,6 +447,11 @@ export default function OneShootPage() {
   const [p2RefineHistories, setP2RefineHistories] = useState<Record<string, string[]>>({});
   const [p2RefineImageHistories, setP2RefineImageHistories] = useState<Record<string, string[]>>({});
   const [p2RefiningId, setP2RefiningId] = useState<string | null>(null);
+
+  // P1 format adaptation
+  const [p1AdaptFormats, setP1AdaptFormats] = useState<string[]>([]);
+  const [p1AdaptedImages, setP1AdaptedImages] = useState<{ format: string; label: string; angleKey: string; base64: string }[]>([]);
+  const [p1Adapting, setP1Adapting] = useState(false);
 
   // P3 format adaptation
   const [p3AdaptFormats, setP3AdaptFormats] = useState<string[]>([]);
@@ -860,6 +870,7 @@ export default function OneShootPage() {
               setP2Done(prev => prev + 1);
             }
             if (data.creativeError) { setP2Done(prev => prev + 1); }
+            if (data.angleError) { setP2Done(prev => prev + 3); } // whole angle plan failed — skip 3 slots
             if (data.done) {
               if (sessionId) {
                 const pecMeta = collectedCreatives.map(c => ({
@@ -1006,6 +1017,41 @@ export default function OneShootPage() {
     setP2Error('');
     setError('');
     setView('setup');
+  };
+
+  // ── P1 Format Adaptation ─────────────────────────────────────────────────
+  const generateP1Adaptations = async () => {
+    if (p1AdaptFormats.length === 0 || p1Images.length === 0) return;
+    setP1Adapting(true);
+    const FORMAT_LABELS: Record<string, string> = {
+      story: 'Story / Reels (9:16)', square: 'Cuadrado 1:1',
+    };
+    const allResults: { format: string; label: string; angleKey: string; base64: string }[] = [];
+    try {
+      for (const img of p1Images) {
+        const results = await Promise.all(
+          p1AdaptFormats.map(async format => {
+            for (let attempt = 0; attempt < 2; attempt++) {
+              const res = await fetch('/api/adapt-size', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imageBase64: img.base64, format }),
+              });
+              if (res.ok) {
+                const data = await res.json();
+                return { format, label: FORMAT_LABELS[format] || format, angleKey: img.angleKey, base64: data.base64 };
+              }
+              if (attempt === 0) await new Promise(r => setTimeout(r, 1500));
+            }
+            return null;
+          })
+        );
+        allResults.push(...(results.filter(Boolean) as { format: string; label: string; angleKey: string; base64: string }[]));
+      }
+      setP1AdaptedImages(allResults);
+    } finally {
+      setP1Adapting(false);
+    }
   };
 
   // ── P3 Format Adaptation ─────────────────────────────────────────────────
@@ -1587,6 +1633,78 @@ export default function OneShootPage() {
               </div>
             )}
 
+            {/* P1 Format Adaptations */}
+            {p1Images.length > 0 && (
+              <div className="mb-8 bg-white border border-gray-200 rounded-2xl p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-7 h-7 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-4 h-4 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="font-bold text-gray-900 text-sm">Adaptaciones de formato</h2>
+                    <p className="text-xs text-gray-400">Generá versiones Story y Cuadrado de tus ángulos para testear en más placements</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {[{ key: 'story', label: 'Story / Reels (9:16)' }, { key: 'square', label: 'Cuadrado 1:1' }].map(f => (
+                    <button
+                      key={f.key}
+                      onClick={() => setP1AdaptFormats(prev => prev.includes(f.key) ? prev.filter(x => x !== f.key) : [...prev, f.key])}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                        p1AdaptFormats.includes(f.key)
+                          ? 'bg-purple-100 border-purple-400 text-purple-700'
+                          : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={generateP1Adaptations}
+                  disabled={p1AdaptFormats.length === 0 || p1Adapting}
+                  className="text-sm font-semibold px-4 py-2 rounded-xl bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  {p1Adapting ? 'Generando adaptaciones...' : 'Generar adaptaciones'}
+                </button>
+                {p1AdaptedImages.length > 0 && (
+                  <div className="mt-5">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Adaptaciones generadas</p>
+                    {p1Images.map(img => {
+                      const adapted = p1AdaptedImages.filter(a => a.angleKey === img.angleKey);
+                      if (adapted.length === 0) return null;
+                      const angle = p1Angles.find(a => a.key === img.angleKey);
+                      return (
+                        <div key={img.angleKey} className="mb-4">
+                          <p className="text-xs font-semibold text-gray-600 mb-2">{angle?.name || img.angleKey}</p>
+                          <div className="flex flex-wrap gap-3">
+                            {adapted.map((a, i) => (
+                              <div key={i} className="relative rounded-xl overflow-hidden border border-gray-200 bg-white w-24">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={`data:image/png;base64,${a.base64}`} alt={a.label} className="w-full object-cover" style={{ aspectRatio: a.format === 'story' ? '9/16' : '1/1' }} />
+                                <div className="p-1 text-[10px] text-center text-gray-500 truncate">{a.label}</div>
+                                <button
+                                  onClick={() => downloadImage(a.base64, `angulo-${a.angleKey}-${a.format}.png`)}
+                                  className="absolute top-1 right-1 p-1 bg-white/90 rounded text-gray-500 hover:text-gray-800 shadow-sm"
+                                  title="Descargar"
+                                >
+                                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                  </svg>
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Launch checklist */}
             <div className="mb-8 bg-white border border-gray-200 rounded-2xl p-5">
               <div className="flex items-center gap-2 mb-4">
@@ -1600,10 +1718,10 @@ export default function OneShootPage() {
               <ol className="space-y-3">
                 {[
                   'Subí las imágenes a Meta Ads Manager',
-                  'Un ad set por ángulo con el mismo presupuesto',
+                  `1 campaña · 1 conjunto de anuncios · ${p1Angles.length} anuncios (uno por ángulo) con el mismo presupuesto`,
                   'Audiencia fría: Intereses o Broad',
                   'Objetivo de campaña: Compras',
-                  'Dejá correr al menos 7 días (o hasta 40+ compras)',
+                  'Dejá correr al menos 7–15 días o hasta 4+ compras por ángulo',
                 ].map((item, i) => (
                   <li key={i} className="flex items-start gap-3 text-sm text-gray-700">
                     <span className="flex-shrink-0 w-5 h-5 rounded-full bg-gray-100 text-gray-500 text-xs flex items-center justify-center font-bold mt-0.5">{i + 1}</span>

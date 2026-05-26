@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
 
 Planificá un carrusel de EXACTAMENTE 3 slides para esta marca Y el copy del post que lo acompaña.
 ${hasProduct ? `
-PRODUCTO ESPECÍFICO: Se adjunta imagen del producto. El copy de los slides debe hablar de ESTE PRODUCTO en particular, no de la marca en general. Usá la imagen para entender qué es el producto y adaptá el contenido.
+PRODUCTO ESPECÍFICO — PRIORITARIO: Se adjunta imagen del producto. TODO el copy de los slides (títulos, subtítulos, items) debe hablar de ESTE PRODUCTO ESPECÍFICO — no de la marca en general. Usá la imagen para entender qué es el producto y adaptá el contenido al eje central del carrusel.
 ` : ''}
 MARCA:
 ${brandKitContext}

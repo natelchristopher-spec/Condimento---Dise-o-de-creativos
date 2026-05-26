@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
   const prompt = `Sos un estratega de contenido para e-commerce en redes sociales.
 Generá exactamente 9 ideas de carruseles de Instagram para esta marca, 3 por cada etapa del funnel.
 ${hasProduct ? `
-PRODUCTO ESPECÍFICO — PRIORITARIO: Se adjunta una imagen del producto para este carousel. Generá los temas en torno a ESE PRODUCTO ESPECÍFICO — no a la marca en general. La marca es el contexto de estilo; el producto es el eje central de todos los temas.
+PRODUCTO ESPECÍFICO — PRIORITARIO: Se adjunta imagen del producto. Generá los 9 temas en torno a ESTE PRODUCTO ESPECÍFICO — no a la marca en general. La marca es el contexto de estilo; el producto es el eje de todos los temas.
 ` : ''}${topicHint ? `
 TEMA PRINCIPAL — PRIORITARIO: "${topicHint}"
 TODAS las ideas deben girar en torno a este tema. El brand kit da el contexto de marca, pero el tema del usuario es la restricción principal.
