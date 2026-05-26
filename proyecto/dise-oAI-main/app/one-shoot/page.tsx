@@ -283,7 +283,7 @@ function getGuidanceMessage(
   // Tight budget = ≤$20/day → kill at 2x CPA. More budget → allow 3x.
   const killMultiplier = (!isNaN(dailyBudget) && dailyBudget > 0 && dailyBudget <= 20) ? 2 : 3;
   // New account = < 40 total purchases → needs more time even with high CPA
-  const isNewAccount = accountType === 'new' || (accountType === 'established' && totalAccountPurchases > 0 && totalAccountPurchases < 40);
+  const isNewAccount = accountType === 'new';
 
   if (!isNaN(spendPerAngle) && !isNaN(cpaNum) && cpaNum > 0 && purchases === 0 && spendPerAngle >= cpaNum * killMultiplier) {
     return {
@@ -362,7 +362,7 @@ function getAngleRec(
 ): AngleRec | null {
   if (!hasData) return null;
   const dayThreshold = accountType === 'new' ? 15 : 7;
-  const isNewAccount = accountType === 'new' || (accountType === 'established' && totalAccountPurchases > 0 && totalAccountPurchases < 40);
+  const isNewAccount = accountType === 'new';
   const killMultiplier = (!isNaN(dailyBudget) && dailyBudget > 0 && dailyBudget <= 20) ? 2 : 3;
   const burnPct = (targetCpa > 0 && spend > 0) ? Math.round((spend / targetCpa) * 100) : undefined;
 
@@ -2173,6 +2173,13 @@ export default function OneShootPage() {
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">
                     Tipo de cuenta
+                    <span className="ml-1 group relative inline-block cursor-help">
+                      <span className="text-blue-500 text-[11px] border border-blue-300 rounded-full px-1 bg-blue-50">?</span>
+                      <span className="hidden group-hover:block absolute left-0 bottom-full mb-1.5 w-60 bg-gray-900 text-white text-[11px] rounded-lg p-2.5 z-10 leading-relaxed shadow-lg">
+                        <strong>Nueva:</strong> menos de 50 compras en el historial de la cuenta en ese nicho. Los umbrales son más tolerantes — el algoritmo necesita tiempo para aprender.<br/><br/>
+                        <strong>Con historial:</strong> la cuenta ya tiene datos suficientes para tomar decisiones rápidas.
+                      </span>
+                    </span>
                   </label>
                   <div className="flex gap-1.5">
                     <button onClick={() => setAccountType('new')} className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all ${accountType === 'new' ? 'bg-[#e42820]/10 border-[#e42820] text-[#e42820]' : 'bg-white border-gray-200 text-gray-500'}`}>
@@ -2183,13 +2190,6 @@ export default function OneShootPage() {
                     </button>
                   </div>
                 </div>
-                {accountType === 'established' && (
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Compras totales de la cuenta</label>
-                    <input type="number" min={0} value={totalAccountPurchases} onChange={e => setTotalAccountPurchases(e.target.value)} placeholder="ej: 150"
-                      className="w-28 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]" />
-                  </div>
-                )}
               </div>
 
               {/* Semáforo summary */}
