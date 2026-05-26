@@ -1714,7 +1714,7 @@ export default function OneShootPage() {
                                 <img src={`data:image/png;base64,${a.base64}`} alt={a.label} className="w-full object-cover" style={{ aspectRatio: a.format === 'story' ? '9/16' : '1/1' }} />
                                 <div className="p-1 text-[10px] text-center text-gray-500 truncate">{a.label}</div>
                                 <button
-                                  onClick={() => downloadImage(a.base64, `angulo-${a.angleKey}-${a.format}.png`)}
+                                  onClick={() => downloadExact(a.base64, `angulo-${a.angleKey}-${a.format}.png`, a.format)}
                                   className="absolute top-1 right-1 p-1 bg-white/90 rounded text-gray-500 hover:text-gray-800 shadow-sm"
                                   title="Descargar"
                                 >
