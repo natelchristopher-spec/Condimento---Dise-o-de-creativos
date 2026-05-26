@@ -38,6 +38,8 @@ export interface MessageAngle {
 
 const CLOTHING_TERMS = /\b(prenda|vestido|pantalón|remera|camiseta|camisa|campera|buzo|short|pollera|falda|indumentaria|calzado|zapatilla|zapato|tela|tejido|outfit|jean|jogger|bikini|traje|garment|clothing|apparel|fabric|dress|shirt|pants|jacket|hoodie|sneaker|shoe|top|blouse|skirt|coat|sleeve|collar|hem|knit|denim|cotton|polyester)\b/i;
 
+const HEALTH_TERMS = /\b(suplemento|proteína|proteina|creatina|colágeno|colageno|vitamina|omega|probiótico|probiotico|prebiótico|prebiotico|aminoácido|aminoacido|bcaa|whey|caseína|caseina|glutamina|magnesio|zinc|hierro|calcio|biotina|melatonina|curcumina|ashwagandha|spirulina|chlorella|antioxidante|quemador|fat burner|pre-workout|preworkout|mass gainer|suero|nutrición|nutricion|dieta|adelgazar|bajar de peso|perder peso|déficit calórico|deficit calorico|salud|bienestar|wellness|health|supplement|multivitamínico|multivitaminico|enzimas digestivas|fibra dietética|fibra dietetica|colesterol|glucosa|tensión arterial|tension arterial|inmunidad|sistema inmune)\b/i;
+
 const PRODUCT_DESCRIPTION_PROMPT_FASHION = `Sos un técnico de producto de moda de alta gama. Analizá esta prenda y describila con precisión quirúrgica para que pueda ser reproducida EXACTAMENTE por un modelo de IA generativa. Imaginá que quien lee tu descripción no puede ver la foto — tu texto es el único recurso.
 
 Describí en este orden exacto:
@@ -185,6 +187,9 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Detect health/wellness product (text-based only — no vision needed)
+  const isHealthProduct = HEALTH_TERMS.test(brief + ' ' + (brandKit.clientRequest || '') + ' ' + (brandKit.styleDescription || ''));
+
   // Step 1: describe the product
   let productDescription = brief;
   if (productDataUrl && productDataUrl.length > 100) {
@@ -280,6 +285,16 @@ Generá EXACTAMENTE:
 
 Cada ángulo debe apuntar a una tensión GENUINAMENTE DISTINTA — no el mismo argumento redactado diferente.
 PROHIBIDO inventar precios, métricas, descuentos o resultados que no estén en el brief.
+${isHealthProduct ? `
+RESTRICCIÓN LEGAL — NICHO SALUD Y BIENESTAR:
+Este es un producto de salud/nutrición. Los ángulos DEBEN respetar estas reglas sin excepción:
+❌ PROHIBIDO: afirmaciones médicas ("cura", "trata", "previene enfermedades", "aprobado clínicamente", "comprobado científicamente", "aumenta la testosterona X%", "mejora la memoria", "reduce el colesterol")
+❌ PROHIBIDO: prometer resultados garantizados de salud que no estén textualmente en el brief
+❌ PROHIBIDO: diagnosticar condiciones o sugerir que reemplaza tratamiento médico
+✅ CORRECTO: hablar de experiencia, energía percibida, contexto de uso, estilo de vida, objetivos personales
+✅ CORRECTO: usar los claims que el usuario incluyó literalmente en el brief (si dice "alto en proteína", podés usarlo)
+✅ CORRECTO: tensiones de estilo de vida como "no llegás a tu proteína diaria" en lugar de "tu cuerpo no sintetiza músculo"
+Los hooks deben sonar como algo que diría una persona real — NO como un estudio científico ni como una promesa de resultado.` : ''}
 
 Respondé SOLO con JSON:
 {
