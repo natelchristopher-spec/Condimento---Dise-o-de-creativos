@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import OpenAI from 'openai';
+import OpenAI, { toFile } from 'openai';
 import { BrandKit } from '@/app/types';
 import { buildBrandKitContext } from '@/app/lib/brandKitContext';
 import { getUserContext } from '@/app/lib/get-user-context';
@@ -74,6 +74,29 @@ Para PRODUCTOS SIN PACKAGING (electrónico, joyería, calzado, decoración, acce
 6. ELEMENTOS ÚNICOS: lo que diferencia este producto específico de uno genérico
 
 CRÍTICO: NO menciones ninguna marca ni logo de terceros. Solo describí el producto en sí.`;
+
+async function editProductForConcept(
+  openai: OpenAI,
+  productDataUrl: string,
+  editPrompt: string,
+): Promise<string> {
+  try {
+    const base64Data = productDataUrl.includes(',') ? productDataUrl.split(',')[1] : productDataUrl;
+    const buffer = Buffer.from(base64Data, 'base64');
+    const imageFile = await toFile(buffer, 'product.jpg', { type: 'image/jpeg' });
+    const response = await openai.images.edit({
+      model: 'gpt-image-2',
+      image: imageFile,
+      prompt: editPrompt,
+      size: '1024x1536',
+      quality: 'medium',
+    });
+    return response.data?.[0]?.b64_json || '';
+  } catch (err) {
+    console.error('editProductForConcept failed:', err);
+    return '';
+  }
+}
 
 export async function POST(req: NextRequest) {
   const ctx = await getUserContext();
@@ -372,9 +395,11 @@ Respondé SOLO con JSON:
             } else {
               const productConstraint = hasProductPhoto
                 ? [
-                    '⚠️ PRODUCT COLOR LOCK — TOP PRIORITY: The reference photo is the absolute source of truth for the product. Reproduce the exact color, shape, packaging, and proportions pixel-perfect from the photo. Do NOT interpret, stylize, or adjust anything.',
+                    '⚠️ ABSOLUTE RULE — THE PRODUCT IN THE PHOTO IS THE EXACT PRODUCT BEING ADVERTISED. DO NOT recreate, reimagine, rebrand, or relabel it. Show the exact product from the reference photo as-is — its label text, brand name on packaging, colors, shape, and design are FIXED AND IMMUTABLE.',
+                    'DO NOT add, modify, or remove any text from the product label or packaging. DO NOT write the advertiser brand name on the product. The product label belongs to the manufacturer shown in the photo — leave it exactly as it appears.',
+                    'PRODUCT COLOR LOCK — TOP PRIORITY: The reference photo is the absolute source of truth. Reproduce the exact color, shape, packaging, and proportions pixel-perfect. Do NOT interpret, stylize, or adjust anything.',
                     productDescription ? `Technical description for backup (only use to reinforce what you see in the photo): ${productDescription}` : '',
-                    'CRITICAL: The brand palette listed below is ONLY for backgrounds, overlays, and text — NEVER apply brand colors to the product itself.',
+                    'CRITICAL: The brand palette listed below is ONLY for backgrounds, overlays, and ad copy text — NEVER apply brand colors to the product itself.',
                   ].filter(Boolean).join(' ')
                 : `PRODUCT: ${productDescription}.`;
 
@@ -398,43 +423,67 @@ Respondé SOLO con JSON:
 
             let base64 = '';
 
-            // For fashion (both product and category angles): product photo + all person reference images
-            // The garment must be reproduced faithfully in both composition types
-            // For non-fashion: product photo only
-            const inputImages = [
-              ...(hasProductPhoto ? [productDataUrl] : []),
-              ...(isFashionProduct && refImageUrls.length > 0 ? refImageUrls : []),
-            ];
-
-            const inputContent = [
-              ...inputImages.map(url => ({ type: 'input_image', image_url: url, detail: 'high' })),
-              { type: 'input_text', text: fullPrompt },
-            ];
-
-            for (let attempt = 1; attempt <= 2; attempt++) {
-              try {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const response = await (openai.responses.create as any)({
-                  model: 'gpt-image-2',
-                  input: [{ role: 'user', content: inputContent }],
-                  tools: [{
-                    type: 'image_generation',
+            // Non-fashion with product photo: use images.edit starting FROM the product photo
+            // (same approach as anuncios module) — preserves product colors, label, and design exactly
+            if (!isFashionProduct && hasProductPhoto) {
+              base64 = await editProductForConcept(openai, productDataUrl, fullPrompt);
+              // Fallback to Responses API if images.edit fails
+              if (!base64) {
+                try {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const response = await (openai.responses.create as any)({
                     model: 'gpt-image-2',
-                    quality: 'medium',
-                    size: '1024x1536',
-                  }],
-                });
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                for (const block of (response.output || [])) {
-                  if (block.type === 'image_generation_call' && block.result) {
-                    base64 = block.result;
-                    break;
+                    input: [{ role: 'user', content: [
+                      { type: 'input_image', image_url: productDataUrl, detail: 'high' },
+                      { type: 'input_text', text: fullPrompt },
+                    ]}],
+                    tools: [{ type: 'image_generation', model: 'gpt-image-2', quality: 'medium', size: '1024x1536' }],
+                  });
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  for (const block of (response.output || [])) {
+                    if (block.type === 'image_generation_call' && block.result) { base64 = block.result; break; }
                   }
+                } catch (err) {
+                  console.error(`testing-angles "${angle.name}" responses fallback failed:`, err);
                 }
-                if (base64) break;
-              } catch (err) {
-                console.error(`testing-angles "${angle.name}" attempt ${attempt} failed:`, err);
-                if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
+              }
+            } else {
+              // Fashion products or no product photo: Responses API with product + reference images
+              const inputImages = [
+                ...(hasProductPhoto ? [productDataUrl] : []),
+                ...(isFashionProduct && refImageUrls.length > 0 ? refImageUrls : []),
+              ];
+
+              const inputContent = [
+                ...inputImages.map(url => ({ type: 'input_image', image_url: url, detail: 'high' })),
+                { type: 'input_text', text: fullPrompt },
+              ];
+
+              for (let attempt = 1; attempt <= 2; attempt++) {
+                try {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const response = await (openai.responses.create as any)({
+                    model: 'gpt-image-2',
+                    input: [{ role: 'user', content: inputContent }],
+                    tools: [{
+                      type: 'image_generation',
+                      model: 'gpt-image-2',
+                      quality: 'medium',
+                      size: '1024x1536',
+                    }],
+                  });
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  for (const block of (response.output || [])) {
+                    if (block.type === 'image_generation_call' && block.result) {
+                      base64 = block.result;
+                      break;
+                    }
+                  }
+                  if (base64) break;
+                } catch (err) {
+                  console.error(`testing-angles "${angle.name}" attempt ${attempt} failed:`, err);
+                  if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
+                }
               }
             }
 
@@ -442,7 +491,7 @@ Respondé SOLO con JSON:
               try {
                 const fallback = await openai.images.generate({
                   model: 'gpt-image-2',
-                  prompt: `Direct response ad for ${brandKit.name}. ${productDescription.slice(0, 200)}. Headline: "${angle.hook}". Colors: ${brandKit.primary1}. Portrait. Spanish text only.`,
+                  prompt: `Direct response ad. Product shown exactly as in reference photo — do NOT rebrand or recolor it. Background and text use brand colors: ${brandKit.primary1}. ${productDescription.slice(0, 150)}. Headline: "${angle.hook}". Portrait. Spanish text only.`,
                   size: '1024x1536',
                   quality: 'low',
                   n: 1,
