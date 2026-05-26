@@ -589,7 +589,7 @@ export default function OneShootPage() {
         body: JSON.stringify({
           brief,
           brandKit,
-          productImage: productImagesCompressed[0] || '',
+          productImages: productImagesCompressed.slice(0, 2),
           referenceImages: refImagesCompressed,
           productCount,
           categoryCount,
