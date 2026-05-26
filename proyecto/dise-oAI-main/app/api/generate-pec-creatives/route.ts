@@ -222,6 +222,8 @@ Respondé SOLO con JSON válido:
                       'Para neutros cálidos (beige, arena, tostado, camel, crudo, khaki): NUNCA renderices como blanco ni gris claro.',
                       'Para colores oscuros (negro, azul marino, marrón): NUNCA los ilumines.',
                       isFashionProduct ? 'PANTALONES Y PRENDAS INFERIORES — DOBLE ATENCIÓN: si la prenda es un pantalón, prestá máxima atención al color. Telas lisas (twill, gabardina): superficie uniforme y suave, sin texturas artificiales ni arrugas exageradas. Replicá largo, ancho de pierna y tiro tal cual se ven en la referencia. NO reclasifiques el tipo de pantalón — usá el nombre que indica el brief.' : '',
+                      'POSICIÓN Y TAMAÑO DEL ESTAMPADO — CRÍTICO: si la prenda tiene un gráfico, logo, ilustración o print, replicá su posición exacta en la prenda (centrado en el pecho, esquina inferior, etc.), el tamaño relativo que ocupa (porcentaje del área de la prenda) y la distancia a los bordes. NO reubiques ni redimensiones el estampado.',
+                      'TERMINACIONES DE PRENDAS — CRÍTICO: replicá exactamente cómo terminan los bordes de la prenda. Para pantalones: si el tobillo queda suelto, con puño, con elástico o ajustado. Para remeras/vestidos: si el borde es recto, curvo, raw o con doblez visible. El grosor y tipo de ruedo deben ser idénticos a la referencia.',
                     ].filter(Boolean).join(' ')
                   : `PRODUCT: ${productDescription}.`;
 
