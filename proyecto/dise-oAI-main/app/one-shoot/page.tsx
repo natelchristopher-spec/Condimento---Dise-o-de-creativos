@@ -2148,7 +2148,7 @@ export default function OneShootPage() {
                   <label className="block text-xs font-semibold text-gray-600 mb-1">
                     Costo objetivo por venta ($)
                     <span className="ml-1 group relative inline-block cursor-help">
-                      <span className="text-gray-400 text-[11px] border border-gray-300 rounded-full px-1">?</span>
+                      <span className="text-blue-500 text-[11px] border border-blue-300 rounded-full px-1 bg-blue-50">?</span>
                       <span className="hidden group-hover:block absolute left-0 bottom-full mb-1.5 w-56 bg-gray-900 text-white text-[11px] rounded-lg p-2.5 z-10 leading-relaxed shadow-lg">
                         Lo máximo que querés gastar en publicidad para conseguir una venta. Ej: si tu producto vale $10.000, poné $3.000 o $4.000.
                       </span>
@@ -2161,7 +2161,7 @@ export default function OneShootPage() {
                   <label className="block text-xs font-semibold text-gray-600 mb-1">
                     Presupuesto diario ($)
                     <span className="ml-1 group relative inline-block cursor-help">
-                      <span className="text-gray-400 text-[11px] border border-gray-300 rounded-full px-1">?</span>
+                      <span className="text-blue-500 text-[11px] border border-blue-300 rounded-full px-1 bg-blue-50">?</span>
                       <span className="hidden group-hover:block absolute left-0 bottom-full mb-1.5 w-56 bg-gray-900 text-white text-[11px] rounded-lg p-2.5 z-10 leading-relaxed shadow-lg">
                         Lo que gastás por día en total en la campaña. Con menos de $20/día los umbrales para apagar son más estrictos.
                       </span>
