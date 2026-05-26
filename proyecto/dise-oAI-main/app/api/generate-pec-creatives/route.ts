@@ -29,8 +29,8 @@ const STAGE_STYLES: Record<string, string> = {
   Testimonial: 'Real-looking customer. Genuine, relatable expression. Quote or review text prominently featured. Trust-focused composition.',
   Beneficios: 'Product hero shot with benefit callouts. Clean, informative layout. Features labeled or visually highlighted.',
   'How-to': 'Step-by-step or process visual. Product shown in use. Educational, clear, sequential feel.',
-  'Oferta/Precio': 'Product prominently featured with price/offer element. Bold, high-contrast. Urgency and value communicated visually.',
-  'Prueba Social': 'Social proof focus. Star ratings, review count, or sales volume prominently displayed. Numbers and credibility markers.',
+  'Oferta/Precio': 'Product hero with offer or price element — ONLY if a price or promotion is explicitly mentioned in the brief. If no price is in the brief, treat this as urgency-focused: bold, high-contrast, conversion-driven without any invented numbers.',
+  'Prueba Social': 'Social proof focus. Customer trust and satisfaction cues. Trust-focused composition. Do NOT invent star ratings, counts, or statistics not mentioned in the brief.',
   'Garantía': 'Trust and confidence imagery. Quality, safety, and risk-reversal cues. Clean, reassuring, premium feel.',
 };
 
@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
     winningAngles,
     brandKit,
     productImageBase64 = '',
+    productImages = [],
     referenceImages = [],
   }: {
     brief?: string;
@@ -69,15 +70,23 @@ export async function POST(req: NextRequest) {
     winningAngles: MessageAngle[];
     brandKit: BrandKit;
     productImageBase64?: string;
+    productImages?: string[];
     referenceImages?: string[];
   } = await req.json();
 
   const openai = new OpenAI({ apiKey: ctx.openaiApiKey });
   const brandKitContext = buildBrandKitContext(brandKit);
 
-  const productDataUrl = productImageBase64
-    ? (productImageBase64.startsWith('data:') ? productImageBase64 : `data:image/jpeg;base64,${productImageBase64}`)
-    : '';
+  // Support both legacy single image and new multi-image array
+  const allProductImages = productImages.length > 0
+    ? productImages
+    : (productImageBase64 ? [productImageBase64] : []);
+
+  const productDataUrls = allProductImages.map(img =>
+    img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`
+  ).filter(url => url.length > 100);
+
+  const productDataUrl = productDataUrls[0] || '';
 
   const encoder = new TextEncoder();
   const send = (controller: ReadableStreamDefaultController, data: object) =>
@@ -105,24 +114,27 @@ Marca: ${brandKit.name}${brandKit.clientRequest ? ` — ${brandKit.clientRequest
 
 Tu tarea: adaptá ESTE MISMO ÁNGULO a las 3 etapas de consciencia del funnel (P/E/C).
 El hook y el eje del mensaje NO CAMBIAN — lo que cambia es el FORMATO CREATIVO y el CONCEPTO VISUAL según dónde está el cliente en su decisión de compra.
+Cada etapa debe verse y sentirse VISUALMENTE DISTINTA — composición, mood y elementos diferentes. No el mismo layout con distinto texto.
 
 PROSPECCIÓN (P) — Para quien no te conoce:
-Elegí el formato: ${P_FORMATS.join(' / ')}
+Elegí el formato más adecuado de: ${P_FORMATS.join(' / ')}
 El concepto visual debe evocar la ASPIRACIÓN o el PROBLEMA que este ángulo resuelve. La marca aparece al final. NO vender directamente.
 
 EVALUACIÓN (E) — Para quien ya te vio:
-Elegí el formato: ${E_FORMATS.join(' / ')}
+Elegí el formato más adecuado de: ${E_FORMATS.join(' / ')}
 El concepto visual debe mostrar PRUEBA o PROCESO concreto del ángulo. El producto entra en foco.
 
 CONVERSIÓN (C) — Para quien está listo para comprar:
-Elegí el formato: ${C_FORMATS.join(' / ')}
+Elegí el formato más adecuado de: ${C_FORMATS.join(' / ')}
 El concepto visual debe cerrar la duda. Urgencia, garantía o prueba social. El producto es el héroe.
 
 REGLAS:
-- Los 3 conceptos deben verse VISUALMENTE DISTINTOS — composición, mood y elementos diferentes
 - headline y subline deben reflejar el ángulo "${angle.name}" — no genéricos
 - max 8 palabras cada uno, en español
-- NO inventés precios, descuentos, métricas o garantías que no estén en el brief
+- concept: describí la ejecución visual específica (composición, elementos, mood) — no el copy
+
+ANTI-ALUCINACIÓN — REGLA ABSOLUTA:
+PROHIBIDO inventar o incluir en headline/subline/concept: precios ($), porcentajes de descuento (50% OFF), cantidades de ventas, ratings con estrellas (4.8/5), testimonios específicos, fechas límite, cuotas o mecánicas promocionales que NO estén explícitamente mencionados en el brief o brand kit.
 
 Respondé SOLO con JSON válido:
 {
@@ -183,7 +195,7 @@ Respondé SOLO con JSON válido:
                       'REGLAS DE COLOR — CRÍTICO: color idéntico al de la foto de referencia. NO aclarar, NO oscurecer, NO desaturar, NO cambiar temperatura.',
                       'Para neutros cálidos (beige, arena, tostado, camel, crudo, khaki): NUNCA renderices como blanco ni gris claro.',
                       'Para colores oscuros (negro, azul marino, marrón): NUNCA los ilumines.',
-                      isFashionProduct ? 'PANTALONES Y PRENDAS INFERIORES — DOBLE ATENCIÓN: si la prenda es un pantalón, prestá máxima atención al color. Telas lisas (twill, gabardina, cotton chino): superficie uniforme y suave, sin texturas artificiales ni arrugas exageradas. Replicá largo, ancho de pierna y tiro tal cual se ven en la referencia.' : '',
+                      isFashionProduct ? 'PANTALONES Y PRENDAS INFERIORES — DOBLE ATENCIÓN: si la prenda es un pantalón, prestá máxima atención al color. Telas lisas (twill, gabardina): superficie uniforme y suave, sin texturas artificiales ni arrugas exageradas. Replicá largo, ancho de pierna y tiro tal cual se ven en la referencia. NO reclasifiques el tipo de pantalón — usá el nombre que indica el brief.' : '',
                     ].filter(Boolean).join(' ')
                   : `PRODUCT: ${productDescription}.`;
 
@@ -201,10 +213,11 @@ Respondé SOLO con JSON válido:
                   'Portrait 1024x1536. ALL text in Spanish. Professional agency quality.',
                   'ANTI-HALLUCINATION: Do NOT invent prices, discounts, metrics, phone numbers, URLs, or statistics not in the brief.',
                   'Do NOT include button-style CTAs in the image.',
+                  productDataUrl ? 'GARMENT COLOR FINAL CHECK — CRITICAL: the garment color in the generated image must exactly match the reference photo attached. Same hue, same saturation, same temperature. For warm neutrals (tostado, tan, camel, sand, beige): NEVER render as white or light gray — preserve the warm undertone from the reference.' : '',
                 ].filter(Boolean).join(' ');
 
                 const inputImages = [
-                  ...(productDataUrl ? [productDataUrl] : []),
+                  ...productDataUrls.slice(0, 3),
                   ...(isFashionProduct && referenceImages.length > 0
                     ? referenceImages.slice(0, 2).map(img => img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`)
                     : []),

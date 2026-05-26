@@ -50,7 +50,8 @@ Describí en este orden exacto:
 6. ELEMENTOS ÚNICOS: cualquier detalle que diferencie esta prenda de una genérica
 
 CRÍTICO para pantalones y prendas de color sólido: el color debe quedar completamente fiel. Si es beige, describí exactamente qué tipo de beige. Si es negro, indicá si tiene subtono. La IA tiende a desaturar o cambiar la temperatura del color — tu descripción debe ser lo suficientemente específica para evitarlo.
-CRÍTICO: NO menciones ninguna marca ni logo de terceros.`;
+CRÍTICO: NO menciones ninguna marca ni logo de terceros.
+CRÍTICO — NO RECLASIFIQUES: usá el nombre de prenda tal como lo indica el brief del usuario. Si el brief dice "pantalón gabardina", NO lo llames "pantalón chino" ni ningún otro tipo genérico. Describí lo que ves sin cambiar el nombre del producto.`;
 
 const PRODUCT_DESCRIPTION_PROMPT_GENERIC = `Sos un experto en descripción de productos para generación de imágenes IA. Analizá este producto y describilo con precisión máxima. La persona que lea tu descripción no puede ver la foto — tu texto es el único recurso.
 
@@ -95,6 +96,7 @@ export async function POST(req: NextRequest) {
     productCount,
     categoryCount,
     peopleMode = 'auto',
+    excludeAngles = [],
   }: {
     brief?: string;
     brandKit: BrandKit;
@@ -104,6 +106,7 @@ export async function POST(req: NextRequest) {
     productCount?: number;
     categoryCount?: number;
     peopleMode?: 'none' | 'real' | 'auto';
+    excludeAngles?: MessageAngle[];
   } = await req.json();
 
   // Resolve counts: if productCount/categoryCount provided use them, else split count 50/50
@@ -207,12 +210,16 @@ export async function POST(req: NextRequest) {
     async start(controller) {
       try {
         // Step 3: generate product + category angles (text only) with GPT-4o
+        const excludeNotice = excludeAngles.length > 0
+          ? `\nÁNGULOS YA PROBADOS — NO REPETIR NI HACER VARIACIONES SIMILARES: ${excludeAngles.map(a => `"${a.name}" (hook: "${a.hook}")`).join(', ')}. Generá ángulos genuinamente distintos en enfoque y argumento.`
+          : '';
+
         const anglesPrompt = `Sos un estratega de publicidad directa para e-commerce.
 Analizá este producto y generá ángulos de mensaje para anuncios de respuesta directa, divididos en dos categorías.
 
 PRODUCTO: ${productDescription}
 BRIEF: ${brief || '(sin brief adicional)'}
-MARCA: ${brandKit.name}${brandKit.clientRequest ? ` — ${brandKit.clientRequest}` : ''}
+MARCA: ${brandKit.name}${brandKit.clientRequest ? ` — ${brandKit.clientRequest}` : ''}${excludeNotice}
 
 Necesito EXACTAMENTE:
 - ${resolvedProductCount} ÁNGULOS DE PRODUCTO: el argumento habla DEL PRODUCTO ESPECÍFICO (características, materiales, precio, diferenciador). El hook habla SOBRE EL PRODUCTO.
@@ -335,7 +342,7 @@ Respondé SOLO con JSON:
                     'REGLAS DE COLOR — CRÍTICO: tomá el valor de color directamente de los píxeles de la referencia. NO aclarar, NO oscurecer, NO desaturar, NO cambiar temperatura de color.',
                     'Para neutros cálidos (beige, arena, tostado, camel, crudo, khaki): NUNCA renderices como blanco ni gris claro. Mantené la temperatura cálida exacta de la foto.',
                     'Para colores oscuros (negro, azul marino, marrón): NUNCA los ilumines ni aclarés.',
-                    'PANTALONES Y PRENDAS INFERIORES — DOBLE ATENCIÓN: si la prenda es un pantalón, prestá máxima atención al color — es donde el modelo tiende a fallar más. Telas lisas (twill, gabardina, cotton chino): superficie uniforme y suave, sin texturas artificiales ni arrugas exageradas. Replicá largo, ancho de pierna y tiro tal cual se ven en la referencia.',
+                    'PANTALONES Y PRENDAS INFERIORES — DOBLE ATENCIÓN: si la prenda es un pantalón, prestá máxima atención al color — es donde el modelo tiende a fallar más. Telas lisas (twill, gabardina): superficie uniforme y suave, sin texturas artificiales ni arrugas exageradas. Replicá largo, ancho de pierna y tiro tal cual se ven en la referencia. NO reclasifiques el tipo de pantalón — usá el nombre que indica el brief.',
                     'Mismo estampado pixel-perfect, misma silueta, mismo tejido, mismas proporciones que en la referencia visual.',
                   ].filter(Boolean).join(' ')
                 : `PRENDA: ${productDescription}.`;
@@ -359,6 +366,7 @@ Respondé SOLO con JSON:
                 'Portrait 1024x1536. Todo el texto en español. Calidad agencia profesional.',
                 'ANTI-ALUCINACIÓN: NO inventés precios, descuentos, métricas, teléfonos, URLs ni estadísticas que no estén en el brief.',
                 'NO incluyas botones CTA en la imagen.',
+                hasProductPhoto ? 'VERIFICACIÓN FINAL DE COLOR DE PRENDA — CRÍTICO: el color de la prenda en la imagen generada debe coincidir exactamente con la foto de referencia adjunta. Mismo tono, misma saturación, misma temperatura. Para neutros cálidos (tostado, camel, arena, beige): NUNCA renderizar como blanco ni gris claro — mantener el subtono cálido de la referencia.' : '',
               ].filter(Boolean).join(' ');
 
             } else {

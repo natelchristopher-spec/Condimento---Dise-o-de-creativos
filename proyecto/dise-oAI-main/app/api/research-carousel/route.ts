@@ -32,9 +32,6 @@ export async function POST(req: NextRequest) {
   const brandKitContext = buildBrandKitContext(brandKit);
 
   const hasProduct = productImages.length > 0;
-  const productDataUrl = hasProduct
-    ? (productImages[0].startsWith('data:') ? productImages[0] : `data:image/jpeg;base64,${productImages[0]}`)
-    : '';
 
   const excludeSection = excludeTopics.length > 0
     ? `TEMAS YA GENERADOS — NO repetir ni temas similares:\n${excludeTopics.map(t => `- ${t}`).join('\n')}\n\n`
@@ -43,7 +40,7 @@ export async function POST(req: NextRequest) {
   const prompt = `Sos un estratega de contenido para e-commerce en redes sociales.
 Generá exactamente 9 ideas de carruseles de Instagram para esta marca, 3 por cada etapa del funnel.
 ${hasProduct ? `
-PRODUCTO ESPECÍFICO — PRIORITARIO: Se adjunta imagen del producto. Generá los 9 temas en torno a ESTE PRODUCTO ESPECÍFICO. La marca es el contexto de estilo; el producto es el eje de todos los temas.
+PRODUCTO ESPECÍFICO — PRIORITARIO: Se adjunta imagen del producto. Generá los 9 temas en torno a ESTE PRODUCTO ESPECÍFICO — no a la marca en general. La marca es el contexto de estilo; el producto es el eje de todos los temas.
 ` : ''}${topicHint ? `
 TEMA PRINCIPAL — PRIORITARIO: "${topicHint}"
 TODAS las ideas deben girar en torno a este tema. El brand kit da el contexto de marca, pero el tema del usuario es la restricción principal.
@@ -74,13 +71,16 @@ Respondé SOLO con JSON válido:
     { "funnel": "BOFU", "title": "...", "hook": "...", "why": "..." }
   ]
 }
-Donde: funnel = "TOFU"|"MOFU"|"BOFU", title = nombre del carousel (max 6 palabras), hook = frase de apertura del primer slide que detenga el scroll (max 8 palabras), why = por qué este contenido funciona para este negocio (1 oración corta).`;
+Donde: funnel = "TOFU"|"MOFU"|"BOFU", title = nombre del carousel (max 6 palabras), hook = frase de apertura que GENERE CURIOSIDAD O TENSIÓN — usá preguntas incómodas, datos sorpresivos, afirmaciones contraintuitivas o promesas específicas. PROHIBIDO frases motivacionales genéricas ("Transforma tu vida", "El secreto del éxito"). Ejemplos del tipo correcto: "¿Por qué el 80% falla en esto?" / "Lo que nadie te dice sobre X" / "El error que te está costando ventas" / "Por qué esto no funciona como creés". Máx 8 palabras. why = por qué este contenido funciona para este negocio (1 oración corta).`;
 
   try {
-    const userContent: Parameters<typeof openai.chat.completions.create>[0]['messages'][0]['content'] = hasProduct && productDataUrl
+    const userContent: Parameters<typeof openai.chat.completions.create>[0]['messages'][0]['content'] = hasProduct
       ? [
           { type: 'text', text: prompt },
-          { type: 'image_url', image_url: { url: productDataUrl, detail: 'low' as const } },
+          ...productImages.slice(0, 1).map(img => ({
+            type: 'image_url' as const,
+            image_url: { url: img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`, detail: 'low' as const },
+          })),
         ]
       : prompt;
 

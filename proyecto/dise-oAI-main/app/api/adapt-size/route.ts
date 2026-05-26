@@ -5,7 +5,7 @@ import { getUserContext } from '@/app/lib/get-user-context';
 export const maxDuration = 300;
 
 type Format =
-  | 'story' | 'feed45' | 'square' | 'landscape'
+  | 'story' | 'instant_exp' | 'feed45' | 'square' | 'landscape'
   | 'pmax_square' | 'pmax_landscape' | 'pmax_portrait'
   | 'banner_desktop' | 'banner_mobile' | 'webpush'
   | 'mailing';
@@ -15,6 +15,10 @@ const FORMAT_CONFIG: Record<Format, { size: string; prompt: string }> = {
   story: {
     size: '1024x1792',
     prompt: 'Adapt this image to a 9:16 vertical story format (Instagram/TikTok/Reels). Extend the background naturally at top and bottom. Keep all text, logos, product, and composition elements exactly as they are. Do NOT add button-style CTAs ("Compra ahora", "Buy Now", etc.) — those are set in the ad platform.',
+  },
+  instant_exp: {
+    size: '1024x1792',
+    prompt: 'Adapt this image to a full-screen 9:16 vertical format for Facebook Instant Experience (Canvas). Fill the entire frame edge-to-edge with no white margins. Extend the background naturally at top and bottom. Keep all text, logos, product, and composition elements exactly as they are, making them feel immersive and bold. Do NOT add button-style CTAs — those are configured inside the Instant Experience builder.',
   },
   feed45: {
     size: '1024x1536',

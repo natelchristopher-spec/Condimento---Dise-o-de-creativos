@@ -6,7 +6,7 @@ import { useRequireAuth } from '@/app/lib/use-auth';
 import { BrandKit } from '@/app/types';
 import Sidebar from '@/app/components/Sidebar';
 import { MessageAngle } from '@/app/api/generate-testing-angles/route';
-import { readAsImage, compressImage } from '@/app/lib/image-utils';
+import { readAsImage, compressImage, downloadExact } from '@/app/lib/image-utils';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -18,6 +18,7 @@ type OneShootView =
   | 'p1-review'
   | 'p2-generating'
   | 'p2-results'
+  | 'p2-refine'
   | 'p3';
 
 type AngleStatus = 'active' | 'winner' | 'off';
@@ -70,38 +71,103 @@ function downloadImage(base64: string, name: string) {
 }
 
 const lsKey = (id: string) => `one_shoot_images_${id}`;
+const lsP2Key = (id: string) => `one_shoot_p2_${id}`;
 
 interface LsData {
   p1: AngleImage[];
-  p2: PECCreative[];
   angleStatuses: Record<string, AngleStatus>;
   launchDate: string;
 }
 
+// P1 images and angle statuses — stored separately from P2 to avoid hitting the 5MB localStorage limit
 function saveLsImages(
   id: string,
   p1: AngleImage[],
-  p2: PECCreative[],
   angleStatuses: Record<string, AngleStatus> = {},
   launchDate = ''
 ) {
   try {
-    localStorage.setItem(lsKey(id), JSON.stringify({ p1, p2, angleStatuses, launchDate }));
+    localStorage.setItem(lsKey(id), JSON.stringify({ p1, angleStatuses, launchDate }));
   } catch { /* storage full */ }
 }
 
 function loadLsImages(id: string): LsData {
   try {
     const raw = localStorage.getItem(lsKey(id));
-    if (!raw) return { p1: [], p2: [], angleStatuses: {}, launchDate: '' };
+    if (!raw) return { p1: [], angleStatuses: {}, launchDate: '' };
     const parsed = JSON.parse(raw);
     return {
       p1: parsed.p1 || [],
-      p2: parsed.p2 || [],
+      // legacy: some sessions stored p2 here before the split — ignored now
       angleStatuses: parsed.angleStatuses || {},
       launchDate: parsed.launchDate || '',
     };
-  } catch { return { p1: [], p2: [], angleStatuses: {}, launchDate: '' }; }
+  } catch { return { p1: [], angleStatuses: {}, launchDate: '' }; }
+}
+
+// P2 creatives stored in a dedicated key to avoid competing with P1 images for storage space
+function saveLsP2(id: string, p2: PECCreative[]) {
+  try {
+    localStorage.setItem(lsP2Key(id), JSON.stringify(p2));
+  } catch { /* storage full */ }
+}
+
+function loadLsP2(id: string): PECCreative[] {
+  try {
+    const raw = localStorage.getItem(lsP2Key(id));
+    if (!raw) return [];
+    return JSON.parse(raw) || [];
+  } catch { return []; }
+}
+
+type AngleMetricsMap = Record<string, { purchases: string; spend: string }>;
+
+function saveAngleMetrics(id: string, metrics: AngleMetricsMap) {
+  try { localStorage.setItem(`one_shoot_angle_metrics_${id}`, JSON.stringify(metrics)); } catch { /* ok */ }
+}
+
+function loadAngleMetrics(id: string): AngleMetricsMap {
+  try {
+    const raw = localStorage.getItem(`one_shoot_angle_metrics_${id}`);
+    return raw ? JSON.parse(raw) : {};
+  } catch { return {}; }
+}
+
+// ─── Supabase Storage helpers ─────────────────────────────────────────────────
+
+const STORAGE_BUCKET = 'one-shoot-images';
+
+async function uploadBase64(
+  supabase: ReturnType<typeof createSupabaseBrowser>,
+  path: string,
+  base64: string
+): Promise<void> {
+  try {
+    const b64 = base64.includes(',') ? base64.split(',')[1] : base64;
+    const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    await supabase.storage
+      .from(STORAGE_BUCKET)
+      .upload(path, new Blob([bytes], { type: 'image/jpeg' }), { contentType: 'image/jpeg', upsert: true });
+  } catch { /* non-blocking */ }
+}
+
+async function downloadBase64(
+  supabase: ReturnType<typeof createSupabaseBrowser>,
+  path: string
+): Promise<string | null> {
+  try {
+    const { data, error } = await supabase.storage.from(STORAGE_BUCKET).download(path);
+    if (error || !data) return null;
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        resolve(result.includes(',') ? result.split(',')[1] : result);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(data);
+    });
+  } catch { return null; }
 }
 
 // ─── Game Header Component ────────────────────────────────────────────────────
@@ -112,7 +178,7 @@ interface GameHeaderProps {
 
 function GameHeader({ view }: GameHeaderProps) {
   const step1Done = ['p1-review', 'p2-generating', 'p2-results', 'p3'].includes(view);
-  const step2Done = ['p2-results', 'p3'].includes(view);
+  const step2Done = ['p2-results', 'p2-refine', 'p3'].includes(view);
   const step1Active = ['p1-generating', 'p1-live', 'p1-review'].includes(view);
   const step2Active = ['p2-generating', 'p2-results'].includes(view);
   const step3Active = view === 'p3';
@@ -189,20 +255,75 @@ function GameHeader({ view }: GameHeaderProps) {
 
 // ─── Guidance logic ───────────────────────────────────────────────────────────
 
-function getGuidanceMessage(days: number, purchases: number): { text: string; color: string } | null {
-  if (isNaN(days) || isNaN(purchases)) return null;
-  if (purchases === 0 && days < 15) {
-    return { text: '⏳ Muy temprano. Esperá al menos 15 días antes de decidir.', color: 'text-amber-700 bg-amber-50 border-amber-200' };
+type GuidanceAction = 'regenerate' | null;
+
+interface GuidanceResult {
+  text: string;
+  color: string;
+  action: GuidanceAction;
+}
+
+function getGuidanceMessage(
+  days: number,
+  purchases: number,
+  accountType: 'new' | 'established',
+  totalSpend: string,
+  targetCpa: string,
+  angleCount: number,
+): GuidanceResult | null {
+  if (isNaN(days)) return null;
+
+  const dayThreshold = accountType === 'new' ? 15 : 7;
+  const daysOk = days >= dayThreshold;
+  const spendNum = parseFloat(totalSpend.replace(/\./g, '').replace(',', '.'));
+  const cpaNum = parseFloat(targetCpa.replace(/\./g, '').replace(',', '.'));
+  const spendPerAngle = (!isNaN(spendNum) && angleCount > 0) ? spendNum / angleCount : NaN;
+
+  // Regla 2x CPA: gastaste el doble del CPA objetivo por ángulo sin ninguna compra
+  if (!isNaN(spendPerAngle) && !isNaN(cpaNum) && cpaNum > 0 && purchases === 0 && spendPerAngle >= cpaNum * 2) {
+    return {
+      text: `🔴 Gastaste ${Math.round(spendPerAngle / cpaNum)}x el CPA objetivo por ángulo sin compras. Recomendamos apagar estos ángulos y probar mensajes nuevos.`,
+      color: 'text-red-700 bg-red-50 border-red-200',
+      action: 'regenerate',
+    };
   }
-  if (purchases === 0 && days >= 15) {
-    return { text: '⚠️ Ningún ángulo convierte tras 15+ días. Revisá producto, precio o audiencia.', color: 'text-red-700 bg-red-50 border-red-200' };
+
+  // Tiempo mínimo superado sin compras
+  if (purchases === 0 && daysOk) {
+    return {
+      text: `⚠️ ${days} días sin compras. Estos mensajes no están convirtiendo. Probá nuevos ángulos.`,
+      color: 'text-red-700 bg-red-50 border-red-200',
+      action: 'regenerate',
+    };
   }
-  if (purchases >= 4 && days >= 15) {
-    return { text: '✅ Datos suficientes para decidir el ángulo ganador.', color: 'text-green-700 bg-green-50 border-green-200' };
+
+  // Muy temprano aún
+  if (!daysOk && (isNaN(purchases) || purchases < 4)) {
+    return {
+      text: `⏳ Muy temprano. Esperá al menos ${dayThreshold} días${purchases > 0 ? ' y 4+ compras' : ''} antes de decidir.`,
+      color: 'text-amber-700 bg-amber-50 border-amber-200',
+      action: null,
+    };
   }
-  if (purchases > 0 && purchases < 4) {
-    return { text: `⏳ ${purchases} compra${purchases > 1 ? 's' : ''} — seguí esperando 15+ días y 4+ compras para decidir.`, color: 'text-amber-700 bg-amber-50 border-amber-200' };
+
+  // Días ok, compras suficientes
+  if (daysOk && purchases >= 4) {
+    return {
+      text: '✅ Datos suficientes para decidir el ángulo ganador.',
+      color: 'text-green-700 bg-green-50 border-green-200',
+      action: null,
+    };
   }
+
+  // Días ok, pocas compras
+  if (daysOk && purchases > 0 && purchases < 4) {
+    return {
+      text: `⏳ ${purchases} compra${purchases > 1 ? 's' : ''} — seguí esperando hasta 4+ para decidir.`,
+      color: 'text-amber-700 bg-amber-50 border-amber-200',
+      action: null,
+    };
+  }
+
   return null;
 }
 
@@ -263,8 +384,10 @@ export default function OneShootPage() {
   const supabase = createSupabaseBrowser();
 
   const [userEmail, setUserEmail] = useState('');
+  const [userId, setUserId] = useState('');
   const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
   const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
+  const [brandKitLoaded, setBrandKitLoaded] = useState(false);
 
   // View
   const [view, setView] = useState<OneShootView>('sessions');
@@ -278,8 +401,9 @@ export default function OneShootPage() {
 
   // Setup
   const [brief, setBrief] = useState('');
-  const [productImage, setProductImage] = useState('');
-  const [productPreview, setProductPreview] = useState('');
+  const [productUrl, setProductUrl] = useState('');
+  const [scrapingUrl, setScrapingUrl] = useState(false);
+  const [productImages, setProductImages] = useState<string[]>([]);
   const [referenceImages, setReferenceImages] = useState<string[]>([]);
   const [productCount, setProductCount] = useState(2);
   const [categoryCount, setCategoryCount] = useState(2);
@@ -301,8 +425,11 @@ export default function OneShootPage() {
 
   // P1 review
   const [angleStatuses, setAngleStatuses] = useState<Record<string, AngleStatus>>({});
+  const [angleMetrics, setAngleMetrics] = useState<AngleMetricsMap>({});
   const [daysRunning, setDaysRunning] = useState('');
-  const [totalPurchases, setTotalPurchases] = useState('');
+  const [accountType, setAccountType] = useState<'new' | 'established'>('new');
+  const [targetCpa, setTargetCpa] = useState('');
+  const [excludeAngles, setExcludeAngles] = useState<MessageAngle[]>([]);
 
   // Winners
   const [winnerKeys, setWinnerKeys] = useState<string[]>([]);
@@ -331,6 +458,7 @@ export default function OneShootPage() {
   const [p3AdaptSourceIds, setP3AdaptSourceIds] = useState<string[]>([]);
   const [p3AdaptedImages, setP3AdaptedImages] = useState<{ format: string; label: string; creativeId: string; base64: string }[]>([]);
   const [p3Generating, setP3Generating] = useState(false);
+
   // Error handling
   const [error, setError] = useState('');
 
@@ -340,13 +468,13 @@ export default function OneShootPage() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
       setUserEmail(session.user.email || '');
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('openai_api_key, brand_kit')
-        .eq('id', session.user.id)
-        .single();
-      setHasApiKey(!!profile?.openai_api_key);
-      if (profile?.brand_kit) setBrandKit(profile.brand_kit as BrandKit);
+      setUserId(session.user.id);
+      fetch('/api/profile').then(r => r.json()).then(data => {
+        setHasApiKey(!!data.openai_api_key);
+      }).catch(() => setHasApiKey(false));
+      fetch('/api/brand-kits').then(r => r.json()).then(kit => {
+        if (kit && !kit.error) setBrandKit(kit as BrandKit);
+      }).catch(console.error).finally(() => setBrandKitLoaded(true));
     };
     load();
   }, [supabase]);
@@ -401,12 +529,27 @@ export default function OneShootPage() {
   // ── File handlers ─────────────────────────────────────────────────────────
   const handleProductFile = async (file: File) => {
     const b64 = await readAsImage(file);
-    if (b64) { setProductImage(b64); setProductPreview(b64); }
+    if (b64) setProductImages(prev => [...prev, b64].slice(0, 3));
   };
 
   const handleReferenceFile = async (file: File) => {
     const b64 = await readAsImage(file);
     if (b64) setReferenceImages(prev => [...prev.slice(0, 2), b64]);
+  };
+
+  const scrapeProduct = async () => {
+    if (!productUrl.trim()) return;
+    setScrapingUrl(true);
+    try {
+      const res = await fetch('/api/scrape-product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: productUrl }),
+      });
+      const data = await res.json();
+      if (data.clientRequest) setBrief(data.clientRequest);
+    } catch { /* keep existing brief */ }
+    finally { setScrapingUrl(false); }
   };
 
   // ── P1 Generation ─────────────────────────────────────────────────────────
@@ -422,13 +565,11 @@ export default function OneShootPage() {
     setP1Total(total);
     setP1Error('');
     setAngleStatuses({});
+    setAngleMetrics({});
     setDaysRunning('');
-    setTotalPurchases('');
     setView('p1-generating');
 
-    const productImageCompressed = productImage
-      ? await compressImage(productImage, 1024)
-      : '';
+    const productImagesCompressed = await Promise.all(productImages.map(img => compressImage(img, 1024)));
     const refImagesCompressed = await Promise.all(
       referenceImages.map(img => compressImage(img, 768))
     );
@@ -444,11 +585,12 @@ export default function OneShootPage() {
         body: JSON.stringify({
           brief,
           brandKit,
-          productImage: productImageCompressed,
+          productImage: productImagesCompressed[0] || '',
           referenceImages: refImagesCompressed,
           productCount,
           categoryCount,
           peopleMode,
+          excludeAngles: excludeAngles.length > 0 ? excludeAngles : undefined,
         }),
       });
 
@@ -522,12 +664,19 @@ export default function OneShootPage() {
         if (saveRes.ok) {
           const { id } = await saveRes.json();
           setSessionId(id);
-          // Store images + product/ref images in localStorage only
-          saveLsImages(id, finalImages, [], {}, '');
+          // Store images in localStorage (fast cache) and Supabase Storage (cross-device persistence)
+          saveLsImages(id, finalImages, {}, '');
+          if (userId) {
+            void Promise.allSettled(
+              finalImages.map(img =>
+                uploadBase64(supabase, `${userId}/${id}/p1_${img.angleKey}.jpg`, img.base64)
+              )
+            );
+          }
           // Also store product/ref images for P2 generation
           try {
-            if (productImageCompressed) {
-              localStorage.setItem(`one_shoot_product_img_${id}`, productImageCompressed);
+            if (productImagesCompressed.length > 0) {
+              localStorage.setItem(`one_shoot_product_imgs_${id}`, JSON.stringify(productImagesCompressed));
             }
             if (refImagesCompressed.length > 0) {
               localStorage.setItem(`one_shoot_ref_imgs_${id}`, JSON.stringify(refImagesCompressed));
@@ -561,20 +710,62 @@ export default function OneShootPage() {
     setWinnerKeys(session.winning_angle_keys || []);
 
     const stored = loadLsImages(session.id);
-    setP1Images(stored.p1);
-    setAngleStatuses(stored.angleStatuses || {});
+    let p1ToLoad = stored.p1;
 
-    // Restore product image from localStorage
+    // If localStorage is empty (different device/browser), download from Supabase Storage
+    if (p1ToLoad.length === 0 && userId) {
+      const downloaded = await Promise.all(
+        session.angles.map(async (angle) => {
+          const b64 = await downloadBase64(supabase, `${userId}/${session.id}/p1_${angle.key}.jpg`);
+          if (!b64) return null;
+          return {
+            id: angle.key,
+            base64: b64,
+            angleKey: angle.key,
+            angleName: angle.name,
+            hook: angle.hook,
+            emphasis: angle.emphasis,
+            level: angle.level,
+          } as AngleImage;
+        })
+      );
+      p1ToLoad = downloaded.filter(Boolean) as AngleImage[];
+      if (p1ToLoad.length > 0) saveLsImages(session.id, p1ToLoad, stored.angleStatuses, stored.launchDate);
+    }
+
+    setP1Images(p1ToLoad);
+    setAngleStatuses(stored.angleStatuses || {});
+    setAngleMetrics(loadAngleMetrics(session.id));
+
+    // Restore product images from localStorage
     try {
-      const prodImg = localStorage.getItem(`one_shoot_product_img_${session.id}`);
-      if (prodImg) { setProductImage(prodImg); setProductPreview(prodImg); }
+      const prodImgs = localStorage.getItem(`one_shoot_product_imgs_${session.id}`);
+      if (prodImgs) setProductImages(JSON.parse(prodImgs));
+      else {
+        const legacy = localStorage.getItem(`one_shoot_product_img_${session.id}`);
+        if (legacy) setProductImages([legacy]);
+      }
       const refImgs = localStorage.getItem(`one_shoot_ref_imgs_${session.id}`);
       if (refImgs) setReferenceImages(JSON.parse(refImgs));
     } catch { /* ok */ }
 
-    if (session.status === 'paso2_done' && stored.p2.length > 0) {
-      setP2Creatives(stored.p2);
-      // Restore winner keys from angle statuses if possible
+    let storedP2 = loadLsP2(session.id);
+
+    // If P2 localStorage is empty, download from Supabase Storage using pec_results metadata
+    if (session.status === 'paso2_done' && storedP2.length === 0 && userId && session.pec_results?.length > 0) {
+      const downloaded = await Promise.all(
+        session.pec_results.map(async (meta) => {
+          const b64 = await downloadBase64(supabase, `${userId}/${session.id}/p2_${meta.id}.jpg`);
+          if (!b64) return null;
+          return { ...meta, base64: b64 } as PECCreative;
+        })
+      );
+      storedP2 = downloaded.filter(Boolean) as PECCreative[];
+      if (storedP2.length > 0) saveLsP2(session.id, storedP2);
+    }
+
+    if (session.status === 'paso2_done' && storedP2.length > 0) {
+      setP2Creatives(storedP2);
       const wk = Object.entries(stored.angleStatuses || {})
         .filter(([, s]) => s === 'winner')
         .map(([k]) => k);
@@ -610,19 +801,24 @@ export default function OneShootPage() {
     }
 
     // Load product images from localStorage
-    let prodImg = productImage;
+    let prodImgs = productImages;
     let refImgs = referenceImages;
 
-    if (!prodImg && sessionId) {
+    if (prodImgs.length === 0 && sessionId) {
       try {
-        const stored = localStorage.getItem(`one_shoot_product_img_${sessionId}`);
-        if (stored) prodImg = stored;
+        const stored = localStorage.getItem(`one_shoot_product_imgs_${sessionId}`);
+        if (stored) prodImgs = JSON.parse(stored);
+        // legacy single-image key
+        else {
+          const storedSingle = localStorage.getItem(`one_shoot_product_img_${sessionId}`);
+          if (storedSingle) prodImgs = [storedSingle];
+        }
         const storedRef = localStorage.getItem(`one_shoot_ref_imgs_${sessionId}`);
         if (storedRef) refImgs = JSON.parse(storedRef);
       } catch { /* ok */ }
     }
 
-    const productImageCompressed = prodImg ? await compressImage(prodImg, 1024) : '';
+    const prodImgsCompressed = await Promise.all(prodImgs.map(img => compressImage(img, 1024)));
     const refImagesCompressed = await Promise.all(refImgs.map(img => compressImage(img, 768)));
 
     const controller = new AbortController();
@@ -640,7 +836,8 @@ export default function OneShootPage() {
           isFashionProduct,
           winningAngles: winners,
           brandKit,
-          productImageBase64: productImageCompressed,
+          productImageBase64: prodImgsCompressed[0] || '',
+          productImages: prodImgsCompressed,
           referenceImages: refImagesCompressed,
         }),
       });
@@ -693,7 +890,15 @@ export default function OneShootPage() {
                   body: JSON.stringify({ status: 'paso2_done', pecResults: pecMeta }),
                 });
                 const stored = loadLsImages(sessionId);
-                saveLsImages(sessionId, stored.p1, collectedCreatives, stored.angleStatuses, stored.launchDate);
+                saveLsImages(sessionId, stored.p1, stored.angleStatuses, stored.launchDate);
+                saveLsP2(sessionId, collectedCreatives);
+                if (userId) {
+                  void Promise.allSettled(
+                    collectedCreatives.map(c =>
+                      uploadBase64(supabase, `${userId}/${sessionId}/p2_${c.id}.jpg`, c.base64)
+                    )
+                  );
+                }
                 await loadSessions();
               }
             }
@@ -714,22 +919,80 @@ export default function OneShootPage() {
     }
   };
 
+  // ── P2 Refine ─────────────────────────────────────────────────────────────
+  const applyP2Refinement = async (creativeId: string) => {
+    const input = p2RefineInputs[creativeId]?.trim();
+    if (!input) return;
+    const creative = p2Creatives.find(c => c.id === creativeId);
+    if (!creative) return;
+    setP2RefiningId(creativeId);
+    setP2RefineInputs(prev => ({ ...prev, [creativeId]: '' }));
+    try {
+      const prodImgsCompressed = await Promise.all(productImages.slice(0, 3).map(img => compressImage(img, 1024)));
+      const res = await fetch('/api/adjust-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageBase64: creative.base64,
+          instruction: input,
+          productDetailImages: prodImgsCompressed.filter(Boolean),
+        }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const { base64, error: apiError } = await res.json();
+      if (apiError) throw new Error(apiError);
+      setP2RefineImageHistories(prev => ({ ...prev, [creativeId]: [...(prev[creativeId] || []), creative.base64] }));
+      setP2RefineHistories(prev => ({ ...prev, [creativeId]: [...(prev[creativeId] || []), input] }));
+      const updated = p2Creatives.map(c => c.id === creativeId ? { ...c, base64 } : c);
+      setP2Creatives(updated);
+      if (sessionId) saveLsP2(sessionId, updated);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error aplicando ajuste');
+    } finally {
+      setP2RefiningId(null);
+    }
+  };
+
+  const undoP2Refinement = (creativeId: string) => {
+    const imgHistory = p2RefineImageHistories[creativeId];
+    if (!imgHistory?.length) return;
+    const prev = imgHistory[imgHistory.length - 1];
+    setP2RefineImageHistories(h => ({ ...h, [creativeId]: h[creativeId].slice(0, -1) }));
+    setP2RefineHistories(h => ({ ...h, [creativeId]: (h[creativeId] || []).slice(0, -1) }));
+    const updated = p2Creatives.map(c => c.id === creativeId ? { ...c, base64: prev } : c);
+    setP2Creatives(updated);
+    if (sessionId) saveLsP2(sessionId, updated);
+  };
+
   // ── Delete session ────────────────────────────────────────────────────────
   const deleteSession = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     await fetch(`/api/one-shoot-sessions/${id}`, { method: 'DELETE' });
     try {
       localStorage.removeItem(lsKey(id));
+      localStorage.removeItem(lsP2Key(id));
+      localStorage.removeItem(`one_shoot_product_imgs_${id}`);
       localStorage.removeItem(`one_shoot_product_img_${id}`);
       localStorage.removeItem(`one_shoot_ref_imgs_${id}`);
+      localStorage.removeItem(`one_shoot_angle_metrics_${id}`);
     } catch { /* ok */ }
+    // Delete images from Supabase Storage
+    if (userId) {
+      try {
+        const { data: files } = await supabase.storage.from(STORAGE_BUCKET).list(`${userId}/${id}`);
+        if (files && files.length > 0) {
+          await supabase.storage
+            .from(STORAGE_BUCKET)
+            .remove(files.map(f => `${userId}/${id}/${f.name}`));
+        }
+      } catch { /* ok */ }
+    }
     setSessions(prev => prev.filter(s => s.id !== id));
   };
 
   const resetToSetup = (keepBrief = false) => {
     if (!keepBrief) setBrief('');
-    setProductImage('');
-    setProductPreview('');
+    setProductImages([]);
     setReferenceImages([]);
     setProductCount(2);
     setCategoryCount(2);
@@ -741,14 +1004,15 @@ export default function OneShootPage() {
     setP2Done(0);
     setP2Total(0);
     setAngleStatuses({});
+    setAngleMetrics({});
     setDaysRunning('');
-    setTotalPurchases('');
     setWinnerKeys([]);
     setP2Creatives([]);
     setSessionId(null);
     setIsFashionProduct(false);
     setProductDescription('');
     setPersonDescription('');
+    setProductImages([]);
     setP1Error('');
     setP2Error('');
     setError('');
@@ -825,6 +1089,7 @@ export default function OneShootPage() {
       setP3Generating(false);
     }
   };
+
   // ─── Render helpers ───────────────────────────────────────────────────────
 
   const fmtElapsed = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
@@ -853,7 +1118,7 @@ export default function OneShootPage() {
             {/* Header */}
             <div className="mb-8">
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-bold uppercase tracking-widest text-[#e42820]">ONE SHOOT</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-[#e42820]">AD FORMULA</span>
               </div>
               <h1 className="text-2xl font-bold text-gray-900">Spicy Ad Formula</h1>
               <p className="text-gray-500 text-sm mt-1">Paso 1: testeá ángulos de mensaje → Paso 2: escalá el ganador en campaña PEC</p>
@@ -867,16 +1132,28 @@ export default function OneShootPage() {
               </div>
             )}
 
-            {/* New session button */}
-            <button
-              onClick={() => resetToSetup(false)}
-              className="w-full mb-6 flex items-center justify-center gap-2 bg-[#e42820] text-white font-semibold py-3 rounded-xl hover:bg-[#c82019] transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Nueva sesión
-            </button>
+            {/* New session button — blocked if there's an active session */}
+            {!loadingSessions && sessions.length > 0 ? (
+              <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+                <svg className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+                <div>
+                  <p className="text-sm font-semibold text-amber-800">Tenés un proyecto activo</p>
+                  <p className="text-xs text-amber-700 mt-0.5">Cerrá el proyecto actual antes de iniciar uno nuevo. Así las imágenes se limpian y no acumulás sesiones abiertas.</p>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => resetToSetup(false)}
+                className="w-full mb-6 flex items-center justify-center gap-2 bg-[#e42820] text-white font-semibold py-3 rounded-xl hover:bg-[#c82019] transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Nueva sesión
+              </button>
+            )}
 
             {/* Sessions list */}
             {loadingSessions ? (
@@ -897,34 +1174,43 @@ export default function OneShootPage() {
                   <div
                     key={session.id}
                     onClick={() => resumeSession(session)}
-                    className="bg-white border border-gray-200 rounded-xl p-4 cursor-pointer hover:border-gray-300 hover:shadow-sm transition-all flex items-start gap-4"
+                    className="bg-white border border-gray-200 rounded-xl p-4 cursor-pointer hover:border-gray-300 hover:shadow-sm transition-all"
                   >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                          session.status === 'paso2_done'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-orange-100 text-orange-700'
-                        }`}>
-                          {session.status === 'paso2_done' ? 'Paso 2 listo' : 'Paso 1 listo'}
-                        </span>
-                        {session.is_fashion_product && (
-                          <span className="text-[10px] font-medium text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">Fashion</span>
-                        )}
+                    <div className="flex items-start gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                            session.status === 'paso2_done'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-orange-100 text-orange-700'
+                          }`}>
+                            {session.status === 'paso2_done' ? 'Paso 2 listo' : 'Paso 1 listo'}
+                          </span>
+                          {session.is_fashion_product && (
+                            <span className="text-[10px] font-medium text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">Fashion</span>
+                          )}
+                        </div>
+                        <p className="text-sm font-medium text-gray-900 truncate">{session.brief || 'Sin descripción'}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {session.angles?.length || 0} ángulos · {new Date(session.updated_at).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </p>
                       </div>
-                      <p className="text-sm font-medium text-gray-900 truncate">{session.brief || 'Sin descripción'}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {session.angles?.length || 0} ángulos · {new Date(session.updated_at).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </p>
-                    </div>
-                    <button
-                      onClick={e => deleteSession(session.id, e)}
-                      className="p-1.5 rounded-lg text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors shrink-0"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      <svg className="w-4 h-4 text-gray-300 shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
-                    </button>
+                    </div>
+                    {/* Close project button */}
+                    <div className="mt-3 pt-3 border-t border-gray-100 flex justify-end">
+                      <button
+                        onClick={e => deleteSession(session.id, e)}
+                        className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-red-500 transition-colors px-2 py-1 rounded-lg hover:bg-red-50"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        Cerrar proyecto
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -960,7 +1246,19 @@ export default function OneShootPage() {
               <p className="text-sm text-gray-500 mt-1">Una sesión = un producto o categoría. Encontrá el mensaje que convierte.</p>
             </div>
 
-            {!brandKit && (
+            {excludeAngles.length > 0 && (
+              <div className="mb-5 bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-blue-800 flex items-start gap-2">
+                <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>
+                  Se van a generar ángulos distintos a los {excludeAngles.length} que ya probaste y no convirtieron.{' '}
+                  <button onClick={() => setExcludeAngles([])} className="underline font-medium">Cancelar exclusión</button>
+                </span>
+              </div>
+            )}
+
+            {brandKitLoaded && !brandKit && (
               <div className="mb-5 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800">
                 No encontramos tu marca.{' '}
                 <a href="/config" className="underline font-medium">Configurala primero</a> para que los creativos reflejen tu identidad.
@@ -970,6 +1268,30 @@ export default function OneShootPage() {
             {error && (
               <div className="mb-5 bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700">{error}</div>
             )}
+
+            {/* URL scraper */}
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                URL del producto <span className="text-gray-400 font-normal">(opcional)</span>
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={productUrl}
+                  onChange={e => setProductUrl(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && scrapeProduct()}
+                  placeholder="https://tutienda.com/producto"
+                  className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]"
+                />
+                <button
+                  onClick={scrapeProduct}
+                  disabled={!productUrl.trim() || scrapingUrl}
+                  className="px-4 py-2.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-all whitespace-nowrap"
+                >
+                  {scrapingUrl ? 'Analizando...' : 'Importar brief'}
+                </button>
+              </div>
+            </div>
 
             {/* Brief */}
             <div className="mb-5">
@@ -985,36 +1307,35 @@ export default function OneShootPage() {
               />
             </div>
 
-            {/* Product image */}
+            {/* Product images */}
             <div className="mb-5">
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                Foto del producto <span className="text-gray-400 font-normal">(opcional)</span>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Fotos del producto <span className="text-gray-400 font-normal">(opcional · hasta 3)</span>
               </label>
-              <div
-                onClick={() => productFileRef.current?.click()}
-                className="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center cursor-pointer hover:border-gray-300 transition-colors"
-              >
-                {productPreview ? (
-                  <div className="relative inline-block">
+              <p className="text-xs text-gray-400 mb-2">Para ropa: subí frente, espalda y detalle del estampado para mejor fidelidad.</p>
+              <div className="flex gap-2 flex-wrap">
+                {productImages.map((img, i) => (
+                  <div key={i} className="relative w-20 h-20">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={productPreview.startsWith('data:') ? productPreview : `data:image/jpeg;base64,${productPreview}`}
-                      alt="Producto"
-                      className="max-h-40 rounded-lg object-cover mx-auto"
+                      src={img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`}
+                      alt={`Producto ${i + 1}`}
+                      className="w-20 h-20 object-cover rounded-xl border border-gray-200"
                     />
                     <button
-                      onClick={e => { e.stopPropagation(); setProductImage(''); setProductPreview(''); }}
-                      className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center"
+                      onClick={() => setProductImages(prev => prev.filter((_, j) => j !== i))}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center"
                     >×</button>
                   </div>
-                ) : (
-                  <div>
-                    <svg className="w-8 h-8 text-gray-300 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <p className="text-sm text-gray-400">Subí una foto del producto</p>
-                    <p className="text-xs text-gray-300 mt-0.5">JPG, PNG · hasta 10 MB</p>
-                  </div>
+                ))}
+                {productImages.length < 3 && (
+                  <button
+                    onClick={() => productFileRef.current?.click()}
+                    className="w-20 h-20 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center text-gray-400 hover:border-gray-300 hover:text-gray-500 transition-colors"
+                  >
+                    <svg className="w-5 h-5 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                    <span className="text-xs">Agregar</span>
+                  </button>
                 )}
               </div>
               <input ref={productFileRef} type="file" accept="image/*" className="hidden"
@@ -1031,7 +1352,7 @@ export default function OneShootPage() {
                   onClick={() => { setPeopleMode('none'); setReferenceImages([]); }}
                   className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-medium border-2 transition-all ${
                     peopleMode === 'none'
-                      ? 'border-gray-800 bg-gray-800 text-white'
+                      ? 'border-[#e42820] bg-[#e42820]/10 text-[#e42820]'
                       : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
                   }`}
                 >
@@ -1041,7 +1362,7 @@ export default function OneShootPage() {
                   onClick={() => setPeopleMode('real')}
                   className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-medium border-2 transition-all ${
                     peopleMode === 'real'
-                      ? 'border-[#e42820] bg-[#e42820]/5 text-[#e42820]'
+                      ? 'border-[#e42820] bg-[#e42820]/10 text-[#e42820]'
                       : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
                   }`}
                 >
@@ -1090,16 +1411,16 @@ export default function OneShootPage() {
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-sm font-semibold text-blue-800">Ángulos de Producto</label>
-                  <span className="text-lg font-bold text-blue-700">{productCount}</span>
+                  <span className="text-lg font-bold text-blue-700">{productCount === 0 ? '0 — omitir' : productCount}</span>
                 </div>
                 <p className="text-xs text-blue-600 mb-3">El argumento habla del producto (características, materiales, precio)</p>
                 <input
-                  type="range" min={1} max={4} value={productCount}
+                  type="range" min={0} max={4} value={productCount}
                   onChange={e => setProductCount(Number(e.target.value))}
                   className="w-full accent-blue-600"
                 />
                 <div className="flex justify-between text-xs text-blue-400 mt-1">
-                  <span>1</span><span>2</span><span>3</span><span>4</span>
+                  <span>0</span><span>1</span><span>2</span><span>3</span><span>4</span>
                 </div>
               </div>
 
@@ -1107,16 +1428,16 @@ export default function OneShootPage() {
               <div className="bg-orange-50 border border-orange-100 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-sm font-semibold text-orange-800">Ángulos de Categoría</label>
-                  <span className="text-lg font-bold text-orange-700">{categoryCount}</span>
+                  <span className="text-lg font-bold text-orange-700">{categoryCount === 0 ? '0 — omitir' : categoryCount}</span>
                 </div>
                 <p className="text-xs text-orange-600 mb-3">El argumento habla del contexto, necesidad o estilo de vida</p>
                 <input
-                  type="range" min={1} max={4} value={categoryCount}
+                  type="range" min={0} max={4} value={categoryCount}
                   onChange={e => setCategoryCount(Number(e.target.value))}
                   className="w-full accent-orange-500"
                 />
                 <div className="flex justify-between text-xs text-orange-400 mt-1">
-                  <span>1</span><span>2</span><span>3</span><span>4</span>
+                  <span>0</span><span>1</span><span>2</span><span>3</span><span>4</span>
                 </div>
               </div>
 
@@ -1127,7 +1448,7 @@ export default function OneShootPage() {
 
             <button
               onClick={generateP1}
-              disabled={!brief.trim() || !brandKit}
+              disabled={!brief.trim() || !brandKit || (productCount === 0 && categoryCount === 0)}
               className="w-full bg-[#e42820] text-white font-semibold py-3 rounded-xl hover:bg-[#c82019] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               Generar ángulos
@@ -1163,14 +1484,16 @@ export default function OneShootPage() {
             </p>
             <p className="text-xs text-gray-400 mb-6">{fmtElapsed(p1Elapsed)}</p>
 
-            {p1Total > 0 && (
-              <div className="w-full bg-gray-200 rounded-full h-2 mb-4 overflow-hidden">
+            <div className="w-full bg-gray-200 rounded-full h-2 mb-4 overflow-hidden">
+              {p1Total > 0 ? (
                 <div
-                  className="h-2 bg-[#e42820] rounded-full transition-all duration-300"
+                  className="h-2 bg-[#e42820] rounded-full transition-all duration-500"
                   style={{ width: `${pct}%` }}
                 />
-              </div>
-            )}
+              ) : (
+                <div className="h-2 bg-[#e42820]/60 rounded-full animate-pulse" style={{ width: '30%' }} />
+              )}
+            </div>
 
             {/* Angle chips — product (blue) and category (orange) */}
             {p1Angles.length > 0 && (
@@ -1436,9 +1759,26 @@ export default function OneShootPage() {
     const currentWinners = p1Angles.filter(a => (angleStatuses[a.key] || 'active') === 'winner');
 
     const daysNum = parseInt(daysRunning, 10);
-    const purchasesNum = parseInt(totalPurchases, 10);
-    const guidance = (daysRunning !== '' && totalPurchases !== '')
-      ? getGuidanceMessage(isNaN(daysNum) ? 0 : daysNum, isNaN(purchasesNum) ? 0 : purchasesNum)
+    const cpaNum = parseFloat(targetCpa.replace(/,/g, '.')) || 0;
+
+    // Aggregate totals derived from per-angle metrics
+    const totalPurchasesAgg = Object.values(angleMetrics)
+      .reduce((sum, m) => sum + (parseInt(m.purchases, 10) || 0), 0);
+    const totalSpendAgg = Object.values(angleMetrics)
+      .reduce((sum, m) => sum + (parseFloat(m.spend.replace(/,/g, '.')) || 0), 0);
+    const hasAnyMetrics = p1Angles.some(a => {
+      const m = angleMetrics[a.key];
+      return m && (m.purchases !== '' || m.spend !== '');
+    });
+    const guidance = hasAnyMetrics && daysRunning !== ''
+      ? getGuidanceMessage(
+          isNaN(daysNum) ? 0 : daysNum,
+          totalPurchasesAgg,
+          accountType,
+          totalSpendAgg.toString(),
+          targetCpa,
+          p1Angles.length,
+        )
       : null;
 
     const setStatus = (key: string, status: AngleStatus) => {
@@ -1447,8 +1787,17 @@ export default function OneShootPage() {
         // Persist to localStorage
         if (sessionId) {
           const stored = loadLsImages(sessionId);
-          saveLsImages(sessionId, stored.p1, stored.p2, next, stored.launchDate);
+          saveLsImages(sessionId, stored.p1, next, stored.launchDate);
         }
+        return next;
+      });
+    };
+
+    const updateAngleMetric = (key: string, field: 'purchases' | 'spend', value: string) => {
+      setAngleMetrics(prev => {
+        const existing = prev[key] || { purchases: '', spend: '' };
+        const next = { ...prev, [key]: { ...existing, [field]: value } };
+        if (sessionId) saveAngleMetrics(sessionId, next);
         return next;
       });
     };
@@ -1459,6 +1808,19 @@ export default function OneShootPage() {
       const isWinner = status === 'winner';
       const isOff = status === 'off';
       const isProduct = angle.level === 'product';
+
+      const metrics = angleMetrics[angle.key] || { purchases: '', spend: '' };
+      const purchasesNum = parseInt(metrics.purchases, 10);
+      const spendNum = parseFloat(metrics.spend.replace(/,/g, '.'));
+      const hasData = metrics.purchases !== '' || metrics.spend !== '';
+      const rec = getAngleRec(
+        isNaN(purchasesNum) ? 0 : purchasesNum,
+        isNaN(spendNum) ? 0 : spendNum,
+        isNaN(daysNum) ? 0 : daysNum,
+        cpaNum,
+        accountType,
+        hasData,
+      );
 
       return (
         <div
@@ -1471,19 +1833,13 @@ export default function OneShootPage() {
               : 'border-gray-200'
           }`}
         >
-          {/* Overlay for off state */}
           {isOff && (
             <div className="absolute inset-0 bg-gray-400/20 z-10 rounded-xl pointer-events-none" />
           )}
 
-          {/* Image */}
           {img ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={`data:image/png;base64,${img.base64}`}
-              alt={angle.name}
-              className="w-full aspect-[2/3] object-cover"
-            />
+            <img src={`data:image/png;base64,${img.base64}`} alt={angle.name} className="w-full aspect-[2/3] object-cover" />
           ) : (
             <div className="w-full aspect-[2/3] bg-gray-100 flex items-center justify-center">
               <svg className="w-8 h-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1492,12 +1848,9 @@ export default function OneShootPage() {
             </div>
           )}
 
-          {/* Card body */}
           <div className="p-3 relative z-20">
             <div className="flex items-center gap-1.5 mb-1">
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                isProduct ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
-              }`}>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isProduct ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
                 {isProduct ? 'Producto' : 'Categoría'}
               </span>
               <span className="text-xs text-gray-500 font-medium truncate">{angle.name}</span>
@@ -1506,14 +1859,45 @@ export default function OneShootPage() {
               &ldquo;{angle.hook}&rdquo;
             </p>
 
+            {/* Per-angle metrics */}
+            <div className="flex gap-2 mb-2">
+              <div className="flex-1">
+                <label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Compras</label>
+                <input
+                  type="number" min={0} value={metrics.purchases}
+                  onChange={e => updateAngleMetric(angle.key, 'purchases', e.target.value)}
+                  placeholder="0"
+                  className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Gasto ($)</label>
+                <input
+                  type="text" value={metrics.spend}
+                  onChange={e => updateAngleMetric(angle.key, 'spend', e.target.value)}
+                  placeholder="0"
+                  className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]"
+                />
+              </div>
+            </div>
+
+            {/* Per-angle recommendation */}
+            {rec && (
+              <div className={`text-[11px] font-semibold px-2 py-1 rounded-lg border mb-2 ${rec.color}`}>
+                {rec.type === 'scale' && '🟢 '}
+                {rec.type === 'off' && '🔴 '}
+                {rec.type === 'regenerate' && '🟠 '}
+                {rec.type === 'wait' && '⏳ '}
+                {rec.label}
+              </div>
+            )}
+
             {/* Action buttons */}
             <div className="flex gap-2">
               <button
                 onClick={() => setStatus(angle.key, isWinner ? 'active' : 'winner')}
                 className={`flex-1 text-xs font-semibold py-1.5 rounded-lg border transition-all flex items-center justify-center gap-1 ${
-                  isWinner
-                    ? 'bg-green-500 border-green-500 text-white'
-                    : 'bg-white border-gray-200 text-gray-600 hover:border-green-300 hover:text-green-700'
+                  isWinner ? 'bg-green-500 border-green-500 text-white' : 'bg-white border-gray-200 text-gray-600 hover:border-green-300 hover:text-green-700'
                 }`}
               >
                 <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -1524,9 +1908,7 @@ export default function OneShootPage() {
               <button
                 onClick={() => setStatus(angle.key, isOff ? 'active' : 'off')}
                 className={`flex-1 text-xs font-semibold py-1.5 rounded-lg border transition-all flex items-center justify-center gap-1 ${
-                  isOff
-                    ? 'bg-red-500 border-red-500 text-white'
-                    : 'bg-white border-gray-200 text-gray-600 hover:border-red-300 hover:text-red-600'
+                  isOff ? 'bg-red-500 border-red-500 text-white' : 'bg-white border-gray-200 text-gray-600 hover:border-red-300 hover:text-red-600'
                 }`}
               >
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1555,34 +1937,63 @@ export default function OneShootPage() {
             {/* Stats panel */}
             <div className="mb-6 bg-white border border-gray-200 rounded-2xl p-4">
               <h3 className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-3">Resultados de la campaña</h3>
+
+              {/* Account type toggle */}
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={() => setAccountType('new')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${accountType === 'new' ? 'bg-[#e42820]/10 border-[#e42820] text-[#e42820]' : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'}`}
+                >
+                  Cuenta nueva <span className="font-normal opacity-70">(15 días mín.)</span>
+                </button>
+                <button
+                  onClick={() => setAccountType('established')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${accountType === 'established' ? 'bg-[#e42820]/10 border-[#e42820] text-[#e42820]' : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'}`}
+                >
+                  Con historial <span className="font-normal opacity-70">(7 días mín.)</span>
+                </button>
+              </div>
+
               <div className="flex flex-wrap gap-4 items-end">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Días corriendo</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={daysRunning}
-                    onChange={e => setDaysRunning(e.target.value)}
-                    placeholder="0"
-                    className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]"
-                  />
+                  <input type="number" min={0} value={daysRunning} onChange={e => setDaysRunning(e.target.value)} placeholder="0"
+                    className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Compras totales</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={totalPurchases}
-                    onChange={e => setTotalPurchases(e.target.value)}
-                    placeholder="0"
-                    className="w-24 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]"
-                  />
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">CPA objetivo ($)</label>
+                  <input type="text" value={targetCpa} onChange={e => setTargetCpa(e.target.value)} placeholder="0"
+                    className="w-28 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]" />
                 </div>
+                {hasAnyMetrics && (
+                  <div className="flex gap-4 text-xs text-gray-500">
+                    <span>Total compras: <strong className="text-gray-900">{totalPurchasesAgg}</strong></span>
+                    <span>Total gasto: <strong className="text-gray-900">${totalSpendAgg.toFixed(0)}</strong></span>
+                  </div>
+                )}
               </div>
+              <p className="text-[11px] text-gray-400 mt-2">Ingresá compras y gasto por ángulo en cada tarjeta ↓</p>
+
               {guidance && (
-                <div className={`mt-3 text-sm px-3 py-2 rounded-lg border ${guidance.color}`}>
+                <div className={`mt-3 text-sm px-3 py-2.5 rounded-lg border font-medium ${guidance.color}`}>
                   {guidance.text}
                 </div>
+              )}
+
+              {guidance?.action === 'regenerate' && (
+                <button
+                  onClick={() => {
+                    const failedAngles = p1Angles.filter(a => (angleStatuses[a.key] || 'active') !== 'winner');
+                    setExcludeAngles(failedAngles);
+                    resetToSetup(true);
+                  }}
+                  className="mt-3 flex items-center gap-2 text-sm font-semibold text-[#e42820] border border-[#e42820]/30 bg-[#e42820]/5 hover:bg-[#e42820]/10 px-4 py-2 rounded-xl transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Probar nuevos ángulos (distintos a los que no funcionaron)
+                </button>
               )}
             </div>
 
@@ -1620,14 +2031,34 @@ export default function OneShootPage() {
                     <p className="text-sm font-semibold text-gray-900">
                       {currentWinners.length} ganador{currentWinners.length > 1 ? 'es' : ''} seleccionado{currentWinners.length > 1 ? 's' : ''}
                     </p>
-                    <p className="text-xs text-gray-400">Se generarán {currentWinners.length * 3} creativos PEC</p>
+                    <p className="text-xs text-gray-400">
+                      {p2Creatives.length > 0 ? `${p2Creatives.length} creativos PEC ya generados` : `Se generarán ${currentWinners.length * 3} creativos PEC`}
+                    </p>
                   </div>
-                  <button
-                    onClick={generateP2}
-                    className="shrink-0 bg-[#e42820] text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-[#c82019] transition-colors text-sm"
-                  >
-                    Escalar al Paso 2 →
-                  </button>
+                  {p2Creatives.length > 0 ? (
+                    <div className="flex gap-2 shrink-0">
+                      <button
+                        onClick={() => setView('p2-results')}
+                        className="bg-[#e42820] text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-[#c82019] transition-colors text-sm"
+                      >
+                        Ver PEC →
+                      </button>
+                      <button
+                        onClick={generateP2}
+                        className="border border-gray-300 text-gray-700 font-semibold px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-colors text-sm"
+                        title="Genera nuevos creativos PEC distintos a los existentes"
+                      >
+                        Re-escalar
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={generateP2}
+                      className="shrink-0 bg-[#e42820] text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-[#c82019] transition-colors text-sm"
+                    >
+                      Escalar al Paso 2 →
+                    </button>
+                  )}
                 </>
               ) : (
                 <>
@@ -1744,12 +2175,20 @@ export default function OneShootPage() {
                   Ver Paso 1
                 </button>
                 <button
-                  onClick={() => resetToSetup(false)}
+                  onClick={() => setView('sessions')}
                   className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-200 transition-colors"
                 >
-                  Nueva sesión
+                  Mis proyectos
                 </button>
               </div>
+            </div>
+
+            {/* Download disclaimer */}
+            <div className="mb-5 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800 flex items-start gap-2">
+              <svg className="w-4 h-4 mt-0.5 shrink-0 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </svg>
+              <span>Las imágenes se guardan solo en este navegador. Descargalas antes de salir o cambiar de dispositivo.</span>
             </div>
 
             {p2Error && (
@@ -1812,13 +2251,193 @@ export default function OneShootPage() {
               </div>
             )}
 
-            {/* Go to Paso 3 */}
-            <div className="mt-10 flex justify-center">
+            {/* Go to Refine or Paso 3 */}
+            {p2Creatives.length > 0 && (
+              <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <button
+                  onClick={() => {
+                    setP2RefineInputs({});
+                    setP2RefineHistories({});
+                    setP2RefineImageHistories({});
+                    setView('p2-refine');
+                  }}
+                  className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 font-semibold px-6 py-3 rounded-xl hover:bg-gray-50 transition-colors text-sm"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                  Afinar creativos
+                </button>
+                <button
+                  onClick={() => {
+                    setP3AdaptSourceIds(p2Creatives.map(c => c.id));
+                    setP3AdaptFormats([]);
+                    setP3AdaptedImages([]);
+                    setView('p3');
+                  }}
+                  className="flex items-center gap-2 bg-white border border-purple-200 text-purple-700 font-semibold px-6 py-3 rounded-xl hover:bg-purple-50 transition-colors text-sm"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                  </svg>
+                  <span>Adaptar formatos</span>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                  </svg>
+                </button>
+              </div>
+            )}
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // ── P2 Refine ─────────────────────────────────────────────────────────────
+  if (view === 'p2-refine') {
+    const QUICK_PRESETS = [
+      'Fondo más oscuro', 'Fondo blanco limpio', 'Más contraste',
+      'Colores más vibrantes', 'Texto más grande', 'Producto más prominente',
+      'Composición más minimalista', 'Más espacio en blanco',
+    ];
+
+    const goToP3 = () => {
+      setP3AdaptSourceIds(p2Creatives.map(c => c.id));
+      setP3AdaptFormats([]);
+      setP3AdaptedImages([]);
+      setView('p3');
+    };
+
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar active="/one-shoot" onLogout={handleLogout} userEmail={userEmail} />
+        <main className="flex-1 md:ml-56 pt-14 md:pt-0 pb-32">
+          <div className="max-w-4xl mx-auto px-4 py-8">
+            <GameHeader view="p2-results" />
+
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">Afinar creativos</h1>
+                <p className="text-sm text-gray-500 mt-1">Ajustá cualquier creativo antes de adaptar formatos. Es opcional.</p>
+              </div>
+              <button onClick={() => setView('p2-results')} className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Volver
+              </button>
+            </div>
+
+            {error && (
+              <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl">{error}</div>
+            )}
+
+            <div className="space-y-6">
+              {p2Creatives.map((creative) => {
+                const isRefining = p2RefiningId === creative.id;
+                const input = p2RefineInputs[creative.id] || '';
+                const history = p2RefineHistories[creative.id] || [];
+                const imgHistory = p2RefineImageHistories[creative.id] || [];
+
+                return (
+                  <div key={creative.id} className="bg-white border border-gray-200 rounded-2xl p-4">
+                    <div className="flex gap-4">
+                      {/* Image */}
+                      <div className="shrink-0 w-28">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={`data:image/png;base64,${creative.base64}`}
+                          alt={creative.angleName}
+                          className="w-full rounded-xl object-cover aspect-[2/3]"
+                        />
+                      </div>
+
+                      {/* Controls */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            creative.stage === 'P' ? 'bg-violet-100 text-violet-700' :
+                            creative.stage === 'E' ? 'bg-blue-100 text-blue-700' :
+                            'bg-green-100 text-green-700'
+                          }`}>{creative.stageLabel}</span>
+                          <span className="text-xs text-gray-500 truncate">{creative.angleName} · {creative.formatName}</span>
+                        </div>
+                        <p className="text-sm font-semibold text-gray-800 mb-3 leading-snug">{creative.headline}</p>
+
+                        {/* History */}
+                        {history.length > 0 && (
+                          <div className="space-y-1 mb-3 max-h-20 overflow-y-auto">
+                            {history.map((h, j) => (
+                              <div key={j} className="bg-gray-50 rounded-lg px-3 py-1.5 text-xs text-gray-500 flex items-start gap-1.5">
+                                <span className="text-green-500 shrink-0 mt-0.5">✓</span>{h}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Quick presets */}
+                        <div className="flex flex-wrap gap-1.5 mb-3">
+                          {QUICK_PRESETS.map(preset => (
+                            <button
+                              key={preset}
+                              onClick={() => !isRefining && setP2RefineInputs(prev => ({ ...prev, [creative.id]: preset }))}
+                              disabled={isRefining}
+                              className="text-xs px-2.5 py-1 rounded-lg border bg-white hover:bg-gray-50 border-gray-200 text-gray-500 hover:text-gray-900 transition-colors disabled:opacity-40"
+                            >
+                              {preset}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Input + actions */}
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={input}
+                            onChange={e => !isRefining && setP2RefineInputs(prev => ({ ...prev, [creative.id]: e.target.value }))}
+                            onKeyDown={e => { if (e.key === 'Enter' && !isRefining && input.trim()) applyP2Refinement(creative.id); }}
+                            placeholder="O escribí tu ajuste..."
+                            disabled={isRefining}
+                            className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#e42820] disabled:opacity-50"
+                          />
+                          <button
+                            onClick={() => applyP2Refinement(creative.id)}
+                            disabled={!input.trim() || isRefining}
+                            className="bg-[#e42820] hover:bg-[#c41f18] disabled:opacity-40 text-white font-semibold px-4 py-2 rounded-xl transition-colors text-sm whitespace-nowrap"
+                          >
+                            {isRefining ? (
+                              <span className="flex items-center gap-1.5">
+                                <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                Aplicando...
+                              </span>
+                            ) : 'Aplicar'}
+                          </button>
+                          {imgHistory.length > 0 && (
+                            <button
+                              onClick={() => undoP2Refinement(creative.id)}
+                              disabled={!!p2RefiningId}
+                              className="border border-gray-200 text-gray-500 hover:text-gray-900 hover:bg-gray-50 px-3 py-2 rounded-xl transition-colors disabled:opacity-40"
+                              title="Deshacer"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-8 flex justify-center">
               <button
-                onClick={() => setView('p3')}
-                className="flex items-center gap-2 bg-white border border-purple-200 text-purple-700 font-semibold px-6 py-3 rounded-xl hover:bg-purple-50 transition-colors text-sm"
+                onClick={goToP3}
+                className="flex items-center gap-2 bg-[#e42820] text-white font-semibold px-8 py-3 rounded-xl hover:bg-[#c82019] transition-colors text-sm"
               >
-                <span>Ver recomendación de formatos</span>
+                Continuar a formatos
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
@@ -1830,83 +2449,197 @@ export default function OneShootPage() {
     );
   }
 
-  // ── Paso 3 (static) ───────────────────────────────────────────────────────
+  // ── Paso 3 — Format Adaptation ───────────────────────────────────────────
   if (view === 'p3') {
+    const FORMAT_GROUPS = [
+      { group: 'RRSS', items: [
+        { key: 'story', label: 'Story / Reels', desc: 'Instagram / Facebook · 9:16' },
+        { key: 'instant_exp', label: 'Experiencia Instantánea', desc: 'Facebook Canvas · Full screen' },
+        { key: 'square', label: 'Cuadrado 1:1', desc: 'Instagram / Facebook' },
+        { key: 'landscape', label: 'Landscape 16:9', desc: 'Facebook / YouTube' },
+      ]},
+    ];
+
+    const stages: Array<{ code: 'P' | 'E' | 'C'; label: string }> = [
+      { code: 'P', label: 'Prospección' },
+      { code: 'E', label: 'Evaluación' },
+      { code: 'C', label: 'Conversión' },
+    ];
+
     return (
       <div className="flex min-h-screen bg-gray-50">
         <Sidebar active="/one-shoot" onLogout={handleLogout} userEmail={userEmail} />
         <main className="flex-1 md:ml-56 pt-14 md:pt-0">
-          <div className="max-w-3xl mx-auto px-4 py-8">
+          <div className="max-w-4xl mx-auto px-4 py-8">
             <GameHeader view={view} />
 
-            {/* Celebration header */}
-            <div className="text-center mb-8">
-              <div className="text-4xl mb-3">🎯</div>
-              <h1 className="text-2xl font-bold text-gray-900">¡Misión completada!</h1>
-              <p className="text-gray-500 text-sm mt-2 max-w-lg mx-auto">
-                Escalaste tu ángulo ganador en toda la campaña PEC. El próximo nivel: probá diferentes formatos para seguir creciendo.
-              </p>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">Adaptá los formatos</h1>
+                <p className="text-sm text-gray-500 mt-1">Seleccioná los creativos y formatos que querés adaptar.</p>
+              </div>
+              <button
+                onClick={() => setView('p2-results')}
+                className="text-sm text-gray-400 hover:text-gray-700 flex items-center gap-1.5 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Volver a PEC
+              </button>
             </div>
 
-            {/* Format cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-              {[
-                {
-                  icon: '🎠',
-                  title: 'Carrusel',
-                  description: 'Contá la historia en múltiples slides',
-                  color: 'border-purple-200 bg-purple-50',
-                  badge: 'bg-purple-100 text-purple-700',
-                },
-                {
-                  icon: '🎬',
-                  title: 'Video UGC',
-                  description: 'Testimonio real del producto',
-                  color: 'border-blue-200 bg-blue-50',
-                  badge: 'bg-blue-100 text-blue-700',
-                },
-                {
-                  icon: '📱',
-                  title: 'Story 9:16',
-                  description: 'Formato nativo, máximo impacto mobile',
-                  color: 'border-green-200 bg-green-50',
-                  badge: 'bg-green-100 text-green-700',
-                },
-              ].map(format => (
-                <div key={format.title} className={`rounded-2xl border-2 p-5 ${format.color}`}>
-                  <div className="text-2xl mb-3">{format.icon}</div>
-                  <h3 className="font-bold text-gray-900 mb-1">{format.title}</h3>
-                  <p className="text-sm text-gray-600 mb-3">{format.description}</p>
-                  <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${format.badge}`}>
-                    Próximamente
-                  </span>
+            {/* Creative selector */}
+            <div className="mb-6">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Creativos a adaptar</p>
+              <div className="space-y-4">
+                {stages.map(stage => {
+                  const stageCreatives = p2Creatives.filter(c => c.stage === stage.code);
+                  if (stageCreatives.length === 0) return null;
+                  return (
+                    <div key={stage.code}>
+                      <p className="text-xs text-gray-400 mb-2 flex items-center gap-1.5">
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${STAGE_BG[stage.code]} text-white`}>{stage.code}</span>
+                        {stage.label}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {stageCreatives.map(c => {
+                          const isSelected = p3AdaptSourceIds.includes(c.id);
+                          return (
+                            <button
+                              key={c.id}
+                              onClick={() => setP3AdaptSourceIds(prev =>
+                                isSelected && prev.length > 1
+                                  ? prev.filter(x => x !== c.id)
+                                  : isSelected ? prev : [...prev, c.id]
+                              )}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm transition-all ${
+                                isSelected ? 'border-[#e42820] bg-[#e42820]/10' : 'border-gray-200 bg-white opacity-50 hover:opacity-80'
+                              }`}
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={`data:image/png;base64,${c.base64}`} alt="" className="w-8 h-10 rounded object-cover shrink-0" />
+                              <span className="text-xs font-medium text-gray-700 max-w-[90px] truncate">{c.angleName} · {c.formatName}</span>
+                              {isSelected && (
+                                <svg className="w-3.5 h-3.5 text-[#e42820] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Format selector */}
+            <div className="mb-6">
+              {FORMAT_GROUPS.map(({ group, items }) => (
+                <div key={group}>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">{group}</p>
+                  <div className="flex flex-wrap gap-3">
+                    {items.map(f => (
+                      <button
+                        key={f.key}
+                        onClick={() => setP3AdaptFormats(prev => prev.includes(f.key) ? prev.filter(x => x !== f.key) : [...prev, f.key])}
+                        className={`px-4 py-2.5 rounded-xl border text-left transition-all ${
+                          p3AdaptFormats.includes(f.key)
+                            ? 'border-[#e42820] bg-[#e42820]/10'
+                            : 'border-gray-200 hover:border-gray-300 bg-white'
+                        }`}
+                      >
+                        <p className="text-sm font-medium text-gray-900">{f.label}</p>
+                        <p className="text-xs text-gray-500">{f.desc}</p>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
 
-            {/* Note */}
-            <div className="mb-8 bg-white border border-gray-200 rounded-xl p-4 flex gap-3">
-              <svg className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p className="text-sm text-gray-600">
-                Mientras tanto, podés usar el módulo <strong>Anuncios</strong> para escalar en formatos personalizados.
-              </p>
-            </div>
+            {/* Generate button */}
+            <button
+              onClick={generateP3Adaptations}
+              disabled={p3AdaptFormats.length === 0 || p3AdaptSourceIds.length === 0 || p3Generating}
+              className="mb-8 bg-[#e42820] text-white font-semibold px-6 py-3 rounded-xl hover:bg-[#c82019] disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-2 text-sm"
+            >
+              {p3Generating ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Generando adaptaciones...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                  </svg>
+                  {p3AdaptFormats.length > 0
+                    ? `Generar ${p3AdaptFormats.length} formato${p3AdaptFormats.length > 1 ? 's' : ''} × ${p3AdaptSourceIds.length} creativo${p3AdaptSourceIds.length > 1 ? 's' : ''}`
+                    : 'Seleccioná al menos un formato'}
+                </>
+              )}
+            </button>
 
-            {/* CTAs */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <a
-                href="/anuncios"
-                className="flex-1 bg-[#e42820] text-white font-semibold py-3 rounded-xl hover:bg-[#c82019] transition-colors text-center text-sm"
-              >
-                Ir a Anuncios
-              </a>
+            {/* Adapted images */}
+            {p3AdaptedImages.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Adaptaciones generadas ({p3AdaptedImages.length})</p>
+                  <button
+                    onClick={() => {
+                      p3AdaptedImages.forEach((img, i) => {
+                        const creative = p2Creatives.find(c => c.id === img.creativeId);
+                        const filename = `pec-${creative?.stage || ''}-${img.label.replace(/\s+/g, '-')}-${i + 1}.png`;
+                        downloadExact(img.base64, filename, img.format);
+                      });
+                    }}
+                    className="flex items-center gap-1.5 text-xs text-[#e42820] hover:text-[#c82019] font-medium transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Descargar todas
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {p3AdaptedImages.map((img, i) => {
+                    const creative = p2Creatives.find(c => c.id === img.creativeId);
+                    return (
+                      <div key={i} className="space-y-2">
+                        <div className="rounded-xl overflow-hidden border border-gray-200">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={`data:image/png;base64,${img.base64}`} alt={img.label} className="w-full" />
+                        </div>
+                        <p className="text-xs text-gray-500 text-center leading-snug">
+                          {img.label}<br />
+                          <span className="text-gray-400">{creative?.stage} · {creative?.angleName}</span>
+                        </p>
+                        <button
+                          onClick={() => downloadExact(img.base64, `pec-${creative?.stage || ''}-${img.label.replace(/\s+/g, '-')}-${i + 1}.png`, img.format)}
+                          className="w-full bg-white hover:bg-gray-100 border border-gray-200 text-gray-500 hover:text-gray-900 text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                        >
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                          Descargar
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Bottom CTAs */}
+            <div className="mt-10 flex flex-col sm:flex-row gap-3">
               <button
-                onClick={() => resetToSetup(false)}
+                onClick={() => setView('sessions')}
                 className="flex-1 bg-white border border-gray-200 text-gray-700 font-semibold py-3 rounded-xl hover:border-gray-300 hover:bg-gray-50 transition-colors text-sm"
               >
-                Nueva sesión
+                Mis proyectos
               </button>
             </div>
           </div>

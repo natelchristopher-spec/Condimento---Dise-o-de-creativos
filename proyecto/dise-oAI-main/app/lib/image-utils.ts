@@ -36,6 +36,57 @@ export const readAsImage = (file: File): Promise<string> =>
     img.src = blobUrl;
   });
 
+// Target pixel dimensions for Meta/Google ad formats
+const FORMAT_TARGET_PX: Record<string, { w: number; h: number }> = {
+  square: { w: 1080, h: 1080 },
+  instant_exp: { w: 1080, h: 1920 },
+  story: { w: 1080, h: 1920 },
+  landscape: { w: 1920, h: 1080 },
+};
+
+/**
+ * Downloads a base64 image at exact target pixel dimensions for the given format.
+ * Uses Canvas cover mode: scales proportionally to fill target, crops minimal excess from center.
+ * If the format has no pixel target, falls back to direct download.
+ */
+export function downloadExact(base64: string, name: string, format?: string): void {
+  const target = format ? FORMAT_TARGET_PX[format] : undefined;
+  if (!target) {
+    const a = document.createElement('a');
+    a.href = `data:image/png;base64,${base64}`;
+    a.download = name;
+    a.click();
+    return;
+  }
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = target.w;
+    canvas.height = target.h;
+    const ctx = canvas.getContext('2d')!;
+    const srcRatio = img.naturalWidth / img.naturalHeight;
+    const dstRatio = target.w / target.h;
+    let dw: number, dh: number;
+    if (srcRatio > dstRatio) { dh = target.h; dw = dh * srcRatio; }
+    else { dw = target.w; dh = dw / srcRatio; }
+    ctx.drawImage(img, (target.w - dw) / 2, (target.h - dh) / 2, dw, dh);
+    canvas.toBlob(blob => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = name;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    }, 'image/png');
+  };
+  img.onerror = () => {
+    const a = document.createElement('a');
+    a.href = `data:image/png;base64,${base64}`;
+    a.download = name; a.click();
+  };
+  img.src = `data:image/png;base64,${base64}`;
+}
+
 /**
  * Compresses an existing base64 string to a smaller JPEG.
  * Used before sending images to the API to keep payloads small.

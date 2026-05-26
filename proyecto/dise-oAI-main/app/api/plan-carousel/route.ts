@@ -44,9 +44,6 @@ export async function POST(req: NextRequest) {
   const openai = new OpenAI({ apiKey: ctx.openaiApiKey });
   const brandKitContext = buildBrandKitContext(brandKit);
   const hasProduct = productImages.length > 0;
-  const productDataUrl = hasProduct
-    ? (productImages[0].startsWith('data:') ? productImages[0] : `data:image/jpeg;base64,${productImages[0]}`)
-    : '';
 
   const antiHallucinationRule = 'PROHIBIDO INVENTAR — REGLA ABSOLUTA para todas las etapas: NO agregar ningún dato que no esté explícitamente en el brief o brand kit: teléfonos, URLs, redes sociales (@handles), QR codes, ratings ("4.8/5"), reseñas, número de clientes, certificaciones, claims de ingredientes o materiales, fechas límite, descuentos, mecánicas promocionales, premios o cualquier estadística. Solo datos del brief.';
 
@@ -60,7 +57,7 @@ export async function POST(req: NextRequest) {
 
 Planificá un carrusel de EXACTAMENTE 3 slides para esta marca Y el copy del post que lo acompaña.
 ${hasProduct ? `
-PRODUCTO ESPECÍFICO — PRIORITARIO: Se adjunta imagen del producto. TODO el copy de los slides (títulos, subtítulos, items) debe hablar de ESTE PRODUCTO ESPECÍFICO. La marca es el contexto de estilo; el producto es el eje central del carrusel.
+PRODUCTO ESPECÍFICO — PRIORITARIO: Se adjunta imagen del producto. TODO el copy de los slides (títulos, subtítulos, items) debe hablar de ESTE PRODUCTO ESPECÍFICO — no de la marca en general. Usá la imagen para entender qué es el producto y adaptá el contenido al eje central del carrusel.
 ` : ''}
 MARCA:
 ${brandKitContext}
@@ -75,17 +72,17 @@ Las 3 slides deben verse como parte de una misma serie diseñada por un solo dir
 
 ESTRUCTURA DE SLIDES — seguila exactamente:
 
-Slide 1 (HOOK): captura la atención, hace que la persona quiera ver más.
-- title: máximo 8 palabras, impactante, usa el hook provisto como base
-- subtitle: máximo 6 palabras, complementa el título. Puede ser null.
+Slide 1 (HOOK): detiene el scroll generando curiosidad o tensión real.
+- title: máximo 8 palabras. Debe ser una pregunta incómoda, afirmación contraintuitiva, o promesa específica — NO frases motivacionales genéricas. Usá el hook provisto como base pero asegurate que genere verdadera curiosidad.
+- subtitle: máximo 6 palabras que añadan tensión o especificidad al hook. Puede ser null.
 - image_direction: instrucción en inglés para el generador. DEBE comenzar con el estilo visual unificado definido arriba, luego especificar solo la variación de esta slide. Ejemplo: "Dark red background, bold white typography — Slide 1: large centered headline, minimal elements."
 
-Slide 2 (VALOR): entrega el contenido prometido en el hook.
-- items: exactamente 3 bullets o pasos numerados. Máximo 5 palabras cada uno.
+Slide 2 (VALOR): RESUELVE la promesa o tensión planteada en el hook. Los 3 items deben sentirse como el desarrollo lógico de lo que el hook prometió — no son frases aisladas, son la respuesta directa a la tensión generada. Narrative continuity: el lector debe sentir que el slide 2 cumple lo que el slide 1 prometió.
+- items: exactamente 3 puntos. Máximo 6 palabras cada uno. Deben responder o desarrollar el hook — si el hook preguntó algo, estos items responden. Si el hook planteó un problema, estos son la solución concreta.
 - image_direction: MISMO estilo base que slide 1, solo varía la composición. Ejemplo: "Dark red background, bold white typography — Slide 2: structured list layout with icons or numbers."
 
-Slide 3 (CIERRE): slide de marca que cierra el relato — sin CTA explícito, solo branding.
-- title: máximo 8 palabras, frase de cierre que conecta con el tema y refuerza la marca
+Slide 3 (CIERRE): cierra el arco narrativo — conecta el tema con la marca de forma natural, sin CTA explícito.
+- title: máximo 8 palabras, frase de cierre que retoma el tema del hook y lo conecta con la marca o producto
 - image_direction: MISMO estilo base que slides 1 y 2. Ejemplo: "Dark red background, bold white typography — Slide 3: centered brand closing, clean and premium."
 
 COPY DEL POST DE INSTAGRAM:
@@ -106,10 +103,13 @@ Respondé SOLO con JSON válido:
 }`;
 
   try {
-    const userContent: Parameters<typeof openai.chat.completions.create>[0]['messages'][0]['content'] = hasProduct && productDataUrl
+    const userContent: Parameters<typeof openai.chat.completions.create>[0]['messages'][0]['content'] = hasProduct
       ? [
           { type: 'text', text: prompt },
-          { type: 'image_url', image_url: { url: productDataUrl, detail: 'low' as const } },
+          ...productImages.slice(0, 1).map(img => ({
+            type: 'image_url' as const,
+            image_url: { url: img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`, detail: 'low' as const },
+          })),
         ]
       : prompt;
 

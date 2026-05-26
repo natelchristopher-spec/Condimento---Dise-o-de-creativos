@@ -47,7 +47,8 @@ Describí en este orden exacto:
 5. DETALLES DE CONFECCIÓN: tiro (alto, medio, bajo), piernas (ancho, ajuste), bolsillos, cintura (elástico, cierre, trabillas), costuras decorativas, terminaciones, cualquier detalle funcional
 6. ELEMENTOS ÚNICOS: cualquier detalle que diferencie esta prenda de una genérica
 
-CRÍTICO para pantalones y prendas de color sólido: el color debe quedar completamente fiel. Si es beige, describí exactamente qué tipo de beige. Si es negro, indicá si tiene subtono. La IA tiende a desaturar o cambiar la temperatura del color — tu descripción debe ser lo suficientemente específica para evitarlo.`;
+CRÍTICO para pantalones y prendas de color sólido: el color debe quedar completamente fiel. Si es beige, describí exactamente qué tipo de beige. Si es negro, indicá si tiene subtono. La IA tiende a desaturar o cambiar la temperatura del color — tu descripción debe ser lo suficientemente específica para evitarlo.
+CRÍTICO — NO RECLASIFIQUES: usá el nombre de prenda tal como lo indica el brief del usuario. Si el brief dice "pantalón gabardina", NO lo llames "pantalón chino" ni ningún otro tipo genérico. Describí lo que ves sin cambiar el nombre del producto.`;
 
 const PRODUCT_DESCRIPTION_PROMPT_GENERIC = `Sos un experto en descripción de productos para generación de imágenes IA. Analizá este producto y describilo con precisión máxima. La persona que lea tu descripción no puede ver la foto — tu texto es el único recurso.
 
@@ -257,7 +258,9 @@ export async function POST(req: NextRequest) {
 
   // People instruction for concept generation
   const peopleInstruction = isBrandingMode
-    ? 'NO incluir productos específicos ni personas. El foco es la identidad de marca, el mensaje y la composición gráfica pura.'
+    ? productRef
+      ? 'NO incluir personas. El foco es la identidad de marca junto con el producto. El producto puede aparecer como elemento visual en las composiciones tipográficas y de marca.'
+      : 'NO incluir productos específicos ni personas. El foco es la identidad de marca, el mensaje y la composición gráfica pura.'
     : peopleMode === 'none'
       ? 'NO incluir personas. Enfocarse en producto, composición, elementos gráficos y copy.'
       : isFashionProduct
@@ -275,9 +278,9 @@ export async function POST(req: NextRequest) {
    - PANTALLA DIVIDIDA (COMPARATIVA): dos zonas que narran un contraste — nuestra marca vs. alternativa genérica, con producto vs. sin producto, ocasión A vs. ocasión B. Copy que marca la diferencia entre ambas mitades. Sin mostrar personas en estados negativos.
    ${isProductEcommerce ? '- DAILY USE / USE CASE: el producto integrado en su contexto cotidiano real (escritorio, gym, cocina, rutina, setup). El ambiente rodea al producto de forma natural. Hacerlo sentir usable y cercano.' : '- PRODUCT DETAIL FOCUS: destacar calidad y detalles del producto. Texturas, costuras, fit, closeups de materiales, acabados. Claim técnico corto superpuesto en tipografía refinada (ej: "100% algodón pima" / "Hecho para durar").'}`;
 
-  const brandingConceptDirections = `MODO BRANDING / CAMPAÑA — sin producto específico.
+  const brandingConceptDirections = `MODO BRANDING / CAMPAÑA${productRef ? ' — el producto puede aparecer como elemento visual' : ' — sin producto específico'}.
 PASO 1: Leé el brief y determiná el ÚNICO objetivo principal de campaña (ej: lanzamiento de tienda, Black Friday, temporada de verano, awareness de marca, aniversario, campaña de valores, etc.).
-PASO 2: Generá 6 conceptos que ejecuten ESE MISMO objetivo con 6 TRATAMIENTOS VISUALES completamente distintos. Todos los conceptos deben responder al mismo intent — NO mezclar distintos objetivos entre sí.
+PASO 2: Generá 6 conceptos que ejecuten ESE MISMO objetivo con 6 TRATAMIENTOS VISUALES completamente distintos. Todos los conceptos deben responder al mismo intent — NO mezclar distintos objetivos entre sí.${productRef ? '\nSi el brief incluye el producto, podés incorporarlo en la composición como elemento visual secundario que refuerza el mensaje de marca — pero el protagonista siempre es la identidad y el mensaje, no el producto.' : ''}
 PASO 3: Elegí los 6 tratamientos más apropiados para ese objetivo específico entre estas posibilidades:
   - TIPOGRAFÍA DOMINANTE: solo copy grande + paleta del brand kit. 0% fotografía. Las palabras son la imagen.
   - COUNTDOWN / ANTICIPACIÓN: elementos de cuenta regresiva, fecha, urgencia o expectativa visual.

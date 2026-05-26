@@ -9,7 +9,7 @@ import ImageCard from '@/app/components/ImageCard';
 import StepIndicator from '@/app/components/StepIndicator';
 import LoadingGrid from '@/app/components/LoadingGrid';
 import Sidebar from '@/app/components/Sidebar';
-import { readAsImage, compressImage } from '@/app/lib/image-utils';
+import { readAsImage, compressImage, downloadExact } from '@/app/lib/image-utils';
 
 export default function Home() {
   const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
@@ -25,6 +25,7 @@ export default function Home() {
   const [adaptSourceIds, setAdaptSourceIds] = useState<string[]>([]);
   const [adaptedImages, setAdaptedImages] = useState<{ format: string; label: string; conceptId: string; base64: string }[]>([]);
   const [generatingAdaptations, setGeneratingAdaptations] = useState(false);
+  const [adaptationsJustFinished, setAdaptationsJustFinished] = useState(false);
   const [step, setStep] = useState<Step>('brief');
   const [loading, setLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState('');
@@ -263,7 +264,7 @@ export default function Home() {
         setConcepts(prev => [...prev, img])
       );
       if (pd && !productDescription) setProductDescription(pd);
-      setSelectedConcepts([]);
+      setSelectedConcepts(pinned);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error generando similares');
     } finally {
@@ -275,7 +276,6 @@ export default function Home() {
     setSelectedConcepts(prev => {
       const exists = prev.find(c => c.id === img.id);
       if (exists) return prev.filter(c => c.id !== img.id);
-      if (prev.length >= 3) return prev;
       return [...prev, img];
     });
   };
@@ -424,7 +424,7 @@ export default function Home() {
     if (adaptFormats.length === 0 || conceptsToAdapt.length === 0) return;
     setGeneratingAdaptations(true);
     const FORMAT_LABELS: Record<string, string> = {
-      story: 'Story 9:16', feed45: 'Feed 4:5', square: 'Cuadrado 1:1', landscape: 'Landscape 16:9',
+      story: 'Story / Reels', instant_exp: 'Exp. Instantánea', square: 'Cuadrado 1:1', landscape: 'Landscape 16:9',
       pmax_square: 'PMax 1:1', pmax_landscape: 'PMax 1.91:1', pmax_portrait: 'PMax 4:5',
       banner_desktop: 'Banner Desktop', banner_mobile: 'Banner Mobile', webpush: 'Webpush', mailing: 'Mailing',
     };
@@ -453,6 +453,8 @@ export default function Home() {
         allResults.push(...(results.filter(Boolean) as { format: string; label: string; conceptId: string; base64: string }[]));
       }
       setAdaptedImages(allResults);
+      setAdaptationsJustFinished(true);
+      setTimeout(() => setAdaptationsJustFinished(false), 4000);
     } finally {
       setGeneratingAdaptations(false);
     }
@@ -746,8 +748,8 @@ export default function Home() {
           <div className="space-y-6">
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-2xl font-bold mb-1">Elegí hasta 3 conceptos</h2>
-                <p className="text-gray-500 text-sm">Seleccioná los que más te gustan para afinarlos</p>
+                <h2 className="text-2xl font-bold mb-1">Elegí tus conceptos</h2>
+                <p className="text-gray-500 text-sm">Seleccioná todos los que quieras afinar y descargar</p>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -1184,8 +1186,8 @@ export default function Home() {
 
               {[
                 { group: 'RRSS', items: [
-                  { key: 'story', label: 'Story 9:16', desc: 'Instagram / TikTok' },
-                  { key: 'feed45', label: 'Feed 4:5', desc: 'Instagram / Facebook' },
+                  { key: 'story', label: 'Story / Reels', desc: 'Instagram / Facebook · 9:16' },
+                  { key: 'instant_exp', label: 'Experiencia Instantánea', desc: 'Facebook Canvas · Full screen' },
                   { key: 'square', label: 'Cuadrado 1:1', desc: 'Instagram / Facebook' },
                   { key: 'landscape', label: 'Landscape 16:9', desc: 'Facebook / YouTube' },
                 ]},
@@ -1224,7 +1226,7 @@ export default function Home() {
               <button
                 onClick={generateAdaptations}
                 disabled={adaptFormats.length === 0 || adaptSourceIds.length === 0 || generatingAdaptations}
-                className="bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed text-gray-900 font-medium px-5 py-2.5 rounded-xl transition-colors flex items-center gap-2 text-sm"
+                className={`font-medium px-5 py-2.5 rounded-xl transition-colors flex items-center gap-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed ${generatingAdaptations ? 'bg-[#e42820] text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-900'}`}
               >
                 {generatingAdaptations ? (
                   <><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />Generando adaptaciones...</>
@@ -1238,6 +1240,15 @@ export default function Home() {
                 )}
               </button>
 
+              {adaptationsJustFinished && (
+                <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-800 text-sm font-medium px-4 py-2.5 rounded-xl">
+                  <svg className="w-4 h-4 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  </svg>
+                  ¡Adaptaciones generadas! Descargalas antes de salir.
+                </div>
+              )}
+
               {adaptedImages.length > 0 && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
@@ -1246,14 +1257,8 @@ export default function Home() {
                       onClick={() => {
                         adaptedImages.forEach((img, i) => {
                           const concept = selectedConcepts.find(c => c.id === img.conceptId);
-                          const url = URL.createObjectURL(new Blob([Uint8Array.from(atob(img.base64), c => c.charCodeAt(0))], { type: 'image/png' }));
-                          const a = document.createElement('a');
-                          a.href = url;
-                          a.download = `${brandKit?.name || 'concepto'}-${img.label.replace(/\s+/g, '-')}-${concept?.conceptName?.replace(/\s+/g, '-') || i + 1}.png`;
-                          document.body.appendChild(a);
-                          a.click();
-                          document.body.removeChild(a);
-                          setTimeout(() => URL.revokeObjectURL(url), 5000);
+                          const filename = `${brandKit?.name || 'concepto'}-${img.label.replace(/\s+/g, '-')}-${concept?.conceptName?.replace(/\s+/g, '-') || i + 1}.png`;
+                          downloadExact(img.base64, filename, img.format);
                         });
                       }}
                       className="flex items-center gap-1.5 text-xs text-[#e42820] hover:text-[#c41f18] font-medium transition-colors"
@@ -1275,14 +1280,8 @@ export default function Home() {
                           <p className="text-xs text-gray-500 text-center">{img.label} · {concept?.conceptName || ''}</p>
                           <button
                             onClick={() => {
-                              const url = URL.createObjectURL(new Blob([Uint8Array.from(atob(img.base64), c => c.charCodeAt(0))], { type: 'image/png' }));
-                              const a = document.createElement('a');
-                              a.href = url;
-                              a.download = `${brandKit?.name || 'concepto'}-${img.label.replace(/\s+/g, '-')}-${i + 1}.png`;
-                              document.body.appendChild(a);
-                              a.click();
-                              document.body.removeChild(a);
-                              setTimeout(() => URL.revokeObjectURL(url), 5000);
+                              const filename = `${brandKit?.name || 'concepto'}-${img.label.replace(/\s+/g, '-')}-${i + 1}.png`;
+                              downloadExact(img.base64, filename, img.format);
                             }}
                             className="w-full bg-white hover:bg-gray-100 border border-gray-200 text-gray-500 hover:text-gray-900 text-xs px-3 py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5"
                           >
