@@ -367,7 +367,7 @@ Respondé SOLO con JSON:
                 ? [
                     'PRENDA A MOSTRAR — Las imágenes adjuntas son la FUENTE PRIMARIA DE VERDAD VISUAL. Tomalos directamente de los píxeles de la foto — no los interpetes, no los idealices, no los simplifiques.',
                     productDescription ? `Descripción técnica de respaldo (usala solo para reforzar lo que ves en la foto): ${productDescription}` : '',
-                    'REGLAS DE COLOR — CRÍTICO: tomá el valor de color directamente de los píxeles de la referencia. NO aclarar, NO oscurecer, NO desaturar, NO cambiar temperatura de color.',
+                    'REGLAS DE COLOR — CRÍTICO: El color de cada prenda debe ser IDÉNTICO al de la imagen de referencia. NO aclarar, NO oscurecer, NO desaturar, NO cambiar temperatura de color. Tomá el valor de color directamente de los píxeles de la referencia — no lo interpetes ni lo idealices.',
                     'Para neutros cálidos (beige, arena, tostado, camel, crudo, khaki): NUNCA renderices como blanco ni gris claro. Mantené la temperatura cálida exacta de la foto.',
                     'Para colores oscuros (negro, azul marino, marrón): NUNCA los ilumines ni aclarés.',
                     'PANTALONES Y PRENDAS INFERIORES — DOBLE ATENCIÓN: si la prenda es un pantalón, prestá máxima atención al color — es donde el modelo tiende a fallar más. Telas lisas (twill, gabardina): superficie uniforme y suave, sin texturas artificiales ni arrugas exageradas. Replicá largo, ancho de pierna y tiro tal cual se ven en la referencia. NO reclasifiques el tipo de pantalón — usá el nombre que indica el brief.',
@@ -396,7 +396,6 @@ Respondé SOLO con JSON:
                 'NO incluyas botones CTA en la imagen.',
                 hasProductPhoto ? 'VERIFICACIÓN FINAL DE COLOR DE PRENDA — CRÍTICO: el color de la prenda en la imagen generada debe coincidir exactamente con la foto de referencia adjunta. Mismo tono, misma saturación, misma temperatura. Para neutros cálidos (tostado, camel, arena, beige): NUNCA renderizar como blanco ni gris claro — mantener el subtono cálido de la referencia.' : '',
                 hasProductPhoto ? 'REGLA DE COLOR ABSOLUTA — repetida por importancia crítica: tomá el valor de color DIRECTAMENTE de los píxeles de la foto de referencia. NO interpretes, NO idealices, NO cambies la temperatura de color. Para colores oscuros (negro, azul marino, marrón): NUNCA los ilumines ni aclarés. Para neutros cálidos: NUNCA los renderices como blanco ni gris.' : '',
-                hasProductPhoto ? 'PANTALONES Y PRENDAS INFERIORES — si hay un pantalón: prestá máxima atención al color — es donde el modelo tiende a fallar más. Telas lisas (twill, gabardina, cotton chino): superficie uniforme y suave, sin texturas artificiales. Replicá largo, ancho de pierna y tiro tal cual se ven en la referencia.' : '',
               ].filter(Boolean).join(' ');
 
             } else {
