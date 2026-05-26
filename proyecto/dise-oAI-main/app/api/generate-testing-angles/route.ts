@@ -77,19 +77,23 @@ CRÍTICO: NO menciones ninguna marca ni logo de terceros. Solo describí el prod
 
 async function editProductForConcept(
   openai: OpenAI,
-  productDataUrl: string,
+  productDataUrls: string[],
   editPrompt: string,
 ): Promise<string> {
   try {
-    const base64Data = productDataUrl.includes(',') ? productDataUrl.split(',')[1] : productDataUrl;
-    const buffer = Buffer.from(base64Data, 'base64');
-    const imageFile = await toFile(buffer, 'product.jpg', { type: 'image/jpeg' });
+    const imageFiles = await Promise.all(
+      productDataUrls.map((url, i) => {
+        const base64Data = url.includes(',') ? url.split(',')[1] : url;
+        return toFile(Buffer.from(base64Data, 'base64'), `product-${i}.jpg`, { type: 'image/jpeg' });
+      })
+    );
     const response = await openai.images.edit({
       model: 'gpt-image-2',
-      image: imageFile,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      image: imageFiles.length === 1 ? imageFiles[0] : imageFiles as any,
       prompt: editPrompt,
       size: '1024x1536',
-      quality: 'medium',
+      quality: 'high',
     });
     return response.data?.[0]?.b64_json || '';
   } catch (err) {
@@ -113,7 +117,7 @@ export async function POST(req: NextRequest) {
   const {
     brief = '',
     brandKit,
-    productImage = '',
+    productImages = [] as string[],
     referenceImages = [],
     count = 4,
     productCount,
@@ -123,7 +127,7 @@ export async function POST(req: NextRequest) {
   }: {
     brief?: string;
     brandKit: BrandKit;
-    productImage?: string;
+    productImages?: string[];
     referenceImages?: string[];
     count?: number;
     productCount?: number;
@@ -148,9 +152,10 @@ export async function POST(req: NextRequest) {
   const openai = new OpenAI({ apiKey: ctx.openaiApiKey });
   const brandKitContext = buildBrandKitContext(brandKit);
 
-  const productDataUrl = productImage
-    ? (productImage.startsWith('data:') ? productImage : `data:image/jpeg;base64,${productImage}`)
-    : '';
+  const productDataUrls = productImages
+    .filter(Boolean)
+    .map(img => img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`);
+  const productDataUrl = productDataUrls[0] || '';
 
   const encoder = new TextEncoder();
   const send = (controller: ReadableStreamDefaultController, data: object) =>
@@ -390,6 +395,8 @@ Respondé SOLO con JSON:
                 'ANTI-ALUCINACIÓN: NO inventés precios, descuentos, métricas, teléfonos, URLs ni estadísticas que no estén en el brief.',
                 'NO incluyas botones CTA en la imagen.',
                 hasProductPhoto ? 'VERIFICACIÓN FINAL DE COLOR DE PRENDA — CRÍTICO: el color de la prenda en la imagen generada debe coincidir exactamente con la foto de referencia adjunta. Mismo tono, misma saturación, misma temperatura. Para neutros cálidos (tostado, camel, arena, beige): NUNCA renderizar como blanco ni gris claro — mantener el subtono cálido de la referencia.' : '',
+                hasProductPhoto ? 'REGLA DE COLOR ABSOLUTA — repetida por importancia crítica: tomá el valor de color DIRECTAMENTE de los píxeles de la foto de referencia. NO interpretes, NO idealices, NO cambies la temperatura de color. Para colores oscuros (negro, azul marino, marrón): NUNCA los ilumines ni aclarés. Para neutros cálidos: NUNCA los renderices como blanco ni gris.' : '',
+                hasProductPhoto ? 'PANTALONES Y PRENDAS INFERIORES — si hay un pantalón: prestá máxima atención al color — es donde el modelo tiende a fallar más. Telas lisas (twill, gabardina, cotton chino): superficie uniforme y suave, sin texturas artificiales. Replicá largo, ancho de pierna y tiro tal cual se ven en la referencia.' : '',
               ].filter(Boolean).join(' ');
 
             } else {
@@ -426,7 +433,7 @@ Respondé SOLO con JSON:
             // Non-fashion with product photo: use images.edit starting FROM the product photo
             // (same approach as anuncios module) — preserves product colors, label, and design exactly
             if (!isFashionProduct && hasProductPhoto) {
-              base64 = await editProductForConcept(openai, productDataUrl, fullPrompt);
+              base64 = await editProductForConcept(openai, productDataUrls, fullPrompt);
               // Fallback to Responses API if images.edit fails
               if (!base64) {
                 try {
@@ -434,10 +441,10 @@ Respondé SOLO con JSON:
                   const response = await (openai.responses.create as any)({
                     model: 'gpt-image-2',
                     input: [{ role: 'user', content: [
-                      { type: 'input_image', image_url: productDataUrl, detail: 'high' },
+                      ...productDataUrls.map(url => ({ type: 'input_image', image_url: url, detail: 'high' })),
                       { type: 'input_text', text: fullPrompt },
                     ]}],
-                    tools: [{ type: 'image_generation', model: 'gpt-image-2', quality: 'medium', size: '1024x1536' }],
+                    tools: [{ type: 'image_generation', model: 'gpt-image-2', quality: 'high', size: '1024x1536' }],
                   });
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   for (const block of (response.output || [])) {
@@ -450,7 +457,7 @@ Respondé SOLO con JSON:
             } else {
               // Fashion products or no product photo: Responses API with product + reference images
               const inputImages = [
-                ...(hasProductPhoto ? [productDataUrl] : []),
+                ...productDataUrls,
                 ...(isFashionProduct && refImageUrls.length > 0 ? refImageUrls : []),
               ];
 
@@ -459,7 +466,7 @@ Respondé SOLO con JSON:
                 { type: 'input_text', text: fullPrompt },
               ];
 
-              for (let attempt = 1; attempt <= 2; attempt++) {
+              for (let attempt = 1; attempt <= 3; attempt++) {
                 try {
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   const response = await (openai.responses.create as any)({
@@ -468,7 +475,7 @@ Respondé SOLO con JSON:
                     tools: [{
                       type: 'image_generation',
                       model: 'gpt-image-2',
-                      quality: 'medium',
+                      quality: 'high',
                       size: '1024x1536',
                     }],
                   });
@@ -482,23 +489,29 @@ Respondé SOLO con JSON:
                   if (base64) break;
                 } catch (err) {
                   console.error(`testing-angles "${angle.name}" attempt ${attempt} failed:`, err);
-                  if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
+                  if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 1500));
                 }
               }
             }
 
             if (!base64) {
-              try {
-                const fallback = await openai.images.generate({
-                  model: 'gpt-image-2',
-                  prompt: `Direct response ad. Product shown exactly as in reference photo — do NOT rebrand or recolor it. Background and text use brand colors: ${brandKit.primary1}. ${productDescription.slice(0, 150)}. Headline: "${angle.hook}". Portrait. Spanish text only.`,
-                  size: '1024x1536',
-                  quality: 'low',
-                  n: 1,
-                });
-                base64 = fallback.data?.[0]?.b64_json || '';
-              } catch (err) {
-                console.error(`testing-angles "${angle.name}" fallback failed:`, err);
+              // Last resort fallback: images.edit with high quality if product photo available, else generate
+              if (hasProductPhoto) {
+                base64 = await editProductForConcept(openai, productDataUrls, fullPrompt);
+              }
+              if (!base64) {
+                try {
+                  const fallback = await openai.images.generate({
+                    model: 'gpt-image-2',
+                    prompt: `Direct response ad. Product shown exactly as in reference photo — do NOT rebrand or recolor it. Background and text use brand colors: ${brandKit.primary1}. ${productDescription.slice(0, 150)}. Headline: "${angle.hook}". Portrait. Spanish text only.`,
+                    size: '1024x1536',
+                    quality: 'medium',
+                    n: 1,
+                  });
+                  base64 = fallback.data?.[0]?.b64_json || '';
+                } catch (err) {
+                  console.error(`testing-angles "${angle.name}" fallback failed:`, err);
+                }
               }
             }
 
