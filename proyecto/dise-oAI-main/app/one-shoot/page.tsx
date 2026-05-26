@@ -673,6 +673,7 @@ export default function OneShootPage() {
               setP2Done(prev => prev + 1);
             }
             if (data.creativeError) { setP2Done(prev => prev + 1); }
+            if (data.angleError) { setP2Done(prev => prev + 3); } // whole angle plan failed — skip 3 slots
             if (data.done) {
               if (sessionId) {
                 const pecMeta = collectedCreatives.map(c => ({

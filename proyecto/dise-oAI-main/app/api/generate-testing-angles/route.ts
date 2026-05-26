@@ -235,42 +235,61 @@ Respondé SOLO con JSON:
 }`;
 
         let angles: MessageAngle[] = [];
-        try {
-          const anglesRes = await openai.chat.completions.create({
-            model: 'gpt-4o',
-            messages: [{ role: 'user', content: anglesPrompt }],
-            response_format: { type: 'json_object' },
-            max_tokens: 800,
-            temperature: 0.9,
-          });
-          const parsed = JSON.parse(anglesRes.choices[0].message.content || '{}');
-
-          let idx = 0;
-          const productAngles: MessageAngle[] = (parsed.product_angles || [])
+        const buildAngles = (parsed: Record<string, unknown>, startIdx = 0) => {
+          let idx = startIdx;
+          const productAngles: MessageAngle[] = ((parsed.product_angles as Omit<MessageAngle, 'key' | 'level'>[]) || [])
             .slice(0, resolvedProductCount)
-            .map((a: Omit<MessageAngle, 'key' | 'level'>) => ({
+            .map((a) => ({
               key: `angle-${idx++}`,
               name: a.name || `Ángulo Producto ${idx}`,
               hook: a.hook || '',
               emphasis: a.emphasis || '',
               level: 'product' as const,
             }));
-
-          const categoryAngles: MessageAngle[] = (parsed.category_angles || [])
+          const categoryAngles: MessageAngle[] = ((parsed.category_angles as Omit<MessageAngle, 'key' | 'level'>[]) || [])
             .slice(0, resolvedCategoryCount)
-            .map((a: Omit<MessageAngle, 'key' | 'level'>) => ({
+            .map((a) => ({
               key: `angle-${idx++}`,
               name: a.name || `Ángulo Categoría ${idx}`,
               hook: a.hook || '',
               emphasis: a.emphasis || '',
               level: 'category' as const,
             }));
+          return { productAngles, categoryAngles };
+        };
+
+        try {
+          const runAngleGen = async () => {
+            const res = await openai.chat.completions.create({
+              model: 'gpt-4o',
+              messages: [{ role: 'user', content: anglesPrompt }],
+              response_format: { type: 'json_object' },
+              max_tokens: 1500,
+              temperature: 0.9,
+            });
+            return JSON.parse(res.choices[0].message.content || '{}');
+          };
+
+          let parsed = await runAngleGen();
+          let { productAngles, categoryAngles } = buildAngles(parsed);
+
+          // Retry once if counts don't match
+          if (productAngles.length < resolvedProductCount || categoryAngles.length < resolvedCategoryCount) {
+            console.warn(`testing-angles: got ${productAngles.length}P+${categoryAngles.length}C, expected ${resolvedProductCount}P+${resolvedCategoryCount}C — retrying`);
+            parsed = await runAngleGen();
+            const rebuilt = buildAngles(parsed);
+            // Use the retry result only if it's better
+            if (rebuilt.productAngles.length + rebuilt.categoryAngles.length >= productAngles.length + categoryAngles.length) {
+              productAngles = rebuilt.productAngles;
+              categoryAngles = rebuilt.categoryAngles;
+            }
+          }
 
           angles = [...productAngles, ...categoryAngles];
 
           // Fallback: if API didn't split properly, treat all as legacy (product)
-          if (angles.length === 0 && parsed.angles) {
-            angles = (parsed.angles as Omit<MessageAngle, 'key'>[])
+          if (angles.length === 0 && (parsed as Record<string, unknown>).angles) {
+            angles = ((parsed as Record<string, unknown[]>).angles as Omit<MessageAngle, 'key'>[])
               .slice(0, targetCount)
               .map((a, i) => ({
                 key: `angle-${i}`,
@@ -344,7 +363,11 @@ Respondé SOLO con JSON:
 
             } else {
               const productConstraint = hasProductPhoto
-                ? `THE REFERENCE PHOTO SHOWS THE EXACT PRODUCT — reproduce with zero modifications: same shape, same color, same packaging, same proportions. Description: ${productDescription}`
+                ? [
+                    '⚠️ PRODUCT COLOR LOCK — TOP PRIORITY: The reference photo is the absolute source of truth for the product. Reproduce the exact color, shape, packaging, and proportions pixel-perfect from the photo. Do NOT interpret, stylize, or adjust anything.',
+                    productDescription ? `Technical description for backup (only use to reinforce what you see in the photo): ${productDescription}` : '',
+                    'CRITICAL: The brand palette listed below is ONLY for backgrounds, overlays, and text — NEVER apply brand colors to the product itself.',
+                  ].filter(Boolean).join(' ')
                 : `PRODUCT: ${productDescription}.`;
 
               const compositionInstruction = isCategory
@@ -356,12 +379,12 @@ Respondé SOLO con JSON:
                 compositionInstruction,
                 `HEADLINE (display this exact text, large and bold): "${angle.hook}"`,
                 `MESSAGE EMPHASIS: ${angle.emphasis}.`,
-                `Brand: ${brandKit.name}. Colors: ${brandKit.primary1}, ${brandKit.primary2}, ${brandKit.primary3}. Typography: ${brandKit.typography || 'bold sans-serif'}.`,
-                'COLOR ACCURACY CRITICAL: reproduce the product color exactly — do NOT shift, lighten, darken, or desaturate.',
+                `Brand palette FOR TEXT AND BACKGROUNDS ONLY — do not apply to product: ${brandKit.name} — ${brandKit.primary1}, ${brandKit.primary2}, ${brandKit.primary3}. Typography: ${brandKit.typography || 'bold sans-serif'}.`,
                 `Brand context: ${brandKitContext}`,
                 'Portrait 1024x1536. ALL text in Spanish. Professional agency quality.',
                 'ANTI-HALLUCINATION: Do NOT invent prices, discounts, metrics, phone numbers, URLs, or statistics not in the brief.',
                 'Do NOT include button-style CTAs in the image.',
+                hasProductPhoto ? '⚠️ FINAL COLOR CHECK: Before rendering, verify the product color matches the reference photo. If it does not match, correct it. The product color must not be shifted, lightened, darkened, or desaturated.' : '',
               ].filter(Boolean).join(' ');
             }
 

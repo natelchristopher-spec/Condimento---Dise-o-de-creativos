@@ -95,42 +95,60 @@ export async function POST(req: NextRequest) {
             let plan: PECPlan | null = null;
             const planPrompt = `Sos director creativo de performance marketing para e-commerce.
 
-Tenés el siguiente ángulo de mensaje ganador de Paso 1:
-- Nombre del ángulo: "${angle.name}"
-- Hook (ganador de atención): "${angle.hook}"
-- Énfasis: "${angle.emphasis}"
+ÁNGULO GANADOR — este es el mensaje que conectó con la audiencia en el test:
+- Nombre: "${angle.name}"
+- Hook: "${angle.hook}"
+- Énfasis del mensaje: "${angle.emphasis}"
 
 Producto: ${productDescription || brief}
 Marca: ${brandKit.name}${brandKit.clientRequest ? ` — ${brandKit.clientRequest}` : ''}
 
-Creá el brief creativo para escalar este ángulo en las 3 etapas del funnel PEC.
+Tu tarea: adaptá ESTE MISMO ÁNGULO a las 3 etapas de consciencia del funnel (P/E/C).
+El hook y el eje del mensaje NO CAMBIAN — lo que cambia es el FORMATO CREATIVO y el CONCEPTO VISUAL según dónde está el cliente en su decisión de compra.
 
-Para PROSPECCIÓN (P): elegí el formato más adecuado de: ${P_FORMATS.join(' / ')}
-Para EVALUACIÓN (E): elegí el formato más adecuado de: ${E_FORMATS.join(' / ')}
-Para CONVERSIÓN (C): elegí el formato más adecuado de: ${C_FORMATS.join(' / ')}
+PROSPECCIÓN (P) — Para quien no te conoce:
+Elegí el formato: ${P_FORMATS.join(' / ')}
+El concepto visual debe evocar la ASPIRACIÓN o el PROBLEMA que este ángulo resuelve. La marca aparece al final. NO vender directamente.
 
-Reglas:
-- Cada etapa mantiene el MISMO ángulo de mensaje pero adapta el formato al momento del funnel
-- headlines y sublines en español, max 8 palabras cada uno
-- concept describe SOLO la composición visual y estilo (no el copy)
-- NO inventés precios, descuentos, métricas o garantías no mencionados
+EVALUACIÓN (E) — Para quien ya te vio:
+Elegí el formato: ${E_FORMATS.join(' / ')}
+El concepto visual debe mostrar PRUEBA o PROCESO concreto del ángulo. El producto entra en foco.
+
+CONVERSIÓN (C) — Para quien está listo para comprar:
+Elegí el formato: ${C_FORMATS.join(' / ')}
+El concepto visual debe cerrar la duda. Urgencia, garantía o prueba social. El producto es el héroe.
+
+REGLAS:
+- Los 3 conceptos deben verse VISUALMENTE DISTINTOS — composición, mood y elementos diferentes
+- headline y subline deben reflejar el ángulo "${angle.name}" — no genéricos
+- max 8 palabras cada uno, en español
+- NO inventés precios, descuentos, métricas o garantías que no estén en el brief
 
 Respondé SOLO con JSON válido:
 {
-  "p": { "format": "nombre del formato elegido", "headline": "titular para la imagen", "subline": "subtitulo corto", "concept": "descripción del concepto visual" },
-  "e": { "format": "nombre del formato elegido", "headline": "titular para la imagen", "subline": "subtitulo corto", "concept": "descripción del concepto visual" },
-  "c": { "format": "nombre del formato elegido", "headline": "titular para la imagen", "subline": "subtitulo corto", "concept": "descripción del concepto visual" }
+  "p": { "format": "nombre del formato elegido", "headline": "titular directo del ángulo", "subline": "subtítulo corto", "concept": "descripción específica del concepto visual — composición, mood, elementos principales" },
+  "e": { "format": "nombre del formato elegido", "headline": "titular directo del ángulo", "subline": "subtítulo corto", "concept": "descripción específica del concepto visual — composición, mood, elementos principales" },
+  "c": { "format": "nombre del formato elegido", "headline": "titular directo del ángulo", "subline": "subtítulo corto", "concept": "descripción específica del concepto visual — composición, mood, elementos principales" }
 }`;
 
-            try {
-              const planRes = await openai.chat.completions.create({
+            const runPlan = async () => {
+              const res = await openai.chat.completions.create({
                 model: 'gpt-4o-mini',
                 messages: [{ role: 'user', content: planPrompt }],
                 response_format: { type: 'json_object' },
-                max_tokens: 600,
-                temperature: 0.8,
+                max_tokens: 800,
+                temperature: 0.7,
               });
-              plan = JSON.parse(planRes.choices[0].message.content || '{}') as PECPlan;
+              return JSON.parse(res.choices[0].message.content || '{}') as PECPlan;
+            };
+
+            try {
+              plan = await runPlan();
+              // Retry once if plan is missing required keys
+              if (!plan?.p || !plan?.e || !plan?.c) {
+                console.warn(`pec-creatives plan incomplete for "${angle.name}" — retrying`);
+                plan = await runPlan();
+              }
             } catch (err) {
               console.error(`pec-creatives plan failed for angle "${angle.name}":`, err);
               send(controller, { angleError: angle.key });
