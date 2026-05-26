@@ -1730,7 +1730,7 @@ export default function OneShootPage() {
                   `1 campaña · 1 conjunto de anuncios · ${p1Angles.length} anuncios (uno por ángulo) con el mismo presupuesto`,
                   'Audiencia fría: Intereses o Broad',
                   'Objetivo de campaña: Compras',
-                  'Dejá correr al menos 7–15 días o hasta 4+ compras por ángulo',
+                  'Dejá correr al menos 7–15 días antes de sacar conclusiones',
                 ].map((item, i) => (
                   <li key={i} className="flex items-start gap-3 text-sm text-gray-700">
                     <span className="flex-shrink-0 w-5 h-5 rounded-full bg-gray-100 text-gray-500 text-xs flex items-center justify-center font-bold mt-0.5">{i + 1}</span>
