@@ -269,6 +269,7 @@ export default function RedesPage() {
   const reset = () => {
     setStep('brief');
     setTopicHint('');
+    setProductImages([]);
     setTopics([]);
     setSelectedTopic(null);
     setSlides([]);
