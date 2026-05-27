@@ -72,6 +72,8 @@ function downloadImage(base64: string, name: string) {
 
 const lsKey = (id: string) => `one_shoot_images_${id}`;
 const lsP2Key = (id: string) => `one_shoot_p2_${id}`;
+const lsP1AdaptedKey = (id: string) => `one_shoot_p1_adapted_${id}`;
+const lsP3AdaptedKey = (id: string) => `one_shoot_p3_adapted_${id}`;
 
 // Evict binary image data from OTHER sessions when localStorage is full.
 // Small metadata keys (angle_metrics, product_imgs, ref_imgs, statuses within lsKey)
@@ -82,7 +84,11 @@ function freeUpStorageFor(currentId: string) {
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (!key) continue;
-      const isImageKey = key.startsWith('one_shoot_images_') || key.startsWith('one_shoot_p2_');
+      const isImageKey =
+        key.startsWith('one_shoot_images_') ||
+        key.startsWith('one_shoot_p2_') ||
+        key.startsWith('one_shoot_p1_adapted_') ||
+        key.startsWith('one_shoot_p3_adapted_');
       const isCurrentSession = key.includes(currentId);
       if (isImageKey && !isCurrentSession) keysToRemove.push(key);
     }
@@ -143,6 +149,43 @@ function loadLsP2(id: string): PECCreative[] {
     const raw = localStorage.getItem(lsP2Key(id));
     if (!raw) return [];
     return JSON.parse(raw) || [];
+  } catch { return []; }
+}
+
+type P1AdaptedImage = { format: string; label: string; angleKey: string; base64: string };
+type P3AdaptedImage = { format: string; label: string; creativeId: string; base64: string };
+
+function saveLsP1Adapted(id: string, data: P1AdaptedImage[]) {
+  const payload = JSON.stringify(data);
+  try {
+    localStorage.setItem(lsP1AdaptedKey(id), payload);
+  } catch {
+    freeUpStorageFor(id);
+    try { localStorage.setItem(lsP1AdaptedKey(id), payload); } catch { /* still full */ }
+  }
+}
+
+function loadLsP1Adapted(id: string): P1AdaptedImage[] {
+  try {
+    const raw = localStorage.getItem(lsP1AdaptedKey(id));
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function saveLsP3Adapted(id: string, data: P3AdaptedImage[]) {
+  const payload = JSON.stringify(data);
+  try {
+    localStorage.setItem(lsP3AdaptedKey(id), payload);
+  } catch {
+    freeUpStorageFor(id);
+    try { localStorage.setItem(lsP3AdaptedKey(id), payload); } catch { /* still full */ }
+  }
+}
+
+function loadLsP3Adapted(id: string): P3AdaptedImage[] {
+  try {
+    const raw = localStorage.getItem(lsP3AdaptedKey(id));
+    return raw ? JSON.parse(raw) : [];
   } catch { return []; }
 }
 
@@ -555,14 +598,14 @@ export default function OneShootPage() {
 
   // P1 format adaptation
   const [p1AdaptFormats, setP1AdaptFormats] = useState<string[]>([]);
-  const [p1AdaptedImages, setP1AdaptedImages] = useState<{ format: string; label: string; angleKey: string; base64: string }[]>([]);
+  const [p1AdaptedImages, setP1AdaptedImages] = useState<P1AdaptedImage[]>([]);
   const [p1Adapting, setP1Adapting] = useState(false);
   const [p1AdaptProgress, setP1AdaptProgress] = useState<{ done: number; total: number } | null>(null);
 
   // P3 format adaptation
   const [p3AdaptFormats, setP3AdaptFormats] = useState<string[]>([]);
   const [p3AdaptSourceIds, setP3AdaptSourceIds] = useState<string[]>([]);
-  const [p3AdaptedImages, setP3AdaptedImages] = useState<{ format: string; label: string; creativeId: string; base64: string }[]>([]);
+  const [p3AdaptedImages, setP3AdaptedImages] = useState<P3AdaptedImage[]>([]);
   const [p3Generating, setP3Generating] = useState(false);
 
   // Error handling
@@ -884,6 +927,69 @@ export default function OneShootPage() {
       }
     }
 
+    // Restore P1 format adaptations
+    const storedP1Adapted = loadLsP1Adapted(session.id);
+    if (storedP1Adapted.length > 0) {
+      setP1AdaptedImages(storedP1Adapted);
+    } else if (userId) {
+      // Try Supabase fallback for adapted images
+      try {
+        const { data: files } = await supabase.storage.from(STORAGE_BUCKET).list(`${userId}/${session.id}`);
+        const adaptedFiles = files?.filter(f => f.name.startsWith('p1_adapted_')) || [];
+        if (adaptedFiles.length > 0) {
+          const FORMAT_LABELS: Record<string, string> = { story: 'Story / Reels (9:16)', square: 'Cuadrado 1:1' };
+          const recovered = (await Promise.all(
+            adaptedFiles.map(async f => {
+              // filename: p1_adapted_{angleKey}_{format}.jpg
+              const match = f.name.match(/^p1_adapted_(.+)_(story|square)\.jpg$/);
+              if (!match) return null;
+              const [, angleKey, format] = match;
+              const b64 = await downloadBase64(supabase, `${userId}/${session.id}/${f.name}`);
+              if (!b64) return null;
+              return { format, label: FORMAT_LABELS[format] || format, angleKey, base64: b64 } as P1AdaptedImage;
+            })
+          )).filter(Boolean) as P1AdaptedImage[];
+          if (recovered.length > 0) {
+            setP1AdaptedImages(recovered);
+            saveLsP1Adapted(session.id, recovered);
+          }
+        }
+      } catch { /* ok */ }
+    }
+
+    // Restore P3 format adaptations (only meaningful when session is paso2_done)
+    if (session.status === 'paso2_done') {
+      const storedP3Adapted = loadLsP3Adapted(session.id);
+      if (storedP3Adapted.length > 0) {
+        setP3AdaptedImages(storedP3Adapted);
+      } else if (userId) {
+        try {
+          const { data: files } = await supabase.storage.from(STORAGE_BUCKET).list(`${userId}/${session.id}`);
+          const adaptedFiles = files?.filter(f => f.name.startsWith('p3_adapted_')) || [];
+          if (adaptedFiles.length > 0) {
+            const FORMAT_LABELS: Record<string, string> = {
+              story: 'Story / Reels', instant_exp: 'Exp. Instantánea', square: 'Cuadrado 1:1', landscape: 'Landscape 16:9',
+            };
+            const recovered = (await Promise.all(
+              adaptedFiles.map(async f => {
+                // filename: p3_adapted_{creativeId}_{format}.jpg
+                const match = f.name.match(/^p3_adapted_(.+)_(story|instant_exp|square|landscape)\.jpg$/);
+                if (!match) return null;
+                const [, creativeId, format] = match;
+                const b64 = await downloadBase64(supabase, `${userId}/${session.id}/${f.name}`);
+                if (!b64) return null;
+                return { format, label: FORMAT_LABELS[format] || format, creativeId, base64: b64 } as P3AdaptedImage;
+              })
+            )).filter(Boolean) as P3AdaptedImage[];
+            if (recovered.length > 0) {
+              setP3AdaptedImages(recovered);
+              saveLsP3Adapted(session.id, recovered);
+            }
+          }
+        } catch { /* ok */ }
+      }
+    }
+
     if (session.status === 'paso2_done' && storedP2.length > 0) {
       setP2Creatives(storedP2);
       const wk = Object.entries(stored.angleStatuses || {})
@@ -1067,7 +1173,7 @@ export default function OneShootPage() {
       const updated = p2Creatives.map(c => c.id === creativeId ? { ...c, base64 } : c);
       setP2Creatives(updated);
       if (sessionId) saveLsP2(sessionId, updated);
-      if (userId && sessionId) void uploadBase64(supabase, `${userId}/${sessionId}/p2_${creativeId}.jpg`, base64);
+      if (userId && sessionId) await uploadBase64(supabase, `${userId}/${sessionId}/p2_${creativeId}.jpg`, base64);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error aplicando ajuste');
     } finally {
@@ -1093,6 +1199,8 @@ export default function OneShootPage() {
     try {
       localStorage.removeItem(lsKey(id));
       localStorage.removeItem(lsP2Key(id));
+      localStorage.removeItem(lsP1AdaptedKey(id));
+      localStorage.removeItem(lsP3AdaptedKey(id));
       localStorage.removeItem(`one_shoot_product_imgs_${id}`);
       localStorage.removeItem(`one_shoot_product_img_${id}`);
       localStorage.removeItem(`one_shoot_ref_imgs_${id}`);
@@ -1130,6 +1238,11 @@ export default function OneShootPage() {
     setLaunchDate('');
     setWinnerKeys([]);
     setP2Creatives([]);
+    setP1AdaptedImages([]);
+    setP3AdaptedImages([]);
+    setP1AdaptFormats([]);
+    setP3AdaptFormats([]);
+    setP3AdaptSourceIds([]);
     setSessionId(null);
     setIsFashionProduct(false);
     setProductDescription('');
@@ -1149,7 +1262,7 @@ export default function OneShootPage() {
     const FORMAT_LABELS: Record<string, string> = {
       story: 'Story / Reels (9:16)', square: 'Cuadrado 1:1',
     };
-    const allResults: { format: string; label: string; angleKey: string; base64: string }[] = [];
+    const allResults: P1AdaptedImage[] = [];
     try {
       for (let i = 0; i < p1Images.length; i++) {
         const img = p1Images[i];
@@ -1164,16 +1277,26 @@ export default function OneShootPage() {
               });
               if (res.ok) {
                 const data = await res.json();
-                return { format, label: FORMAT_LABELS[format] || format, angleKey: img.angleKey, base64: data.base64 };
+                return { format, label: FORMAT_LABELS[format] || format, angleKey: img.angleKey, base64: data.base64 } as P1AdaptedImage;
               }
               if (attempt === 0) await new Promise(r => setTimeout(r, 1500));
             }
             return null;
           })
         );
-        allResults.push(...(results.filter(Boolean) as { format: string; label: string; angleKey: string; base64: string }[]));
+        allResults.push(...(results.filter(Boolean) as P1AdaptedImage[]));
       }
       setP1AdaptedImages(allResults);
+      if (sessionId) {
+        saveLsP1Adapted(sessionId, allResults);
+        if (userId) {
+          await Promise.allSettled(
+            allResults.map(a =>
+              uploadBase64(supabase, `${userId}/${sessionId}/p1_adapted_${a.angleKey}_${a.format}.jpg`, a.base64)
+            )
+          );
+        }
+      }
     } finally {
       setP1Adapting(false);
       setP1AdaptProgress(null);
@@ -1188,7 +1311,7 @@ export default function OneShootPage() {
     const FORMAT_LABELS: Record<string, string> = {
       story: 'Story / Reels', instant_exp: 'Exp. Instantánea', square: 'Cuadrado 1:1', landscape: 'Landscape 16:9',
     };
-    const allResults: { format: string; label: string; creativeId: string; base64: string }[] = [];
+    const allResults: P3AdaptedImage[] = [];
     try {
       for (const creative of creativesToAdapt) {
         const results = await Promise.all(
@@ -1201,16 +1324,26 @@ export default function OneShootPage() {
               });
               if (res.ok) {
                 const data = await res.json();
-                return { format, label: FORMAT_LABELS[format] || format, creativeId: creative.id, base64: data.base64 };
+                return { format, label: FORMAT_LABELS[format] || format, creativeId: creative.id, base64: data.base64 } as P3AdaptedImage;
               }
               if (attempt === 0) await new Promise(r => setTimeout(r, 1500));
             }
             return null;
           })
         );
-        allResults.push(...(results.filter(Boolean) as { format: string; label: string; creativeId: string; base64: string }[]));
+        allResults.push(...(results.filter(Boolean) as P3AdaptedImage[]));
       }
       setP3AdaptedImages(allResults);
+      if (sessionId) {
+        saveLsP3Adapted(sessionId, allResults);
+        if (userId) {
+          await Promise.allSettled(
+            allResults.map(a =>
+              uploadBase64(supabase, `${userId}/${sessionId}/p3_adapted_${a.creativeId}_${a.format}.jpg`, a.base64)
+            )
+          );
+        }
+      }
     } finally {
       setP3Generating(false);
     }
