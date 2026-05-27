@@ -1023,6 +1023,7 @@ export default function OneShootPage() {
       const updated = p2Creatives.map(c => c.id === creativeId ? { ...c, base64 } : c);
       setP2Creatives(updated);
       if (sessionId) saveLsP2(sessionId, updated);
+      if (userId && sessionId) void uploadBase64(supabase, `${userId}/${sessionId}/p2_${creativeId}.jpg`, base64);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error aplicando ajuste');
     } finally {
@@ -2589,7 +2590,7 @@ export default function OneShootPage() {
         <Sidebar active="/one-shoot" onLogout={handleLogout} userEmail={userEmail} />
         <main className="flex-1 md:ml-56 pt-14 md:pt-0 pb-32">
           <div className="max-w-4xl mx-auto px-4 py-8">
-            <GameHeader view="p2-results" />
+            <GameHeader view={view} />
 
             <div className="flex items-start justify-between mb-6">
               <div>
