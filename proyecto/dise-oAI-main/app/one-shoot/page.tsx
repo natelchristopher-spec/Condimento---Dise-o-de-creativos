@@ -73,6 +73,23 @@ function downloadImage(base64: string, name: string) {
 const lsKey = (id: string) => `one_shoot_images_${id}`;
 const lsP2Key = (id: string) => `one_shoot_p2_${id}`;
 
+// Evict binary image data from OTHER sessions when localStorage is full.
+// Small metadata keys (angle_metrics, product_imgs, ref_imgs, statuses within lsKey)
+// are preserved — only the heavy base64 payloads are removed.
+function freeUpStorageFor(currentId: string) {
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+      const isImageKey = key.startsWith('one_shoot_images_') || key.startsWith('one_shoot_p2_');
+      const isCurrentSession = key.includes(currentId);
+      if (isImageKey && !isCurrentSession) keysToRemove.push(key);
+    }
+    keysToRemove.forEach(k => localStorage.removeItem(k));
+  } catch { /* ok */ }
+}
+
 interface LsData {
   p1: AngleImage[];
   angleStatuses: Record<string, AngleStatus>;
@@ -86,9 +103,14 @@ function saveLsImages(
   angleStatuses: Record<string, AngleStatus> = {},
   launchDate = ''
 ) {
+  const payload = JSON.stringify({ p1, angleStatuses, launchDate });
   try {
-    localStorage.setItem(lsKey(id), JSON.stringify({ p1, angleStatuses, launchDate }));
-  } catch { /* storage full */ }
+    localStorage.setItem(lsKey(id), payload);
+  } catch {
+    // Quota exceeded — evict other sessions' image blobs and retry once
+    freeUpStorageFor(id);
+    try { localStorage.setItem(lsKey(id), payload); } catch { /* still full */ }
+  }
 }
 
 function loadLsImages(id: string): LsData {
@@ -107,9 +129,13 @@ function loadLsImages(id: string): LsData {
 
 // P2 creatives stored in a dedicated key to avoid competing with P1 images for storage space
 function saveLsP2(id: string, p2: PECCreative[]) {
+  const payload = JSON.stringify(p2);
   try {
-    localStorage.setItem(lsP2Key(id), JSON.stringify(p2));
-  } catch { /* storage full */ }
+    localStorage.setItem(lsP2Key(id), payload);
+  } catch {
+    freeUpStorageFor(id);
+    try { localStorage.setItem(lsP2Key(id), payload); } catch { /* still full */ }
+  }
 }
 
 function loadLsP2(id: string): PECCreative[] {
@@ -739,8 +765,9 @@ export default function OneShootPage() {
           // Store images in localStorage (fast cache) and Supabase Storage (cross-device persistence)
           const generatedAt = new Date().toISOString();
           saveLsImages(id, finalImages, {}, generatedAt);
+          // Await uploads so navigating away doesn't abort them mid-flight
           if (userId) {
-            void Promise.allSettled(
+            await Promise.allSettled(
               finalImages.map(img =>
                 uploadBase64(supabase, `${userId}/${id}/p1_${img.angleKey}.jpg`, img.base64)
               )
@@ -970,7 +997,7 @@ export default function OneShootPage() {
                 saveLsImages(sessionId, p1Images, angleStatuses, launchDate);
                 saveLsP2(sessionId, collectedCreatives);
                 if (userId) {
-                  void Promise.allSettled(
+                  await Promise.allSettled(
                     collectedCreatives.map(c =>
                       uploadBase64(supabase, `${userId}/${sessionId}/p2_${c.id}.jpg`, c.base64)
                     )
