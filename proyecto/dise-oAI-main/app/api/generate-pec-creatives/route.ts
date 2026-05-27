@@ -162,6 +162,7 @@ REGLAS:
 
 ANTI-ALUCINACIÓN — REGLA ABSOLUTA:
 PROHIBIDO inventar o incluir en headline/subline/concept: precios ($), porcentajes de descuento (50% OFF), cantidades de ventas, ratings con estrellas (4.8/5), testimonios específicos, fechas límite, cuotas o mecánicas promocionales que NO estén explícitamente mencionados en el brief o brand kit.
+Si el brief menciona términos promocionales (ej: "3 y 6 cuotas sin interés"), usá la expresión EXACTA como aparece en el brief — no la parafrasees, no la dividas en elementos separados ni la re-combines. Si no hay cuotas ni descuentos en el brief, NO los menciones bajo ningún concepto.
 
 Respondé SOLO con JSON válido:
 {
@@ -239,7 +240,7 @@ Respondé SOLO con JSON válido:
                   `Brand context: ${brandKitContext}`,
                   'MOBILE-FIRST TEXT RULE: keep text minimal and large enough to read on a phone screen. Avoid dense paragraphs or excessive copy. For formats like Beneficios or How-to, short bullet points are fine — but never more text than what fits comfortably without squinting on mobile.',
                   'Portrait 1024x1536. ALL text in Spanish. Professional agency quality.',
-                  'ANTI-HALLUCINATION: Do NOT invent prices, discounts, metrics, phone numbers, URLs, or statistics not in the brief.',
+                  'ANTI-HALLUCINATION: Do NOT invent prices, discounts, metrics, phone numbers, URLs, or statistics not in the brief. If the brief includes promotional terms (e.g. "3 y 6 cuotas sin interés"), reproduce them EXACTLY as-is in a single text element — never split into separate lines or restate differently. If no payment terms are in the brief, do NOT show any.',
                   'Do NOT include button-style CTAs in the image.',
                   productDataUrl ? 'GARMENT COLOR FINAL CHECK — CRITICAL: the garment color in the generated image must exactly match the reference photo attached. Same hue, same saturation, same temperature. For warm neutrals (tostado, tan, camel, sand, beige): NEVER render as white or light gray — preserve the warm undertone from the reference.' : '',
                 ].filter(Boolean).join(' ');

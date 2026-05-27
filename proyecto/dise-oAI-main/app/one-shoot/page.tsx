@@ -513,6 +513,7 @@ export default function OneShootPage() {
   const [p2RefineHistories, setP2RefineHistories] = useState<Record<string, string[]>>({});
   const [p2RefineImageHistories, setP2RefineImageHistories] = useState<Record<string, string[]>>({});
   const [p2RefiningId, setP2RefiningId] = useState<string | null>(null);
+  const [p2CardRefineOpen, setP2CardRefineOpen] = useState<Record<string, boolean>>({});
 
   // P1 format adaptation
   const [p1AdaptFormats, setP1AdaptFormats] = useState<string[]>([]);
@@ -784,25 +785,23 @@ export default function OneShootPage() {
     const stored = loadLsImages(session.id);
     let p1ToLoad = stored.p1;
 
-    // If localStorage is empty (different device/browser), download from Supabase Storage
-    if (p1ToLoad.length === 0 && userId) {
-      const downloaded = await Promise.all(
-        session.angles.map(async (angle) => {
-          const b64 = await downloadBase64(supabase, `${userId}/${session.id}/p1_${angle.key}.jpg`);
-          if (!b64) return null;
-          return {
-            id: angle.key,
-            base64: b64,
-            angleKey: angle.key,
-            angleName: angle.name,
-            hook: angle.hook,
-            emphasis: angle.emphasis,
-            level: angle.level,
-          } as AngleImage;
-        })
-      );
-      p1ToLoad = downloaded.filter(Boolean) as AngleImage[];
-      if (p1ToLoad.length > 0) saveLsImages(session.id, p1ToLoad, stored.angleStatuses, stored.launchDate);
+    // Per-image Supabase fallback — recover any angle missing from localStorage individually
+    if (userId && session.angles.length > 0) {
+      const loadedKeys = new Set(p1ToLoad.map(img => img.angleKey));
+      const missing = session.angles.filter(a => !loadedKeys.has(a.key));
+      if (missing.length > 0) {
+        const recovered = (await Promise.all(
+          missing.map(async (angle) => {
+            const b64 = await downloadBase64(supabase, `${userId}/${session.id}/p1_${angle.key}.jpg`);
+            if (!b64) return null;
+            return { id: angle.key, base64: b64, angleKey: angle.key, angleName: angle.name, hook: angle.hook, emphasis: angle.emphasis, level: angle.level } as AngleImage;
+          })
+        )).filter(Boolean) as AngleImage[];
+        if (recovered.length > 0) {
+          p1ToLoad = [...p1ToLoad, ...recovered];
+          saveLsImages(session.id, p1ToLoad, stored.angleStatuses, stored.launchDate);
+        }
+      }
     }
 
     setP1Images(p1ToLoad);
@@ -824,17 +823,23 @@ export default function OneShootPage() {
 
     let storedP2 = loadLsP2(session.id);
 
-    // If P2 localStorage is empty, download from Supabase Storage using pec_results metadata
-    if (session.status === 'paso2_done' && storedP2.length === 0 && userId && session.pec_results?.length > 0) {
-      const downloaded = await Promise.all(
-        session.pec_results.map(async (meta) => {
-          const b64 = await downloadBase64(supabase, `${userId}/${session.id}/p2_${meta.id}.jpg`);
-          if (!b64) return null;
-          return { ...meta, base64: b64 } as PECCreative;
-        })
-      );
-      storedP2 = downloaded.filter(Boolean) as PECCreative[];
-      if (storedP2.length > 0) saveLsP2(session.id, storedP2);
+    // Per-creative Supabase fallback — recover any creative missing from localStorage individually
+    if (session.status === 'paso2_done' && userId && session.pec_results?.length > 0) {
+      const loadedIds = new Set(storedP2.map(c => c.id));
+      const missingMeta = session.pec_results.filter(meta => !loadedIds.has(meta.id));
+      if (missingMeta.length > 0) {
+        const recovered = (await Promise.all(
+          missingMeta.map(async (meta) => {
+            const b64 = await downloadBase64(supabase, `${userId}/${session.id}/p2_${meta.id}.jpg`);
+            if (!b64) return null;
+            return { ...meta, base64: b64 } as PECCreative;
+          })
+        )).filter(Boolean) as PECCreative[];
+        if (recovered.length > 0) {
+          storedP2 = [...storedP2, ...recovered];
+          saveLsP2(session.id, storedP2);
+        }
+      }
     }
 
     if (session.status === 'paso2_done' && storedP2.length > 0) {
@@ -2467,6 +2472,51 @@ export default function OneShootPage() {
                                 </svg>
                                 Descargar
                               </button>
+                              <button
+                                onClick={() => setP2CardRefineOpen(prev => ({ ...prev, [creative.id]: !prev[creative.id] }))}
+                                className="mt-1.5 w-full text-xs text-indigo-600 hover:text-indigo-800 border border-indigo-200 hover:border-indigo-300 bg-indigo-50 hover:bg-indigo-100 rounded-lg py-1.5 transition-colors flex items-center justify-center gap-1.5"
+                              >
+                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                </svg>
+                                {p2CardRefineOpen[creative.id] ? 'Cerrar' : 'Afinar'}
+                              </button>
+                              {p2CardRefineOpen[creative.id] && (
+                                <div className="mt-2 space-y-1.5 border-t border-gray-100 pt-2">
+                                  <div className="flex flex-wrap gap-1">
+                                    {['Fondo más oscuro', 'Más contraste', 'Texto más grande', 'Producto más prominente', 'Más minimalista'].map(preset => (
+                                      <button
+                                        key={preset}
+                                        onClick={() => !p2RefiningId && setP2RefineInputs(prev => ({ ...prev, [creative.id]: preset }))}
+                                        disabled={!!p2RefiningId}
+                                        className="text-[10px] px-2 py-0.5 rounded-full border bg-white hover:bg-gray-50 border-gray-200 text-gray-500 hover:text-gray-900 transition-colors disabled:opacity-40"
+                                      >
+                                        {preset}
+                                      </button>
+                                    ))}
+                                  </div>
+                                  <div className="flex gap-1.5">
+                                    <input
+                                      type="text"
+                                      value={p2RefineInputs[creative.id] || ''}
+                                      onChange={e => setP2RefineInputs(prev => ({ ...prev, [creative.id]: e.target.value }))}
+                                      onKeyDown={e => { if (e.key === 'Enter' && !p2RefiningId && (p2RefineInputs[creative.id] || '').trim()) applyP2Refinement(creative.id); }}
+                                      placeholder="¿Qué cambiar?"
+                                      disabled={!!p2RefiningId}
+                                      className="flex-1 min-w-0 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-[#e42820] disabled:opacity-50"
+                                    />
+                                    <button
+                                      onClick={() => applyP2Refinement(creative.id)}
+                                      disabled={!(p2RefineInputs[creative.id] || '').trim() || !!p2RefiningId}
+                                      className="bg-[#e42820] hover:bg-[#c41f18] disabled:opacity-40 text-white font-semibold px-3 py-1.5 rounded-lg transition-colors text-xs shrink-0"
+                                    >
+                                      {p2RefiningId === creative.id ? (
+                                        <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin block" />
+                                      ) : 'Aplicar'}
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </div>
                         ))}
