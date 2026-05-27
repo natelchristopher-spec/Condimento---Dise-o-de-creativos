@@ -114,6 +114,12 @@ export async function POST(req: NextRequest) {
   const openai = new OpenAI({ apiKey: ctx.openaiApiKey });
   const brandKitContext = buildBrandKitContext(brandKit);
 
+  const logoDataUrl = (() => {
+    const raw = brandKit?.logoColorBase64 || brandKit?.logoBase64;
+    if (!raw || raw.length < 50) return null;
+    return raw.startsWith('data:') ? raw : `data:image/png;base64,${raw}`;
+  })();
+
   // Support both legacy single image and new multi-image array
   const allProductImages = productImages.length > 0
     ? productImages
@@ -253,6 +259,7 @@ Respondé SOLO con JSON válido:
                   'ANTI-HALLUCINATION: Do NOT invent prices, discounts, metrics, phone numbers, URLs, or statistics not in the brief. If the brief includes promotional terms (e.g. "3 y 6 cuotas sin interés"), reproduce them EXACTLY as-is in a single text element — never split into separate lines or restate differently. If no payment terms are in the brief, do NOT show any.',
                   'Do NOT include button-style CTAs in the image.',
                   productDataUrl ? 'GARMENT COLOR FINAL CHECK — CRITICAL: the garment color in the generated image must exactly match the reference photo attached. Same hue, same saturation, same temperature. For warm neutrals (tostado, tan, camel, sand, beige): NEVER render as white or light gray — preserve the warm undertone from the reference.' : '',
+                  logoDataUrl ? 'BRAND LOGO: The logo image is attached as reference. Place it in the top-right corner, small (approximately 6-8% of image width). Reproduce it exactly as provided — do NOT modify, distort, stylize, or recreate it from memory.' : '',
                 ].filter(Boolean).join(' ');
 
                 const hasProductPhoto = productDataUrls.length > 0;
@@ -261,6 +268,7 @@ Respondé SOLO con JSON válido:
                   ...(isFashionProduct && referenceImages.length > 0
                     ? referenceImages.slice(0, 2).map(img => img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`)
                     : []),
+                  ...(logoDataUrl ? [logoDataUrl] : []),
                 ];
 
                 const inputContent = [
