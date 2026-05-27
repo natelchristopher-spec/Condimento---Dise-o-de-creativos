@@ -567,6 +567,9 @@ export default function OneShootPage() {
   const [p1Error, setP1Error] = useState('');
   const [p1Elapsed, setP1Elapsed] = useState(0);
   const p1TimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const p1AbortRef = useRef<AbortController | null>(null);
+  const p2AbortRef = useRef<AbortController | null>(null);
+  const isMountedRef = useRef(true);
 
   // P1 review
   const [angleStatuses, setAngleStatuses] = useState<Record<string, AngleStatus>>({});
@@ -614,6 +617,9 @@ export default function OneShootPage() {
 
   // Delete confirmation modal
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  // Prevent double-submit on generation
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // ── Load profile ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -670,6 +676,12 @@ export default function OneShootPage() {
     return () => { if (p2TimerRef.current) clearInterval(p2TimerRef.current); };
   }, [view]);
 
+  // ── Unmount guard — prevents post-unmount state writes ───────────────────
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
+
   // ── Keep winnerKeys synced with angleStatuses ─────────────────────────────
   useEffect(() => {
     const winners = Object.entries(angleStatuses)
@@ -711,8 +723,10 @@ export default function OneShootPage() {
 
   // ── P1 Generation ─────────────────────────────────────────────────────────
   const generateP1 = async () => {
+    if (isSubmitting) return;
     if (!brandKit) { setError('Configurá tu marca en "Mi marca" antes de continuar.'); return; }
     if (!brief.trim()) { setError('Describí el producto antes de continuar.'); return; }
+    setIsSubmitting(true);
 
     const total = productCount + categoryCount;
     setError('');
@@ -732,6 +746,7 @@ export default function OneShootPage() {
     );
 
     const controller = new AbortController();
+    p1AbortRef.current = controller;
     const timeout = setTimeout(() => controller.abort(), 5 * 60 * 1000);
 
     try {
@@ -850,13 +865,15 @@ export default function OneShootPage() {
       setView('p1-live');
     } catch (e) {
       if (e instanceof Error && e.name === 'AbortError') {
-        setP1Error('La generación tardó demasiado. Intentá de nuevo.');
+        setP1Error(p1Images.length > 0 ? '' : 'La generación fue cancelada o tardó demasiado.');
       } else {
         setP1Error('Error inesperado. Intentá de nuevo.');
       }
-      setView('p1-live');
+      if (isMountedRef.current) setView('p1-live');
     } finally {
       clearTimeout(timeout);
+      p1AbortRef.current = null;
+      setIsSubmitting(false);
     }
   };
 
@@ -1064,6 +1081,7 @@ export default function OneShootPage() {
     const refImagesCompressed = await Promise.all(refImgs.map(img => compressImage(img, 768)));
 
     const controller = new AbortController();
+    p2AbortRef.current = controller;
     const timeout = setTimeout(() => controller.abort(), 8 * 60 * 1000);
 
     try {
@@ -1149,16 +1167,17 @@ export default function OneShootPage() {
         }
       }
 
-      setView('p2-results');
+      if (isMountedRef.current) setView('p2-results');
     } catch (e) {
       if (e instanceof Error && e.name === 'AbortError') {
-        setP2Error('La generación tardó demasiado. Intentá de nuevo.');
+        setP2Error(p2Creatives.length > 0 ? '' : 'La generación fue cancelada o tardó demasiado.');
       } else {
         setP2Error('Error inesperado. Intentá de nuevo.');
       }
-      setView('p2-results');
+      if (isMountedRef.current) setView('p2-results');
     } finally {
       clearTimeout(timeout);
+      p2AbortRef.current = null;
     }
   };
 
@@ -1805,7 +1824,7 @@ export default function OneShootPage() {
 
             <button
               onClick={generateP1}
-              disabled={!brief.trim() || !brandKit || (productCount === 0 && categoryCount === 0)}
+              disabled={!brief.trim() || !brandKit || (productCount === 0 && categoryCount === 0) || isSubmitting}
               className="w-full bg-[#e42820] text-white font-semibold py-3 rounded-xl hover:bg-[#c82019] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               Generar ángulos
@@ -1859,6 +1878,14 @@ export default function OneShootPage() {
                 <div className="h-2 bg-[#e42820]/60 rounded-full animate-pulse" style={{ width: '30%' }} />
               )}
             </div>
+
+            {/* Cancel button */}
+            <button
+              onClick={() => { p1AbortRef.current?.abort(); }}
+              className="mt-2 mb-4 text-xs text-gray-400 hover:text-gray-600 underline transition-colors"
+            >
+              Cancelar generación
+            </button>
 
             {/* Progressive image grid — skeleton until each image arrives */}
             {p1Angles.length > 0 && (
@@ -2621,6 +2648,14 @@ export default function OneShootPage() {
                 style={{ width: `${pct}%` }}
               />
             </div>
+
+            {/* Cancel button */}
+            <button
+              onClick={() => { p2AbortRef.current?.abort(); }}
+              className="mb-4 text-xs text-gray-400 hover:text-gray-600 underline transition-colors"
+            >
+              Cancelar generación
+            </button>
 
             <div className="flex flex-wrap gap-4 justify-center">
               {winningAngles.map(a => (
