@@ -36,6 +36,38 @@ export const readAsImage = (file: File): Promise<string> =>
     img.src = blobUrl;
   });
 
+/**
+ * Reads a logo file and returns a PNG data URL preserving transparency.
+ * Unlike readAsImage, does NOT fill with white — alpha channel is kept intact.
+ * Accepts any browser-renderable format: PNG, JPG, WebP, SVG, GIF.
+ * Max 512px on the longest side (logos don't need large dimensions).
+ */
+export const readAsLogo = (file: File): Promise<string> =>
+  new Promise(resolve => {
+    const blobUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(blobUrl);
+      try {
+        let { naturalWidth: w, naturalHeight: h } = img;
+        if (!w || !h) { resolve(''); return; }
+        const maxDim = 512;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+          else { w = Math.round(w * maxDim / h); h = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0, w, h);
+        const out = canvas.toDataURL('image/png');
+        resolve(out.length > 100 ? out : '');
+      } catch { resolve(''); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(blobUrl); resolve(''); };
+    img.src = blobUrl;
+  });
+
 // Target pixel dimensions for Meta/Google ad formats
 const FORMAT_TARGET_PX: Record<string, { w: number; h: number }> = {
   square: { w: 1080, h: 1080 },

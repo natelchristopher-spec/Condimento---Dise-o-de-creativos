@@ -6,7 +6,7 @@ import { BrandKit } from '@/app/types';
 import { useRequireAuth } from '@/app/lib/use-auth';
 import { createSupabaseBrowser } from '@/app/lib/supabase-browser';
 import Sidebar from '@/app/components/Sidebar';
-import { readAsImage } from '@/app/lib/image-utils';
+import { readAsImage, readAsLogo } from '@/app/lib/image-utils';
 
 async function extractTextFromPdf(file: File): Promise<string> {
   const pdfjsLib = await import('pdfjs-dist');
@@ -163,7 +163,7 @@ export default function ConfigPage() {
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const compressed = await readAsImage(file);
+    const compressed = await readAsLogo(file);
     if (compressed) setForm(f => ({ ...f, logoBase64: compressed, logoColorBase64: compressed }));
     e.target.value = '';
   };
