@@ -466,6 +466,7 @@ Respondé SOLO con JSON:
                 'Portrait 1024x1536. Todo el texto en español. Calidad agencia profesional.',
                 'ANTI-ALUCINACIÓN: NO inventés precios, descuentos, métricas, teléfonos, URLs ni estadísticas que no estén en el brief.',
                 'NO incluyas botones CTA en la imagen.',
+                'REGLA DE LOGO: NO agregues ni generes el nombre de la marca anunciante como logo, wordmark o elemento gráfico superpuesto en el creativo. La identidad de marca se expresa únicamente a través del headline, los colores y el layout indicados. Cualquier branding visible en el producto de la foto de referencia (etiquetas, estampados, logos impresos en la prenda) debe preservarse exactamente como aparece — no lo elimines ni lo modifiques.',
                 hasProductPhoto ? 'VERIFICACIÓN FINAL DE COLOR DE PRENDA — CRÍTICO: el color de la prenda en la imagen generada debe coincidir exactamente con la foto de referencia adjunta. Mismo tono, misma saturación, misma temperatura. Para neutros cálidos (tostado, camel, arena, beige): NUNCA renderizar como blanco ni gris claro — mantener el subtono cálido de la referencia.' : '',
                 hasProductPhoto ? 'REGLA DE COLOR ABSOLUTA — repetida por importancia crítica: tomá el valor de color DIRECTAMENTE de los píxeles de la foto de referencia. NO interpretes, NO idealices, NO cambies la temperatura de color. Para colores oscuros (negro, azul marino, marrón): NUNCA los ilumines ni aclarés. Para neutros cálidos: NUNCA los renderices como blanco ni gris.' : '',
               ].filter(Boolean).join(' ');
@@ -496,6 +497,7 @@ Respondé SOLO con JSON:
                 'Portrait 1024x1536. ALL text in Spanish. Professional agency quality.',
                 'ANTI-HALLUCINATION: Do NOT invent prices, discounts, metrics, phone numbers, URLs, or statistics not in the brief.',
                 'Do NOT include button-style CTAs in the image.',
+                'BRAND LOGO RULE: Do NOT add or generate the advertiser brand name as a logo, wordmark, or graphic overlay anywhere in the creative. Brand identity is expressed only through the headline text, brand colors, and layout specified above. Any branding already printed on the product in the reference photo (packaging labels, garment prints, logos on the product itself) must be preserved exactly as shown — do not remove or alter it.',
                 hasProductPhoto ? '⚠️ FINAL COLOR CHECK: Before rendering, verify the product color matches the reference photo. If it does not match, correct it. The product color must not be shifted, lightened, darkened, or desaturated.' : '',
               ].filter(Boolean).join(' ');
             }
