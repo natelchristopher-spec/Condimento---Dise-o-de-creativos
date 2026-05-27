@@ -217,14 +217,16 @@ async function uploadBase64(
   let bytes: Uint8Array;
   try {
     const b64 = base64.includes(',') ? base64.split(',')[1] : base64;
-    bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    const binary = atob(b64);
+    bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   } catch { return false; }
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       const { error } = await supabase.storage
         .from(STORAGE_BUCKET)
-        .upload(path, new Blob([bytes], { type: 'image/jpeg' }), { contentType: 'image/jpeg', upsert: true });
+        .upload(path, new Blob([bytes.buffer as ArrayBuffer], { type: 'image/jpeg' }), { contentType: 'image/jpeg', upsert: true });
       if (!error) return true;
     } catch { /* network error — retry */ }
     if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 1000));
@@ -781,9 +783,17 @@ export default function OneShootPage() {
       let finalProdDesc = '';
       let finalPersonDesc = '';
 
+      let chunkTimer: ReturnType<typeof setTimeout> | null = null;
+      const resetChunkTimer = () => {
+        if (chunkTimer) clearTimeout(chunkTimer);
+        chunkTimer = setTimeout(() => controller.abort(), 90_000);
+      };
+      resetChunkTimer();
+
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) { if (chunkTimer) clearTimeout(chunkTimer); break; }
+        resetChunkTimer();
         buffer += dec.decode(value, { stream: true });
         const parts = buffer.split('\n\n');
         buffer = parts.pop() || '';
@@ -1112,10 +1122,20 @@ export default function OneShootPage() {
       const dec = new TextDecoder();
       let buffer = '';
       const collectedCreatives: PECCreative[] = [];
+      const capturedUserId = userId;
+      const capturedSessionId = sessionId;
+
+      let chunkTimer: ReturnType<typeof setTimeout> | null = null;
+      const resetChunkTimer = () => {
+        if (chunkTimer) clearTimeout(chunkTimer);
+        chunkTimer = setTimeout(() => controller.abort(), 90_000);
+      };
+      resetChunkTimer();
 
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) { if (chunkTimer) clearTimeout(chunkTimer); break; }
+        resetChunkTimer();
         buffer += dec.decode(value, { stream: true });
         const parts = buffer.split('\n\n');
         buffer = parts.pop() || '';
@@ -1128,6 +1148,9 @@ export default function OneShootPage() {
               collectedCreatives.push(data.creative);
               setP2Creatives(prev => [...prev, data.creative]);
               setP2Done(prev => prev + 1);
+              if (capturedUserId && capturedSessionId) {
+                void uploadBase64(supabase, `${capturedUserId}/${capturedSessionId}/p2_${data.creative.id}.jpg`, data.creative.base64);
+              }
             }
             if (data.creativeError) { setP2Done(prev => prev + 1); }
             if (data.angleError) { setP2Done(prev => prev + 3); } // whole angle plan failed — skip 3 slots
