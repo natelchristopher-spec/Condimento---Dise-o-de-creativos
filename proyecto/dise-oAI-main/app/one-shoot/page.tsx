@@ -163,18 +163,30 @@ function loadAngleMetrics(id: string): AngleMetricsMap {
 
 const STORAGE_BUCKET = 'one-shoot-images';
 
+// Returns true if upload succeeded, false if all retries exhausted.
+// Retries up to 3 times with 1s / 2s / 4s backoff so transient network
+// errors don't silently lose images.
 async function uploadBase64(
   supabase: ReturnType<typeof createSupabaseBrowser>,
   path: string,
   base64: string
-): Promise<void> {
+): Promise<boolean> {
+  let bytes: Uint8Array;
   try {
     const b64 = base64.includes(',') ? base64.split(',')[1] : base64;
-    const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-    await supabase.storage
-      .from(STORAGE_BUCKET)
-      .upload(path, new Blob([bytes], { type: 'image/jpeg' }), { contentType: 'image/jpeg', upsert: true });
-  } catch { /* non-blocking */ }
+    bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  } catch { return false; }
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const { error } = await supabase.storage
+        .from(STORAGE_BUCKET)
+        .upload(path, new Blob([bytes], { type: 'image/jpeg' }), { contentType: 'image/jpeg', upsert: true });
+      if (!error) return true;
+    } catch { /* network error — retry */ }
+    if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 1000));
+  }
+  return false;
 }
 
 async function downloadBase64(
@@ -184,13 +196,13 @@ async function downloadBase64(
   try {
     const { data, error } = await supabase.storage.from(STORAGE_BUCKET).download(path);
     if (error || !data) return null;
-    return new Promise((resolve, reject) => {
+    return new Promise(resolve => {
       const reader = new FileReader();
       reader.onloadend = () => {
         const result = reader.result as string;
         resolve(result.includes(',') ? result.split(',')[1] : result);
       };
-      reader.onerror = reject;
+      reader.onerror = () => resolve(null);
       reader.readAsDataURL(data);
     });
   } catch { return null; }
@@ -555,6 +567,7 @@ export default function OneShootPage() {
 
   // Error handling
   const [error, setError] = useState('');
+  const [syncWarning, setSyncWarning] = useState('');
 
   // ── Load profile ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -767,11 +780,13 @@ export default function OneShootPage() {
           saveLsImages(id, finalImages, {}, generatedAt);
           // Await uploads so navigating away doesn't abort them mid-flight
           if (userId) {
-            await Promise.allSettled(
+            const uploadResults = await Promise.allSettled(
               finalImages.map(img =>
                 uploadBase64(supabase, `${userId}/${id}/p1_${img.angleKey}.jpg`, img.base64)
               )
             );
+            const failed = uploadResults.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value)).length;
+            if (failed > 0) setSyncWarning(`${failed} imagen${failed > 1 ? 'es' : ''} no se pudo${failed > 1 ? 'ron' : ''} sincronizar con la nube. Están guardadas en este dispositivo.`);
           }
           // Also store product/ref images for P2 generation
           try {
@@ -997,11 +1012,13 @@ export default function OneShootPage() {
                 saveLsImages(sessionId, p1Images, angleStatuses, launchDate);
                 saveLsP2(sessionId, collectedCreatives);
                 if (userId) {
-                  await Promise.allSettled(
+                  const uploadResults = await Promise.allSettled(
                     collectedCreatives.map(c =>
                       uploadBase64(supabase, `${userId}/${sessionId}/p2_${c.id}.jpg`, c.base64)
                     )
                   );
+                  const failed = uploadResults.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value)).length;
+                  if (failed > 0) setSyncWarning(`${failed} creativo${failed > 1 ? 's' : ''} no se pudo${failed > 1 ? 'ron' : ''} sincronizar con la nube. Están guardados en este dispositivo.`);
                 }
                 await loadSessions();
               }
@@ -1715,6 +1732,12 @@ export default function OneShootPage() {
 
             {p1Error && (
               <div className="mb-5 bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700">{p1Error}</div>
+            )}
+            {syncWarning && (
+              <div className="mb-5 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800 flex items-start justify-between gap-3">
+                <span>⚠️ {syncWarning}</span>
+                <button onClick={() => setSyncWarning('')} className="text-amber-500 hover:text-amber-700 shrink-0 text-xs">Cerrar</button>
+              </div>
             )}
 
             {/* Download all */}
@@ -2452,6 +2475,12 @@ export default function OneShootPage() {
 
             {p2Error && (
               <div className="mb-5 bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700">{p2Error}</div>
+            )}
+            {syncWarning && (
+              <div className="mb-5 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800 flex items-start justify-between gap-3">
+                <span>⚠️ {syncWarning}</span>
+                <button onClick={() => setSyncWarning('')} className="text-amber-500 hover:text-amber-700 shrink-0 text-xs">Cerrar</button>
+              </div>
             )}
 
             {p2Creatives.length === 0 ? (
