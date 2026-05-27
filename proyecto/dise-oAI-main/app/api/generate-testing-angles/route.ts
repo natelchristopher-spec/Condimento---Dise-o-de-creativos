@@ -162,12 +162,6 @@ export async function POST(req: NextRequest) {
   const openai = new OpenAI({ apiKey: ctx.openaiApiKey });
   const brandKitContext = buildBrandKitContext(brandKit);
 
-  const logoDataUrl = (() => {
-    const raw = brandKit?.logoColorBase64 || brandKit?.logoBase64;
-    if (!raw || raw.length < 50) return null;
-    return raw.startsWith('data:') ? raw : `data:image/png;base64,${raw}`;
-  })();
-
   const productDataUrls = productImages
     .filter(Boolean)
     .map(img => img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`);
@@ -474,7 +468,6 @@ Respondé SOLO con JSON:
                 'NO incluyas botones CTA en la imagen.',
                 hasProductPhoto ? 'VERIFICACIÓN FINAL DE COLOR DE PRENDA — CRÍTICO: el color de la prenda en la imagen generada debe coincidir exactamente con la foto de referencia adjunta. Mismo tono, misma saturación, misma temperatura. Para neutros cálidos (tostado, camel, arena, beige): NUNCA renderizar como blanco ni gris claro — mantener el subtono cálido de la referencia.' : '',
                 hasProductPhoto ? 'REGLA DE COLOR ABSOLUTA — repetida por importancia crítica: tomá el valor de color DIRECTAMENTE de los píxeles de la foto de referencia. NO interpretes, NO idealices, NO cambies la temperatura de color. Para colores oscuros (negro, azul marino, marrón): NUNCA los ilumines ni aclarés. Para neutros cálidos: NUNCA los renderices como blanco ni gris.' : '',
-                logoDataUrl ? 'LOGO DE MARCA: el logo está adjunto como imagen de referencia. Colocalo en la esquina superior derecha del creativo, pequeño (aprox. 6-8% del ancho de imagen). Reproduci el logo exactamente tal como se ve en la imagen adjunta — NO lo modifiques, redibujés, distorsiones ni recreés de memoria.' : '',
               ].filter(Boolean).join(' ');
 
             } else {
@@ -504,7 +497,6 @@ Respondé SOLO con JSON:
                 'ANTI-HALLUCINATION: Do NOT invent prices, discounts, metrics, phone numbers, URLs, or statistics not in the brief.',
                 'Do NOT include button-style CTAs in the image.',
                 hasProductPhoto ? '⚠️ FINAL COLOR CHECK: Before rendering, verify the product color matches the reference photo. If it does not match, correct it. The product color must not be shifted, lightened, darkened, or desaturated.' : '',
-                logoDataUrl ? 'BRAND LOGO: The logo image is attached as reference. Place it in the top-right corner, small (approximately 6-8% of image width). Reproduce it exactly as provided — do NOT modify, distort, stylize, or recreate it from memory.' : '',
               ].filter(Boolean).join(' ');
             }
 
@@ -522,7 +514,6 @@ Respondé SOLO con JSON:
                     model: 'gpt-image-2',
                     input: [{ role: 'user', content: [
                       ...productDataUrls.map(url => ({ type: 'input_image', image_url: url, detail: 'high' })),
-                      ...(logoDataUrl ? [{ type: 'input_image', image_url: logoDataUrl, detail: 'high' }] : []),
                       { type: 'input_text', text: fullPrompt },
                     ]}],
                     tools: [{ type: 'image_generation', model: 'gpt-image-2', quality: 'high', size: '1024x1536' }],
@@ -540,7 +531,6 @@ Respondé SOLO con JSON:
               const inputImages = [
                 ...productDataUrls.slice(0, 2),
                 ...(isFashionProduct && refImageUrls.length > 0 ? refImageUrls : []),
-                ...(logoDataUrl ? [logoDataUrl] : []),
               ];
 
               const inputContent = [
@@ -585,7 +575,7 @@ Respondé SOLO con JSON:
                 try {
                   const fallback = await openai.images.generate({
                     model: 'gpt-image-2',
-                    prompt: `Direct response ad. Product shown exactly as in reference photo — do NOT rebrand or recolor it. Background and text use brand colors: ${brandKit.primary1}. ${productDescription.slice(0, 150)}. Headline: "${angle.hook}". Portrait. Spanish text only.${logoDataUrl ? ' Place brand logo in top-right corner, small (6-8% of image width). Reproduce it exactly — do NOT recreate or stylize it.' : ''}`,
+                    prompt: `Direct response ad. Product shown exactly as in reference photo — do NOT rebrand or recolor it. Background and text use brand colors: ${brandKit.primary1}. ${productDescription.slice(0, 150)}. Headline: "${angle.hook}". Portrait. Spanish text only.`,
                     size: '1024x1536',
                     quality: 'medium',
                     n: 1,
