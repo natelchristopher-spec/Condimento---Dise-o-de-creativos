@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
               'IDIOMA — CRÍTICO: TODO el texto generado (beneficios, features, claims, CTAs, etiquetas) debe estar en ESPAÑOL. Solo se permite inglés si es parte del nombre de marca o nombre de producto. NUNCA generar copy descriptivo en inglés.',
               `CARRUSEL VISUAL COHERENTE: Esta es la slide ${slide.index} de 3. Las 3 slides DEBEN compartir idéntica paleta de colores, mismo peso tipográfico y mismo tratamiento visual general. Se ven como diseñadas por el mismo director creativo en la misma sesión de diseño.`,
               'ANTI-HALLUCINATION — do NOT invent or add any data not in the brief: phone numbers, URLs, social handles, QR codes, star ratings, testimonials, customer counts, certifications, ingredient/material claims, deadlines, discounts, promotional mechanics, awards, or any statistics. Only use what is explicitly in the brief.',
-              'BRAND LOGO RULE: Do NOT add or generate the advertiser brand name as a logo, wordmark, or graphic overlay anywhere in the slide. Brand identity is expressed only through colors, typography, and layout specified above. Any branding already printed on the product in the reference photo (packaging labels, garment prints, logos on the product itself) must be preserved exactly as shown — do not remove or alter it.',
+              'BRAND LOGO RULE: Do NOT add or generate the advertiser brand name as a logo, wordmark, or separate graphic element anywhere in the slide. Brand identity is expressed only through colors, typography, and layout specified above.',
             ].filter(Boolean).join(' ');
 
             let base64 = '';
