@@ -5,7 +5,7 @@ import { buildBrandKitContext } from '@/app/lib/brandKitContext';
 import { getUserContext } from '@/app/lib/get-user-context';
 import { MessageAngle } from '../generate-testing-angles/route';
 
-export const maxDuration = 480;
+export const maxDuration = 300;
 
 function getOpenAIErrorMessage(e: unknown): string {
   const msg = e instanceof Error ? e.message : String(e);
