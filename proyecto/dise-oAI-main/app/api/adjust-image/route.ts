@@ -32,12 +32,19 @@ export async function POST(req: NextRequest) {
   const ctx = await getUserContext();
   if (!ctx) return NextResponse.json({ error: 'Configurá tu API key de OpenAI en el perfil.' }, { status: 401 });
 
-  const { imageBase64, instruction, productDetailImages = [], size = '1024x1536' }: {
-    imageBase64: string;
-    instruction: string;
-    productDetailImages: string[];
-    size?: string;
-  } = await req.json();
+  let imageBase64: string;
+  let instruction: string;
+  let productDetailImages: string[] = [];
+  let size = '1024x1536';
+  try {
+    ({ imageBase64, instruction, productDetailImages = [], size = '1024x1536' } = await req.json());
+  } catch {
+    return NextResponse.json({ error: 'Request inválido' }, { status: 400 });
+  }
+  if (!imageBase64 || typeof imageBase64 !== 'string' || imageBase64.length < 100)
+    return NextResponse.json({ error: 'Imagen requerida' }, { status: 400 });
+  if (!instruction?.trim())
+    return NextResponse.json({ error: 'Instrucción requerida' }, { status: 400 });
 
   const openai = new OpenAI({ apiKey: ctx.openaiApiKey });
 

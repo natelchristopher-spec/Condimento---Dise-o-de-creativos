@@ -5,7 +5,7 @@ import { buildBrandKitContext } from '@/app/lib/brandKitContext';
 import { getUserContext } from '@/app/lib/get-user-context';
 import { MessageAngle } from '../generate-testing-angles/route';
 
-export const maxDuration = 300;
+export const maxDuration = 480;
 
 function getOpenAIErrorMessage(e: unknown): string {
   const msg = e instanceof Error ? e.message : String(e);
@@ -79,6 +79,26 @@ export async function POST(req: NextRequest) {
     return new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } });
   }
 
+  let body: {
+    brief?: string;
+    productDescription?: string;
+    personDescription?: string;
+    isFashionProduct?: boolean;
+    winningAngles: MessageAngle[];
+    brandKit: BrandKit;
+    productImageBase64?: string;
+    productImages?: string[];
+    referenceImages?: string[];
+  };
+  try {
+    body = await req.json();
+  } catch {
+    return new Response('data: {"error":"Request inválido."}\n\ndata: {"done":true}\n\n', { headers: { 'Content-Type': 'text/event-stream' } });
+  }
+  if (!Array.isArray(body.winningAngles) || body.winningAngles.length === 0) {
+    return new Response('data: {"error":"No hay ángulos ganadores seleccionados."}\n\ndata: {"done":true}\n\n', { headers: { 'Content-Type': 'text/event-stream' } });
+  }
+
   const {
     brief = '',
     productDescription = '',
@@ -89,17 +109,7 @@ export async function POST(req: NextRequest) {
     productImageBase64 = '',
     productImages = [],
     referenceImages = [],
-  }: {
-    brief?: string;
-    productDescription?: string;
-    personDescription?: string;
-    isFashionProduct?: boolean;
-    winningAngles: MessageAngle[];
-    brandKit: BrandKit;
-    productImageBase64?: string;
-    productImages?: string[];
-    referenceImages?: string[];
-  } = await req.json();
+  } = body;
 
   const openai = new OpenAI({ apiKey: ctx.openaiApiKey });
   const brandKitContext = buildBrandKitContext(brandKit);
@@ -319,7 +329,7 @@ Respondé SOLO con JSON válido:
                 if (base64) {
                   send(controller, {
                     creative: {
-                      id: Math.random().toString(36).slice(2),
+                      id: crypto.randomUUID(),
                       angleKey: angle.key,
                       angleName: angle.name,
                       hook: angle.hook,

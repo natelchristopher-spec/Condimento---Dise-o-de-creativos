@@ -258,9 +258,9 @@ interface GameHeaderProps {
 }
 
 function GameHeader({ view }: GameHeaderProps) {
-  const step1Done = ['p1-review', 'p2-generating', 'p2-results', 'p3'].includes(view);
+  const step1Done = ['p1-review', 'p2-generating', 'p2-results', 'p2-refine', 'p3'].includes(view);
   const step2Done = ['p2-results', 'p2-refine', 'p3'].includes(view);
-  const step1Active = ['p1-generating', 'p1-live', 'p1-review'].includes(view);
+  const step1Active = ['setup', 'p1-generating', 'p1-live', 'p1-review'].includes(view);
   const step2Active = ['p2-generating', 'p2-results'].includes(view);
   const step3Active = view === 'p3';
 
@@ -862,6 +862,19 @@ export default function OneShootPage() {
 
   // ── Resume session ────────────────────────────────────────────────────────
   const resumeSession = async (session: SessionRow) => {
+    // Reset per-session transient state before loading the new session
+    setSyncWarning('');
+    setP2Error('');
+    setTargetCpa('');
+    setDailyBudget('');
+    setAccountType('new');
+    setTotalAccountPurchases('');
+    setLaunchDate('');
+    setExcludeAngles([]);
+    setP2CardRefineOpen({});
+    setP2RefineHistories({});
+    setP2RefineImageHistories({});
+
     setSessionId(session.id);
     setBrief(session.brief);
     setIsFashionProduct(session.is_fashion_product);
@@ -1184,7 +1197,7 @@ export default function OneShootPage() {
     }
   };
 
-  const undoP2Refinement = (creativeId: string) => {
+  const undoP2Refinement = async (creativeId: string) => {
     const imgHistory = p2RefineImageHistories[creativeId];
     if (!imgHistory?.length) return;
     const prev = imgHistory[imgHistory.length - 1];
@@ -1193,6 +1206,7 @@ export default function OneShootPage() {
     const updated = p2Creatives.map(c => c.id === creativeId ? { ...c, base64: prev } : c);
     setP2Creatives(updated);
     if (sessionId) saveLsP2(sessionId, updated);
+    if (userId && sessionId) await uploadBase64(supabase, `${userId}/${sessionId}/p2_${creativeId}.jpg`, prev);
   };
 
   // ── Delete session ────────────────────────────────────────────────────────
@@ -1251,9 +1265,18 @@ export default function OneShootPage() {
     setProductDescription('');
     setPersonDescription('');
     setProductImages([]);
+    setProductUrl('');
     setP1Error('');
     setP2Error('');
     setError('');
+    setSyncWarning('');
+    setTargetCpa('');
+    setDailyBudget('');
+    setAccountType('new');
+    setTotalAccountPurchases('');
+    setP2CardRefineOpen({});
+    setP2RefineHistories({});
+    setP2RefineImageHistories({});
     setView('setup');
   };
 

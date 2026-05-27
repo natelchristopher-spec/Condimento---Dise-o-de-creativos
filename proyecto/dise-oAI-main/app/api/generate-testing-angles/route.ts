@@ -117,6 +117,23 @@ export async function POST(req: NextRequest) {
     return new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } });
   }
 
+  let parsedBody: {
+    brief?: string;
+    brandKit: BrandKit;
+    productImages?: string[];
+    referenceImages?: string[];
+    count?: number;
+    productCount?: number;
+    categoryCount?: number;
+    peopleMode?: 'none' | 'real' | 'auto';
+    excludeAngles?: MessageAngle[];
+  };
+  try {
+    parsedBody = await req.json();
+  } catch {
+    return new Response('data: {"error":"Request inválido."}\n\ndata: {"done":true}\n\n', { headers: { 'Content-Type': 'text/event-stream' } });
+  }
+
   const {
     brief = '',
     brandKit,
@@ -127,17 +144,7 @@ export async function POST(req: NextRequest) {
     categoryCount,
     peopleMode = 'auto',
     excludeAngles = [],
-  }: {
-    brief?: string;
-    brandKit: BrandKit;
-    productImages?: string[];
-    referenceImages?: string[];
-    count?: number;
-    productCount?: number;
-    categoryCount?: number;
-    peopleMode?: 'none' | 'real' | 'auto';
-    excludeAngles?: MessageAngle[];
-  } = await req.json();
+  } = parsedBody;
 
   // Resolve counts: if productCount/categoryCount provided use them, else split count 50/50
   let resolvedProductCount: number;
@@ -583,7 +590,7 @@ Respondé SOLO con JSON:
             if (base64) {
               send(controller, {
                 image: {
-                  id: Math.random().toString(36).slice(2),
+                  id: crypto.randomUUID(),
                   base64,
                   angleKey: angle.key,
                   angleName: angle.name,

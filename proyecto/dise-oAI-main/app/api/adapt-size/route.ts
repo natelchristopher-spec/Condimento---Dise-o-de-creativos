@@ -83,7 +83,15 @@ export async function POST(req: NextRequest) {
   const ctx = await getUserContext();
   if (!ctx) return NextResponse.json({ error: 'Configurá tu API key de OpenAI en el perfil.' }, { status: 401 });
 
-  const { imageBase64, format }: { imageBase64: string; format: Format } = await req.json();
+  let imageBase64: string;
+  let format: Format;
+  try {
+    ({ imageBase64, format } = await req.json());
+  } catch {
+    return NextResponse.json({ error: 'Request inválido' }, { status: 400 });
+  }
+  if (!imageBase64 || typeof imageBase64 !== 'string' || imageBase64.length < 100)
+    return NextResponse.json({ error: 'Imagen requerida' }, { status: 400 });
 
   const config = FORMAT_CONFIG[format];
   if (!config) return NextResponse.json({ error: 'Invalid format' }, { status: 400 });
