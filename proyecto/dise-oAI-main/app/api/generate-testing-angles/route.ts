@@ -31,12 +31,15 @@ function isRefusal(text: string): boolean {
 export interface MessageAngle {
   key: string;
   name: string;
+  angle?: string;
   hook: string;
   emphasis: string;
   level?: 'product' | 'category';
 }
 
 const CLOTHING_TERMS = /\b(prenda|vestido|pantalón|remera|camiseta|camisa|campera|buzo|short|pollera|falda|indumentaria|calzado|zapatilla|zapato|tela|tejido|outfit|jean|jogger|bikini|traje|garment|clothing|apparel|fabric|dress|shirt|pants|jacket|hoodie|sneaker|shoe|top|blouse|skirt|coat|sleeve|collar|hem|knit|denim|cotton|polyester)\b/i;
+
+const HEALTH_TERMS = /\b(suplemento|proteína|proteina|creatina|colágeno|colageno|vitamina|omega|probiótico|probiotico|prebiótico|prebiotico|aminoácido|aminoacido|bcaa|whey|caseína|caseina|glutamina|magnesio|zinc|hierro|calcio|biotina|melatonina|curcumina|ashwagandha|spirulina|chlorella|antioxidante|quemador|fat burner|pre-workout|preworkout|mass gainer|suero|nutrición|nutricion|dieta|adelgazar|bajar de peso|perder peso|déficit calórico|deficit calorico|salud|bienestar|wellness|health|supplement|multivitamínico|multivitaminico|enzimas digestivas|fibra dietética|fibra dietetica|colesterol|glucosa|tensión arterial|tension arterial|inmunidad|sistema inmune)\b/i;
 
 const PRODUCT_DESCRIPTION_PROMPT_FASHION = `Sos un técnico de producto de moda de alta gama. Analizá esta prenda y describila con precisión quirúrgica para que pueda ser reproducida EXACTAMENTE por un modelo de IA generativa. Imaginá que quien lee tu descripción no puede ver la foto — tu texto es el único recurso.
 
@@ -140,12 +143,12 @@ export async function POST(req: NextRequest) {
   let resolvedProductCount: number;
   let resolvedCategoryCount: number;
   if (productCount !== undefined && categoryCount !== undefined) {
-    resolvedProductCount = Math.max(1, Math.min(productCount, 4));
-    resolvedCategoryCount = Math.max(1, Math.min(categoryCount, 4));
+    resolvedProductCount = Math.max(0, Math.min(productCount, 4));
+    resolvedCategoryCount = Math.max(0, Math.min(categoryCount, 4));
   } else {
     const half = Math.max(1, Math.floor(count / 2));
     resolvedProductCount = half;
-    resolvedCategoryCount = Math.max(1, count - half);
+    resolvedCategoryCount = Math.max(0, count - half);
   }
   const targetCount = resolvedProductCount + resolvedCategoryCount;
 
@@ -184,6 +187,13 @@ export async function POST(req: NextRequest) {
       // fallback to text-based detection
     }
   }
+
+  // Detect health/wellness product (text-based only — no vision needed)
+  const isHealthProduct = HEALTH_TERMS.test(brief + ' ' + (brandKit.clientRequest || '') + ' ' + (brandKit.styleDescription || ''));
+
+  // Detect discount/offer in brief
+  const DISCOUNT_TERMS = /(\d+\s*%\s*(off|desc(uento)?|de\s+descuento)|2x1|3x2|cuotas?\s+sin\s+inter[eé]s|envío\s+(gratis|gratuito|libre)|free\s+shipping|promo(ción)?|oferta|liquidaci[oó]n|precio\s+especial|hasta\s+\d+%|bundle|combo|\$\s*\d|\d+\s*pesos?\s+de\s+desc)/i;
+  const hasDiscount = DISCOUNT_TERMS.test(brief + ' ' + (brandKit.clientRequest || ''));
 
   // Step 1: describe the product
   let productDescription = brief;
@@ -242,30 +252,80 @@ export async function POST(req: NextRequest) {
           ? `\nÁNGULOS YA PROBADOS — NO REPETIR NI HACER VARIACIONES SIMILARES: ${excludeAngles.map(a => `"${a.name}" (hook: "${a.hook}")`).join(', ')}. Generá ángulos genuinamente distintos en enfoque y argumento.`
           : '';
 
-        const anglesPrompt = `Sos un estratega de publicidad directa para e-commerce.
-Analizá este producto y generá ángulos de mensaje para anuncios de respuesta directa, divididos en dos categorías.
+        const anglesPrompt = `Sos un estratega de publicidad directa de performance para e-commerce. Tu especialidad es identificar ángulos publicitarios reales — no beneficios genéricos ni características del producto.
 
 PRODUCTO: ${productDescription}
 BRIEF: ${brief || '(sin brief adicional)'}
 MARCA: ${brandKit.name}${brandKit.clientRequest ? ` — ${brandKit.clientRequest}` : ''}${excludeNotice}
 
-Necesito EXACTAMENTE:
-- ${resolvedProductCount} ÁNGULOS DE PRODUCTO: el argumento habla DEL PRODUCTO ESPECÍFICO (características, materiales, precio, diferenciador). El hook habla SOBRE EL PRODUCTO.
-- ${resolvedCategoryCount} ÁNGULOS DE CATEGORÍA: el argumento habla del contexto, necesidad, estilo de vida u ocasión. El hook habla del CONTEXTO o de QUIÉN lo usa, NO del producto en sí.
+---
 
-Cada ángulo debe:
-- Apuntar a una motivación, problema o segmento de audiencia DIFERENTE
-- Tener un hook que detiene el scroll (max 8 palabras, en español, directo y concreto)
-- Enfatizar una razón de compra distinta — NO repetir el mismo argumento con otra redacción
-- Ser honesto — PROHIBIDO inventar precios, métricas, descuentos o resultados que no estén en el brief
+QUÉ ES UN ÁNGULO PUBLICITARIO — leé esto antes de responder:
+
+Un ángulo NO es un beneficio ni una característica del producto.
+Un ángulo ES la hipótesis estratégica que define por qué un grupo ESPECÍFICO de personas debería querer este producto, desde una situación, problema, deseo o creencia particular.
+
+Un ángulo tiene tres partes:
+1. PERSONA: quién es exactamente (específico, no genérico — no "personas que van al gym" sino "personas que ya entrenan hace meses pero no ven cambios en su cuerpo")
+2. TENSIÓN: qué problema concreto, frustración, deseo o creencia tiene esa persona que la tiene en modo de búsqueda
+3. HIPÓTESIS: por qué este producto resuelve exactamente esa tensión — el puente entre la tensión y el producto
+
+Ejemplos de lo que NO es un ángulo:
+❌ "Fuerza y Recuperación" → es una característica
+❌ "Calidad Premium" → es un atributo genérico
+❌ "Para quienes cuidan su alimentación" → es demasiado amplio, no hay tensión
+
+Ejemplos de ángulos reales:
+✅ "Personas que entrenan consistentemente pero no ven cambios porque no están llegando a su proteína diaria — no por falta de disciplina sino por falta de tiempo para preparar comidas extras"
+✅ "Compradores que ya quemaron plata en camperas baratas que se mojaron a los tres meses de lluvia, y ahora quieren comprar bien una sola vez"
+✅ "Mujeres urbanas que necesitan una campera impermeable pero rechazan todas las que encuentran porque parecen de trekking y no combinan con su estilo del día a día"
+
+El hook es la expresión del ángulo — cómo abrís el anuncio para que esa persona específica sienta que le estás hablando a ella.
+
+---
+
+Generá EXACTAMENTE:
+${resolvedProductCount > 0 ? `- ${resolvedProductCount} ÁNGULOS DE PRODUCTO: la tensión gira en torno a algo específico de ESTE producto — su diferenciador, formulación, precio, comparación con alternativas, o una objeción/duda concreta que tiene el comprador sobre este producto en particular.` : ''}
+${resolvedCategoryCount > 0 ? `- ${resolvedCategoryCount} ÁNGULOS DE CATEGORÍA: la tensión gira en torno al estilo de vida, contexto u ocasión de uso. El producto aparece como solución a algo más amplio que tiene esa persona en su vida. El hook habla de la situación de la persona, NO del producto.` : ''}
+${resolvedProductCount === 0 ? 'Generá SOLO ángulos de categoría. El array "product_angles" debe estar vacío [].' : ''}
+${resolvedCategoryCount === 0 ? 'Generá SOLO ángulos de producto. El array "category_angles" debe estar vacío [].' : ''}
+
+Cada ángulo debe apuntar a una tensión GENUINAMENTE DISTINTA — no el mismo argumento redactado diferente.
+PROHIBIDO inventar precios, métricas, descuentos o resultados que no estén en el brief.
+${hasDiscount ? `
+OFERTA / DESCUENTO DETECTADO EN EL BRIEF:
+El brief menciona una oferta concreta. Si esa oferta resuelve una tensión real (ej: "quería comprarlo pero el precio frenaba la decisión"), dedicá al menos 1 ángulo de producto a esa tensión de precio/valor. El descuento no es el ángulo en sí — es el resolutor de la tensión. La persona ya quería el producto, el precio era la barrera, y la oferta la derriba.
+❌ NO: "Ahora con 20% off" (descripción de oferta, no ángulo)
+✅ SÍ: "Personas que posponían la compra porque les parecía caro, esperando el momento justo — ese momento es ahora"
+Si la oferta no encaja naturalmente con ninguna tensión real, no la fuerces — priorizá los ángulos más sólidos.` : ''}
+${isHealthProduct ? `
+RESTRICCIÓN LEGAL — NICHO SALUD Y BIENESTAR:
+Este es un producto de salud/nutrición. Los ángulos DEBEN respetar estas reglas sin excepción:
+❌ PROHIBIDO: afirmaciones médicas ("cura", "trata", "previene enfermedades", "aprobado clínicamente", "comprobado científicamente", "aumenta la testosterona X%", "mejora la memoria", "reduce el colesterol")
+❌ PROHIBIDO: prometer resultados garantizados de salud que no estén textualmente en el brief
+❌ PROHIBIDO: diagnosticar condiciones o sugerir que reemplaza tratamiento médico
+✅ CORRECTO: hablar de experiencia, energía percibida, contexto de uso, estilo de vida, objetivos personales
+✅ CORRECTO: usar los claims que el usuario incluyó literalmente en el brief (si dice "alto en proteína", podés usarlo)
+✅ CORRECTO: tensiones de estilo de vida como "no llegás a tu proteína diaria" en lugar de "tu cuerpo no sintetiza músculo"
+Los hooks deben sonar como algo que diría una persona real — NO como un estudio científico ni como una promesa de resultado.` : ''}
 
 Respondé SOLO con JSON:
 {
   "product_angles": [
-    { "name": "nombre corto del ángulo (3-4 palabras)", "hook": "titular que detiene el scroll", "emphasis": "qué beneficio o razón de compra enfatiza en una oración" }
+    {
+      "name": "nombre estratégico del ángulo (3-4 palabras que capturen la tensión)",
+      "angle": "descripción de la hipótesis estratégica completa: persona específica + tensión concreta + por qué este producto la resuelve (2-3 oraciones)",
+      "hook": "cómo abrís el anuncio para que esa persona sienta que le hablás a ella (max 8 palabras, español, directo, que detenga el scroll)",
+      "emphasis": "qué aspecto de la tensión debe dominar el visual — qué tiene que SENTIR o VER la persona al ver la imagen"
+    }
   ],
   "category_angles": [
-    { "name": "nombre corto del ángulo (3-4 palabras)", "hook": "titular que detiene el scroll", "emphasis": "qué beneficio o razón de compra enfatiza en una oración" }
+    {
+      "name": "nombre estratégico del ángulo (3-4 palabras que capturen la tensión)",
+      "angle": "descripción de la hipótesis estratégica completa: persona específica + tensión de estilo de vida + por qué esta categoría de producto aparece como la solución (2-3 oraciones)",
+      "hook": "cómo abrís el anuncio para que esa persona sienta que le hablás a ella (max 8 palabras, español, directo, que detenga el scroll)",
+      "emphasis": "qué aspecto de la tensión debe dominar el visual — qué tiene que SENTIR o VER la persona al ver la imagen"
+    }
   ]
 }`;
 
@@ -277,6 +337,7 @@ Respondé SOLO con JSON:
             .map((a) => ({
               key: `angle-${idx++}`,
               name: a.name || `Ángulo Producto ${idx}`,
+              angle: a.angle || '',
               hook: a.hook || '',
               emphasis: a.emphasis || '',
               level: 'product' as const,
@@ -286,6 +347,7 @@ Respondé SOLO con JSON:
             .map((a) => ({
               key: `angle-${idx++}`,
               name: a.name || `Ángulo Categoría ${idx}`,
+              angle: a.angle || '',
               hook: a.hook || '',
               emphasis: a.emphasis || '',
               level: 'category' as const,
@@ -390,6 +452,7 @@ Respondé SOLO con JSON:
                 personSection,
                 compositionSection,
                 `HEADLINE (mostrá este texto exacto, grande y en negrita): "${angle.hook}"`,
+                angle.angle ? `ESTRATEGIA DEL ÁNGULO (contexto para el visual): ${angle.angle}` : '',
                 `ÉNFASIS DEL MENSAJE: ${angle.emphasis}.`,
                 `Marca: ${brandKit.name}. Colores de marca (SOLO para fondos, textos y elementos gráficos — NUNCA aplicar al producto): ${brandKit.primary1}, ${brandKit.primary2}, ${brandKit.primary3}. Tipografía: ${brandKit.typography || 'bold sans-serif'}.`,
                 `Contexto de marca: ${brandKitContext}`,
@@ -419,6 +482,7 @@ Respondé SOLO con JSON:
                 productConstraint,
                 compositionInstruction,
                 `HEADLINE (display this exact text, large and bold): "${angle.hook}"`,
+                angle.angle ? `ANGLE STRATEGY (context for the visual): ${angle.angle}` : '',
                 `MESSAGE EMPHASIS: ${angle.emphasis}.`,
                 `Brand palette FOR TEXT AND BACKGROUNDS ONLY — do not apply to product: ${brandKit.name} — ${brandKit.primary1}, ${brandKit.primary2}, ${brandKit.primary3}. Typography: ${brandKit.typography || 'bold sans-serif'}.`,
                 `Brand context: ${brandKitContext}`,

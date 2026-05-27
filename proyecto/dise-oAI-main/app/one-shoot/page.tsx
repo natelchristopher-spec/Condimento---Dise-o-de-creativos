@@ -261,6 +261,7 @@ interface GuidanceResult {
   text: string;
   color: string;
   action: GuidanceAction;
+  phase: 'waiting' | 'deciding' | 'winner' | 'dead';
 }
 
 function getGuidanceMessage(
@@ -270,57 +271,71 @@ function getGuidanceMessage(
   totalSpend: number,
   targetCpa: string,
   angleCount: number,
+  dailyBudget: number,
+  totalAccountPurchases: number,
 ): GuidanceResult | null {
   if (isNaN(days)) return null;
 
   const dayThreshold = accountType === 'new' ? 15 : 7;
   const daysOk = days >= dayThreshold;
-  const spendNum = totalSpend;
   const cpaNum = parseFloat(targetCpa.replace(/\./g, '').replace(',', '.'));
-  const spendPerAngle = (!isNaN(spendNum) && angleCount > 0) ? spendNum / angleCount : NaN;
+  const spendPerAngle = (!isNaN(totalSpend) && angleCount > 0) ? totalSpend / angleCount : NaN;
+  // Tight budget = ≤$20/day → kill at 2x CPA. More budget → allow 3x.
+  const killMultiplier = (!isNaN(dailyBudget) && dailyBudget > 0 && dailyBudget <= 20) ? 2 : 3;
+  // New account = < 40 total purchases → needs more time even with high CPA
+  const isNewAccount = accountType === 'new';
 
-  // Regla 2x CPA: gastaste el doble del CPA objetivo por ángulo sin ninguna compra
-  if (!isNaN(spendPerAngle) && !isNaN(cpaNum) && cpaNum > 0 && purchases === 0 && spendPerAngle >= cpaNum * 2) {
+  if (!isNaN(spendPerAngle) && !isNaN(cpaNum) && cpaNum > 0 && purchases === 0 && spendPerAngle >= cpaNum * killMultiplier) {
     return {
-      text: `🔴 Gastaste ${Math.round(spendPerAngle / cpaNum)}x el CPA objetivo por ángulo sin compras. Recomendamos apagar estos ángulos y probar mensajes nuevos.`,
+      text: `Hay anuncios que gastaron ${killMultiplier}x el costo objetivo sin generar ninguna venta. Te recomendamos apagarlos y probar mensajes nuevos.`,
       color: 'text-red-700 bg-red-50 border-red-200',
       action: 'regenerate',
+      phase: 'dead',
     };
   }
 
-  // Tiempo mínimo superado sin compras
   if (purchases === 0 && daysOk) {
     return {
-      text: `⚠️ ${days} días sin compras. Estos mensajes no están convirtiendo. Probá nuevos ángulos.`,
+      text: `${days} días sin ninguna venta. Estos mensajes no están funcionando — probá ángulos nuevos.`,
       color: 'text-red-700 bg-red-50 border-red-200',
       action: 'regenerate',
+      phase: 'dead',
     };
   }
 
-  // Muy temprano aún
   if (!daysOk && (isNaN(purchases) || purchases < 4)) {
     return {
-      text: `⏳ Muy temprano. Esperá al menos ${dayThreshold} días${purchases > 0 ? ' y 4+ compras' : ''} antes de decidir.`,
+      text: `Todavía es temprano. Dejá correr al menos ${dayThreshold} días antes de tomar decisiones.`,
       color: 'text-amber-700 bg-amber-50 border-amber-200',
       action: null,
+      phase: 'waiting',
     };
   }
 
-  // Días ok, compras suficientes
+  if (isNewAccount && purchases >= 1 && purchases < 4 && !daysOk) {
+    return {
+      text: `Señales tempranas positivas. La cuenta todavía está aprendiendo — dale más tiempo antes de apagar nada.`,
+      color: 'text-blue-700 bg-blue-50 border-blue-200',
+      action: null,
+      phase: 'waiting',
+    };
+  }
+
   if (daysOk && purchases >= 4) {
     return {
-      text: '✅ Datos suficientes para decidir el ángulo ganador.',
+      text: `Tenés datos suficientes para decidir. Marcá el ángulo ganador y escalalo.`,
       color: 'text-green-700 bg-green-50 border-green-200',
       action: null,
+      phase: 'winner',
     };
   }
 
-  // Días ok, pocas compras
   if (daysOk && purchases > 0 && purchases < 4) {
     return {
-      text: `⏳ ${purchases} compra${purchases > 1 ? 's' : ''} — seguí esperando hasta 4+ para decidir.`,
+      text: `${purchases} venta${purchases > 1 ? 's' : ''} hasta ahora. Seguí acumulando datos — todavía no es suficiente para decidir.`,
       color: 'text-amber-700 bg-amber-50 border-amber-200',
       action: null,
+      phase: 'deciding',
     };
   }
 
@@ -328,9 +343,11 @@ function getGuidanceMessage(
 }
 
 interface AngleRec {
-  type: 'scale' | 'off' | 'wait' | 'regenerate';
+  type: 'scale' | 'off' | 'warn' | 'wait' | 'regenerate';
   label: string;
   color: string;
+  light: 'green' | 'yellow' | 'orange' | 'red' | 'gray';
+  burnPct?: number;
 }
 
 function getAngleRec(
@@ -340,40 +357,87 @@ function getAngleRec(
   targetCpa: number,
   accountType: 'new' | 'established',
   hasData: boolean,
+  dailyBudget: number,
+  totalAccountPurchases: number,
 ): AngleRec | null {
   if (!hasData) return null;
   const dayThreshold = accountType === 'new' ? 15 : 7;
+  const isNewAccount = accountType === 'new';
+  const killMultiplier = (!isNaN(dailyBudget) && dailyBudget > 0 && dailyBudget <= 20) ? 2 : 3;
+  const burnPct = (targetCpa > 0 && spend > 0) ? Math.round((spend / targetCpa) * 100) : undefined;
 
-  if (!isNaN(days) && days >= dayThreshold && purchases >= 4) return {
-    type: 'scale',
-    label: `${purchases} compras tras ${days} días — potencial de escalado`,
+  // Green: profitable
+  if (purchases > 0 && targetCpa > 0 && spend / purchases <= targetCpa) return {
+    type: 'scale', light: 'green',
+    label: `Rentable — CPA real $${(spend / purchases).toFixed(0)}. Escalalo.`,
     color: 'bg-green-50 text-green-700 border-green-200',
+    burnPct,
   };
-  if (!isNaN(targetCpa) && targetCpa > 0 && purchases > 0 && spend / purchases > targetCpa * 3) return {
-    type: 'off',
-    label: `CPA real $${(spend / purchases).toFixed(0)} (${Math.round(spend / purchases / targetCpa)}x objetivo) — apagar`,
+
+  // Green: enough data, enough time
+  if (!isNaN(days) && days >= dayThreshold && purchases >= 4 && !(targetCpa > 0 && spend / purchases > targetCpa)) return {
+    type: 'scale', light: 'green',
+    label: `${purchases} ventas en ${days} días — listo para escalar.`,
+    color: 'bg-green-50 text-green-700 border-green-200',
+    burnPct,
+  };
+
+  // Red: CPA too high — hard cap at 3x even for new accounts
+  if (targetCpa > 0 && purchases > 0 && spend / purchases > targetCpa * 3) return {
+    type: 'off', light: 'red',
+    label: `Costo por venta muy alto ($${(spend / purchases).toFixed(0)}). No es rentable — apagalo.`,
     color: 'bg-red-50 text-red-700 border-red-200',
+    burnPct,
   };
-  if (!isNaN(targetCpa) && targetCpa > 0 && spend >= targetCpa * 2 && purchases === 0) return {
-    type: 'off',
-    label: `$${spend} gastados sin compras — apagar`,
+
+  // Red: spent kill threshold without purchases
+  if (targetCpa > 0 && spend >= targetCpa * killMultiplier && purchases === 0) return {
+    type: 'off', light: 'red',
+    label: `Gastaste ${killMultiplier}x el costo objetivo sin ninguna venta. Apagalo.`,
     color: 'bg-red-50 text-red-700 border-red-200',
+    burnPct,
   };
-  if (!isNaN(days) && days >= dayThreshold && purchases === 0) return {
-    type: 'regenerate',
-    label: `${days} días sin compras — mensaje nuevo`,
+
+  // Orange: approaching kill threshold (>70% burned, no purchases)
+  if (targetCpa > 0 && spend >= targetCpa * 0.7 && spend < targetCpa * killMultiplier && purchases === 0) return {
+    type: 'warn', light: 'orange',
+    label: `Gastaste el ${burnPct}% del costo objetivo sin ventas. Vigilalo.`,
     color: 'bg-orange-50 text-orange-700 border-orange-200',
+    burnPct,
   };
+
+  // Yellow: new account with high CPA but has purchases → needs time
+  if (isNewAccount && purchases > 0 && targetCpa > 0 && spend / purchases > targetCpa && spend / purchases <= targetCpa * 3) return {
+    type: 'wait', light: 'yellow',
+    label: `Cuenta en aprendizaje — CPA alto pero dentro del rango. Dale más tiempo.`,
+    color: 'bg-amber-50 text-amber-700 border-amber-200',
+    burnPct,
+  };
+
+  // Gray: no CPA reference, enough days, no purchases
+  if (!isNaN(days) && days >= dayThreshold && purchases === 0) return {
+    type: 'regenerate', light: 'red',
+    label: `${days} días sin ventas — cambiá el mensaje.`,
+    color: 'bg-orange-50 text-orange-700 border-orange-200',
+    burnPct,
+  };
+
+  // Blue: has some purchases, accumulating
   if (purchases > 0 && purchases < 4) return {
-    type: 'wait',
-    label: `${purchases} compra${purchases > 1 ? 's' : ''} — acumulando datos`,
+    type: 'wait', light: 'yellow',
+    label: `${purchases} venta${purchases > 1 ? 's' : ''} — acumulando datos.`,
     color: 'bg-blue-50 text-blue-700 border-blue-200',
+    burnPct,
   };
+
+  // Default waiting
   if (purchases === 0 && spend > 0) return {
-    type: 'wait',
-    label: 'Fase temprana — seguí esperando',
+    type: 'wait', light: 'gray',
+    label: 'Recolectando datos — seguí esperando.',
     color: 'bg-gray-50 text-gray-600 border-gray-200',
+    burnPct,
   };
+
   return null;
 }
 
@@ -426,9 +490,11 @@ export default function OneShootPage() {
   // P1 review
   const [angleStatuses, setAngleStatuses] = useState<Record<string, AngleStatus>>({});
   const [angleMetrics, setAngleMetrics] = useState<AngleMetricsMap>({});
-  const [daysRunning, setDaysRunning] = useState('');
   const [accountType, setAccountType] = useState<'new' | 'established'>('new');
   const [targetCpa, setTargetCpa] = useState('');
+  const [dailyBudget, setDailyBudget] = useState('');
+  const [totalAccountPurchases, setTotalAccountPurchases] = useState('');
+  const [launchDate, setLaunchDate] = useState('');
   const [excludeAngles, setExcludeAngles] = useState<MessageAngle[]>([]);
 
   // Winners
@@ -452,6 +518,7 @@ export default function OneShootPage() {
   const [p1AdaptFormats, setP1AdaptFormats] = useState<string[]>([]);
   const [p1AdaptedImages, setP1AdaptedImages] = useState<{ format: string; label: string; angleKey: string; base64: string }[]>([]);
   const [p1Adapting, setP1Adapting] = useState(false);
+  const [p1AdaptProgress, setP1AdaptProgress] = useState<{ done: number; total: number } | null>(null);
 
   // P3 format adaptation
   const [p3AdaptFormats, setP3AdaptFormats] = useState<string[]>([]);
@@ -570,7 +637,7 @@ export default function OneShootPage() {
     setP1Error('');
     setAngleStatuses({});
     setAngleMetrics({});
-    setDaysRunning('');
+    setLaunchDate('');
     setView('p1-generating');
 
     const productImagesCompressed = await Promise.all(productImages.map(img => compressImage(img, 1024)));
@@ -669,7 +736,8 @@ export default function OneShootPage() {
           const { id } = await saveRes.json();
           setSessionId(id);
           // Store images in localStorage (fast cache) and Supabase Storage (cross-device persistence)
-          saveLsImages(id, finalImages, {}, '');
+          const generatedAt = new Date().toISOString();
+          saveLsImages(id, finalImages, {}, generatedAt);
           if (userId) {
             void Promise.allSettled(
               finalImages.map(img =>
@@ -740,6 +808,7 @@ export default function OneShootPage() {
     setP1Images(p1ToLoad);
     setAngleStatuses(stored.angleStatuses || {});
     setAngleMetrics(loadAngleMetrics(session.id));
+    if (stored.launchDate) setLaunchDate(stored.launchDate);
 
     // Restore product images from localStorage
     try {
@@ -893,8 +962,7 @@ export default function OneShootPage() {
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ status: 'paso2_done', pecResults: pecMeta }),
                 });
-                const stored = loadLsImages(sessionId);
-                saveLsImages(sessionId, stored.p1, stored.angleStatuses, stored.launchDate);
+                saveLsImages(sessionId, p1Images, angleStatuses, launchDate);
                 saveLsP2(sessionId, collectedCreatives);
                 if (userId) {
                   void Promise.allSettled(
@@ -1009,7 +1077,7 @@ export default function OneShootPage() {
     setP2Total(0);
     setAngleStatuses({});
     setAngleMetrics({});
-    setDaysRunning('');
+    setLaunchDate('');
     setWinnerKeys([]);
     setP2Creatives([]);
     setSessionId(null);
@@ -1027,12 +1095,15 @@ export default function OneShootPage() {
   const generateP1Adaptations = async () => {
     if (p1AdaptFormats.length === 0 || p1Images.length === 0) return;
     setP1Adapting(true);
+    setP1AdaptProgress({ done: 0, total: p1Images.length });
     const FORMAT_LABELS: Record<string, string> = {
       story: 'Story / Reels (9:16)', square: 'Cuadrado 1:1',
     };
     const allResults: { format: string; label: string; angleKey: string; base64: string }[] = [];
     try {
-      for (const img of p1Images) {
+      for (let i = 0; i < p1Images.length; i++) {
+        const img = p1Images[i];
+        setP1AdaptProgress({ done: i, total: p1Images.length });
         const results = await Promise.all(
           p1AdaptFormats.map(async format => {
             for (let attempt = 0; attempt < 2; attempt++) {
@@ -1055,6 +1126,7 @@ export default function OneShootPage() {
       setP1AdaptedImages(allResults);
     } finally {
       setP1Adapting(false);
+      setP1AdaptProgress(null);
     }
   };
 
@@ -1480,16 +1552,19 @@ export default function OneShootPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
-            <h2 className="text-lg font-bold text-gray-900 mb-1">Investigando tu producto</h2>
+            <h2 className="text-lg font-bold text-gray-900 mb-1">
+              {p1Angles.length === 0 ? 'Investigando tu producto...' : 'Creando tus anuncios...'}
+            </h2>
             <p className="text-sm text-gray-500 mb-1">
               {p1Angles.length === 0
-                ? 'Analizando producto y generando ángulos de mensaje...'
+                ? 'Analizando el producto y definiendo los mejores ángulos de mensaje'
                 : `Generando imágenes · ${p1Done} de ${p1Total}`}
             </p>
             <p className="text-xs text-gray-400 mb-3">{fmtElapsed(p1Elapsed)}</p>
-            <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 mb-4 text-left">
-              <p className="text-xs text-blue-700 leading-relaxed">
-                <span className="font-semibold">¿Qué estamos haciendo?</span> Estamos probando múltiples ángulos de mensaje para tu producto — distintos enfoques de comunicación para descubrir cuál conecta mejor con tu audiencia. Cada imagen representa una hipótesis diferente que vas a poder testear en pauta.
+            <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 mb-4 text-left">
+              <p className="text-sm font-semibold text-amber-800 mb-1">☕ Esto tarda entre 2 y 4 minutos — buen momento para un café.</p>
+              <p className="text-xs text-amber-700 leading-relaxed">
+                No es lento por casualidad: primero analizamos tu producto en detalle, luego construimos estrategias de mensaje distintas, y después generamos cada imagen con IA de alta calidad. Todo eso junto lleva su tiempo, pero vale la pena.
               </p>
             </div>
 
@@ -1674,9 +1749,23 @@ export default function OneShootPage() {
                 <button
                   onClick={generateP1Adaptations}
                   disabled={p1AdaptFormats.length === 0 || p1Adapting}
-                  className="text-sm font-semibold px-4 py-2 rounded-xl bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  className={`text-sm font-semibold px-4 py-2 rounded-xl transition-colors ${
+                    p1Adapting
+                      ? 'bg-purple-600 text-white cursor-wait'
+                      : p1AdaptFormats.length === 0
+                        ? 'bg-purple-200 text-purple-400 cursor-not-allowed'
+                        : 'bg-purple-600 text-white hover:bg-purple-700'
+                  }`}
                 >
-                  {p1Adapting ? 'Generando adaptaciones...' : 'Generar adaptaciones'}
+                  {p1Adapting ? (
+                    <span className="flex items-center gap-2">
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                      </svg>
+                      {p1AdaptProgress ? `Procesando ángulo ${p1AdaptProgress.done + 1} de ${p1AdaptProgress.total}...` : 'Generando adaptaciones...'}
+                    </span>
+                  ) : 'Generar adaptaciones'}
                 </button>
                 {p1AdaptedImages.length > 0 && (
                   <div className="mt-5">
@@ -1695,7 +1784,7 @@ export default function OneShootPage() {
                                 <img src={`data:image/png;base64,${a.base64}`} alt={a.label} className="w-full object-cover" style={{ aspectRatio: a.format === 'story' ? '9/16' : '1/1' }} />
                                 <div className="p-1 text-[10px] text-center text-gray-500 truncate">{a.label}</div>
                                 <button
-                                  onClick={() => downloadImage(a.base64, `angulo-${a.angleKey}-${a.format}.png`)}
+                                  onClick={() => downloadExact(a.base64, `angulo-${a.angleKey}-${a.format}.png`, a.format)}
                                   className="absolute top-1 right-1 p-1 bg-white/90 rounded text-gray-500 hover:text-gray-800 shadow-sm"
                                   title="Descargar"
                                 >
@@ -1730,7 +1819,7 @@ export default function OneShootPage() {
                   `1 campaña · 1 conjunto de anuncios · ${p1Angles.length} anuncios (uno por ángulo) con el mismo presupuesto`,
                   'Audiencia fría: Intereses o Broad',
                   'Objetivo de campaña: Compras',
-                  'Dejá correr al menos 7–15 días o hasta 4+ compras por ángulo',
+                  'Dejá correr al menos 7–15 días antes de sacar conclusiones',
                 ].map((item, i) => (
                   <li key={i} className="flex items-start gap-3 text-sm text-gray-700">
                     <span className="flex-shrink-0 w-5 h-5 rounded-full bg-gray-100 text-gray-500 text-xs flex items-center justify-center font-bold mt-0.5">{i + 1}</span>
@@ -1767,8 +1856,18 @@ export default function OneShootPage() {
     const categoryAnglesArr = p1Angles.filter(a => a.level === 'category');
     const currentWinners = p1Angles.filter(a => (angleStatuses[a.key] || 'active') === 'winner');
 
-    const daysNum = parseInt(daysRunning, 10);
     const cpaNum = parseFloat(targetCpa.replace(/,/g, '.')) || 0;
+    const dailyBudgetNum = parseFloat(dailyBudget.replace(/,/g, '.')) || 0;
+    const totalAccountPurchasesNum = parseInt(totalAccountPurchases, 10) || 0;
+
+    // Auto-calculate days from launchDate
+    const campaignLaunchDate = launchDate ? new Date(launchDate) : null;
+    const daysNum = campaignLaunchDate
+      ? Math.max(0, Math.floor((Date.now() - campaignLaunchDate.getTime()) / 86400000))
+      : 0;
+    const launchDateFormatted = campaignLaunchDate
+      ? campaignLaunchDate.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
+      : '';
 
     // Aggregate totals derived from per-angle metrics
     const totalPurchasesAgg = Object.values(angleMetrics)
@@ -1779,24 +1878,34 @@ export default function OneShootPage() {
       const m = angleMetrics[a.key];
       return m && (m.purchases !== '' || m.spend !== '');
     });
-    const guidance = hasAnyMetrics && daysRunning !== ''
+    const guidance = hasAnyMetrics && launchDate !== ''
       ? getGuidanceMessage(
-          isNaN(daysNum) ? 0 : daysNum,
+          daysNum,
           totalPurchasesAgg,
           accountType,
           totalSpendAgg,
           targetCpa,
           p1Angles.length,
+          dailyBudgetNum,
+          totalAccountPurchasesNum,
         )
       : null;
+
+    const countByLight = (light: string) => p1Angles.filter(a => {
+      const m = angleMetrics[a.key] || { purchases: '', spend: '' };
+      const p = parseInt(m.purchases, 10) || 0;
+      const s = parseFloat(m.spend.replace(/,/g, '.')) || 0;
+      const rec = getAngleRec(p, s, daysNum, cpaNum, accountType, m.purchases !== '' || m.spend !== '', dailyBudgetNum, totalAccountPurchasesNum);
+      return rec?.light === light;
+    }).length;
 
     const setStatus = (key: string, status: AngleStatus) => {
       setAngleStatuses(prev => {
         const next = { ...prev, [key]: status };
-        // Persist to localStorage
+        // Use in-memory p1Images as source of truth — stored.p1 may be empty
+        // if the initial localStorage save failed silently (quota exceeded).
         if (sessionId) {
-          const stored = loadLsImages(sessionId);
-          saveLsImages(sessionId, stored.p1, next, stored.launchDate);
+          saveLsImages(sessionId, p1Images, next, launchDate);
         }
         return next;
       });
@@ -1825,26 +1934,52 @@ export default function OneShootPage() {
       const rec = getAngleRec(
         isNaN(purchasesNum) ? 0 : purchasesNum,
         isNaN(spendNum) ? 0 : spendNum,
-        isNaN(daysNum) ? 0 : daysNum,
+        daysNum,
         cpaNum,
         accountType,
         hasData,
+        dailyBudgetNum,
+        totalAccountPurchasesNum,
       );
+
+      const lightColor = isWinner ? 'green' : isOff ? 'gray' : (rec?.light || 'gray');
+      const lightStyles: Record<string, string> = {
+        green: 'bg-green-500 shadow-green-400/60',
+        yellow: 'bg-yellow-400 shadow-yellow-300/60',
+        orange: 'bg-orange-500 shadow-orange-400/60',
+        red: 'bg-red-500 shadow-red-400/60',
+        gray: 'bg-gray-300',
+      };
+      const borderStyles: Record<string, string> = {
+        green: 'border-green-400 shadow-lg shadow-green-400/20',
+        yellow: 'border-yellow-300',
+        orange: 'border-orange-300',
+        red: 'border-red-300',
+        gray: 'border-gray-200',
+      };
+
+      const burnPct = rec?.burnPct;
+      const burnBarColor = burnPct === undefined ? '' : burnPct >= 100 ? 'bg-red-500' : burnPct >= 70 ? 'bg-orange-400' : 'bg-green-500';
 
       return (
         <div
           key={angle.key}
-          className={`relative rounded-xl border-2 overflow-hidden bg-white transition-all ${
-            isWinner
-              ? 'border-green-400 shadow-lg shadow-green-400/20'
-              : isOff
-              ? 'border-gray-200 opacity-40'
-              : 'border-gray-200'
+          className={`relative rounded-xl border-2 overflow-hidden bg-white transition-all duration-300 ${
+            isOff ? 'border-gray-200 opacity-40' : borderStyles[lightColor]
           }`}
         >
           {isOff && (
             <div className="absolute inset-0 bg-gray-400/20 z-10 rounded-xl pointer-events-none" />
           )}
+
+          {/* Semáforo indicator */}
+          <div className="absolute top-2 right-2 z-20">
+            {isWinner ? (
+              <span className="text-xl leading-none">👑</span>
+            ) : (
+              <span className={`block w-3.5 h-3.5 rounded-full shadow-md ${lightStyles[lightColor]} ${lightColor !== 'gray' ? 'animate-pulse' : ''}`} />
+            )}
+          </div>
 
           {img ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -1868,10 +2003,26 @@ export default function OneShootPage() {
               &ldquo;{angle.hook}&rdquo;
             </p>
 
+            {/* Burn bar */}
+            {burnPct !== undefined && cpaNum > 0 && !isWinner && (
+              <div className="mb-3">
+                <div className="flex justify-between text-[10px] text-gray-500 mb-0.5">
+                  <span>Presupuesto quemado</span>
+                  <span className="font-semibold">{Math.min(burnPct, 999)}%</span>
+                </div>
+                <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${burnBarColor}`}
+                    style={{ width: `${Math.min(burnPct, 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Per-angle metrics */}
             <div className="flex gap-2 mb-2">
               <div className="flex-1">
-                <label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Compras</label>
+                <label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Ventas</label>
                 <input
                   type="number" min={0} value={metrics.purchases}
                   onChange={e => updateAngleMetric(angle.key, 'purchases', e.target.value)}
@@ -1890,13 +2041,17 @@ export default function OneShootPage() {
               </div>
             </div>
 
-            {/* Per-angle recommendation */}
-            {rec && (
-              <div className={`text-[11px] font-semibold px-2 py-1 rounded-lg border mb-2 ${rec.color}`}>
-                {rec.type === 'scale' && '🟢 '}
-                {rec.type === 'off' && '🔴 '}
-                {rec.type === 'regenerate' && '🟠 '}
-                {rec.type === 'wait' && '⏳ '}
+            {/* CPA real */}
+            {!isNaN(purchasesNum) && purchasesNum > 0 && !isNaN(spendNum) && spendNum > 0 && (
+              <p className="text-[10px] text-gray-500 mb-2">
+                Costo por venta: <strong className="text-gray-800">${(spendNum / purchasesNum).toFixed(0)}</strong>
+                {cpaNum > 0 && <span className={spendNum / purchasesNum <= cpaNum ? ' text-green-600' : ' text-orange-600'}> ({Math.round(spendNum / purchasesNum / cpaNum * 100)}% del objetivo)</span>}
+              </p>
+            )}
+
+            {/* Recommendation */}
+            {rec && !isWinner && (
+              <div className={`text-[11px] font-medium px-2 py-1.5 rounded-lg border mb-2 ${rec.color}`}>
                 {rec.label}
               </div>
             )}
@@ -1912,7 +2067,7 @@ export default function OneShootPage() {
                 <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                Ganador
+                {isWinner ? 'Ganador ✓' : 'Ganador'}
               </button>
               <button
                 onClick={() => setStatus(angle.key, isOff ? 'active' : 'off')}
@@ -1923,7 +2078,7 @@ export default function OneShootPage() {
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
-                Apagar
+                {isOff ? 'Reactivar' : 'Apagar'}
               </button>
             </div>
           </div>
@@ -1939,52 +2094,114 @@ export default function OneShootPage() {
             <GameHeader view={view} />
 
             <div className="mb-6">
-              <h1 className="text-xl font-bold text-gray-900">Analizá los resultados</h1>
-              <p className="text-sm text-gray-500 mt-1">Marcá los ángulos ganadores según el rendimiento en Meta.</p>
+              <h1 className="text-xl font-bold text-gray-900">Semáforo de campaña</h1>
+              <p className="text-sm text-gray-500 mt-1">Cargá los resultados de cada anuncio para ver qué hacer con cada uno.</p>
             </div>
 
-            {/* Stats panel */}
-            <div className="mb-6 bg-white border border-gray-200 rounded-2xl p-4">
-              <h3 className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-3">Resultados de la campaña</h3>
-
-              {/* Account type toggle */}
-              <div className="flex gap-2 mb-4">
-                <button
-                  onClick={() => setAccountType('new')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${accountType === 'new' ? 'bg-[#e42820]/10 border-[#e42820] text-[#e42820]' : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'}`}
-                >
-                  Cuenta nueva <span className="font-normal opacity-70">(15 días mín.)</span>
-                </button>
-                <button
-                  onClick={() => setAccountType('established')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${accountType === 'established' ? 'bg-[#e42820]/10 border-[#e42820] text-[#e42820]' : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'}`}
-                >
-                  Con historial <span className="font-normal opacity-70">(7 días mín.)</span>
-                </button>
+            {/* Campaign phase header */}
+            <div className="mb-4 bg-white border border-gray-200 rounded-2xl p-4">
+              {/* Phase strip */}
+              <div className="flex items-center gap-2 mb-4">
+                {(['waiting','deciding','winner'] as const).map((ph, i) => {
+                  const phaseLabel = ['Esperando datos','Tomando decisiones','Ganador encontrado'][i];
+                  const active = guidance?.phase === ph || (!guidance && ph === 'waiting');
+                  return (
+                    <div key={ph} className="flex items-center gap-2 flex-1 min-w-0">
+                      <div className={`flex-shrink-0 w-2.5 h-2.5 rounded-full transition-all ${active ? (ph === 'winner' ? 'bg-green-500 animate-pulse' : ph === 'deciding' ? 'bg-yellow-400 animate-pulse' : 'bg-gray-400') : 'bg-gray-200'}`} />
+                      <span className={`text-[10px] font-semibold truncate ${active ? 'text-gray-900' : 'text-gray-300'}`}>{phaseLabel}</span>
+                      {i < 2 && <div className="flex-1 h-px bg-gray-200 min-w-[8px]" />}
+                    </div>
+                  );
+                })}
               </div>
 
-              <div className="flex flex-wrap gap-4 items-end">
+              {/* Launch date + days counter */}
+              <div className="flex flex-wrap gap-3 items-end mb-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Días corriendo</label>
-                  <input type="number" min={0} value={daysRunning} onChange={e => setDaysRunning(e.target.value)} placeholder="0"
-                    className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]" />
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">¿Cuándo lanzaste la campaña?</label>
+                  <input
+                    type="date"
+                    value={launchDate ? launchDate.slice(0, 10) : ''}
+                    onChange={e => {
+                      const d = e.target.value ? new Date(e.target.value + 'T12:00:00').toISOString() : '';
+                      setLaunchDate(d);
+                      if (sessionId) {
+                        saveLsImages(sessionId, p1Images, angleStatuses, d);
+                      }
+                    }}
+                    className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]"
+                  />
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">CPA objetivo ($)</label>
-                  <input type="text" value={targetCpa} onChange={e => setTargetCpa(e.target.value)} placeholder="0"
-                    className="w-28 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]" />
-                </div>
-                {hasAnyMetrics && (
-                  <div className="flex gap-4 text-xs text-gray-500">
-                    <span>Total compras: <strong className="text-gray-900">{totalPurchasesAgg}</strong></span>
-                    <span>Total gasto: <strong className="text-gray-900">${totalSpendAgg.toFixed(0)}</strong></span>
+                {launchDate && (
+                  <div className="pb-1.5">
+                    <span className="text-sm font-bold text-gray-900">Día {daysNum}</span>
+                    <span className="text-xs text-gray-400 ml-1">desde el {launchDateFormatted}</span>
                   </div>
                 )}
               </div>
-              <p className="text-[11px] text-gray-400 mt-2">Ingresá compras y gasto por ángulo en cada tarjeta ↓</p>
+
+              {/* Config inputs */}
+              <div className="flex flex-wrap gap-3 items-end mb-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">
+                    Costo objetivo por venta ($)
+                    <span className="ml-1 group relative inline-block cursor-help">
+                      <span className="text-blue-500 text-[11px] border border-blue-300 rounded-full px-1 bg-blue-50">?</span>
+                      <span className="hidden group-hover:block absolute left-0 bottom-full mb-1.5 w-56 bg-gray-900 text-white text-[11px] rounded-lg p-2.5 z-10 leading-relaxed shadow-lg">
+                        Lo máximo que querés gastar en publicidad para conseguir una venta. Ej: si tu producto vale $10.000, poné $3.000 o $4.000.
+                      </span>
+                    </span>
+                  </label>
+                  <input type="text" value={targetCpa} onChange={e => setTargetCpa(e.target.value)} placeholder="ej: 3000"
+                    className="w-28 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">
+                    Presupuesto diario ($)
+                    <span className="ml-1 group relative inline-block cursor-help">
+                      <span className="text-blue-500 text-[11px] border border-blue-300 rounded-full px-1 bg-blue-50">?</span>
+                      <span className="hidden group-hover:block absolute left-0 bottom-full mb-1.5 w-56 bg-gray-900 text-white text-[11px] rounded-lg p-2.5 z-10 leading-relaxed shadow-lg">
+                        Lo que gastás por día en total en la campaña. Con menos de $20/día los umbrales para apagar son más estrictos.
+                      </span>
+                    </span>
+                  </label>
+                  <input type="text" value={dailyBudget} onChange={e => setDailyBudget(e.target.value)} placeholder="ej: 20"
+                    className="w-24 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">
+                    Tipo de cuenta
+                    <span className="ml-1 group relative inline-block cursor-help">
+                      <span className="text-blue-500 text-[11px] border border-blue-300 rounded-full px-1 bg-blue-50">?</span>
+                      <span className="hidden group-hover:block absolute left-0 bottom-full mb-1.5 w-60 bg-gray-900 text-white text-[11px] rounded-lg p-2.5 z-10 leading-relaxed shadow-lg">
+                        <strong>Nueva:</strong> menos de 50 compras en el historial de la cuenta en ese nicho. Los umbrales son más tolerantes — el algoritmo necesita tiempo para aprender.<br/><br/>
+                        <strong>Con historial:</strong> la cuenta ya tiene datos suficientes para tomar decisiones rápidas.
+                      </span>
+                    </span>
+                  </label>
+                  <div className="flex gap-1.5">
+                    <button onClick={() => setAccountType('new')} className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all ${accountType === 'new' ? 'bg-[#e42820]/10 border-[#e42820] text-[#e42820]' : 'bg-white border-gray-200 text-gray-500'}`}>
+                      Nueva
+                    </button>
+                    <button onClick={() => setAccountType('established')} className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all ${accountType === 'established' ? 'bg-[#e42820]/10 border-[#e42820] text-[#e42820]' : 'bg-white border-gray-200 text-gray-500'}`}>
+                      Con historial
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Semáforo summary */}
+              {hasAnyMetrics && (
+                <div className="flex gap-3 text-xs mb-3">
+                  {countByLight('red') > 0 && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" /><strong>{countByLight('red')}</strong> apagar</span>}
+                  {(countByLight('orange') + countByLight('yellow')) > 0 && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-400 inline-block" /><strong>{countByLight('orange') + countByLight('yellow')}</strong> vigilar</span>}
+                  {countByLight('green') > 0 && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500 inline-block" /><strong>{countByLight('green')}</strong> escalar</span>}
+                  <span className="ml-auto text-gray-400">Total gasto: <strong className="text-gray-700">${totalSpendAgg.toFixed(0)}</strong></span>
+                </div>
+              )}
 
               {guidance && (
-                <div className={`mt-3 text-sm px-3 py-2.5 rounded-lg border font-medium ${guidance.color}`}>
+                <div className={`text-sm px-3 py-2.5 rounded-lg border font-medium ${guidance.color}`}>
                   {guidance.text}
                 </div>
               )}
