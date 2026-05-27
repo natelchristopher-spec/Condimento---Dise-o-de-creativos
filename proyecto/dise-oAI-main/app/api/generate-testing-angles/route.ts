@@ -538,7 +538,7 @@ Respondé SOLO con JSON:
             } else {
               // Fashion products or no product photo: Responses API with product + reference images
               const inputImages = [
-                ...productDataUrls,
+                ...productDataUrls.slice(0, 2),
                 ...(isFashionProduct && refImageUrls.length > 0 ? refImageUrls : []),
                 ...(logoDataUrl ? [logoDataUrl] : []),
               ];
@@ -585,7 +585,7 @@ Respondé SOLO con JSON:
                 try {
                   const fallback = await openai.images.generate({
                     model: 'gpt-image-2',
-                    prompt: `Direct response ad. Product shown exactly as in reference photo — do NOT rebrand or recolor it. Background and text use brand colors: ${brandKit.primary1}. ${productDescription.slice(0, 150)}. Headline: "${angle.hook}". Portrait. Spanish text only.`,
+                    prompt: `Direct response ad. Product shown exactly as in reference photo — do NOT rebrand or recolor it. Background and text use brand colors: ${brandKit.primary1}. ${productDescription.slice(0, 150)}. Headline: "${angle.hook}". Portrait. Spanish text only.${logoDataUrl ? ' Place brand logo in top-right corner, small (6-8% of image width). Reproduce it exactly — do NOT recreate or stylize it.' : ''}`,
                     size: '1024x1536',
                     quality: 'medium',
                     n: 1,

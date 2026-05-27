@@ -259,7 +259,7 @@ Respondé SOLO con JSON válido:
                   'ANTI-HALLUCINATION: Do NOT invent prices, discounts, metrics, phone numbers, URLs, or statistics not in the brief. If the brief includes promotional terms (e.g. "3 y 6 cuotas sin interés"), reproduce them EXACTLY as-is in a single text element — never split into separate lines or restate differently. If no payment terms are in the brief, do NOT show any.',
                   'Do NOT include button-style CTAs in the image.',
                   productDataUrl ? 'GARMENT COLOR FINAL CHECK — CRITICAL: the garment color in the generated image must exactly match the reference photo attached. Same hue, same saturation, same temperature. For warm neutrals (tostado, tan, camel, sand, beige): NEVER render as white or light gray — preserve the warm undertone from the reference.' : '',
-                  logoDataUrl ? 'BRAND LOGO: The logo image is attached as reference. Place it in the top-right corner, small (approximately 6-8% of image width). Reproduce it exactly as provided — do NOT modify, distort, stylize, or recreate it from memory.' : '',
+                  logoDataUrl ? 'LOGO DE MARCA: el logo está adjunto como imagen de referencia. Colocalo en la esquina superior derecha del creativo, pequeño (aprox. 6-8% del ancho de imagen). Reproduci el logo exactamente tal como se ve en la imagen adjunta — NO lo modifiques, redibujés, distorsiones ni recreés de memoria.' : '',
                 ].filter(Boolean).join(' ');
 
                 const hasProductPhoto = productDataUrls.length > 0;
@@ -322,7 +322,7 @@ Respondé SOLO con JSON válido:
                     try {
                       const fallback = await openai.images.generate({
                         model: 'gpt-image-2',
-                        prompt: `${label} ad for ${brandKit.name}. Product shown exactly as in reference photo — do NOT rebrand or recolor it. ${productDescription.slice(0, 200)}. Format: ${stagePlan.format}. Headline: "${stagePlan.headline}". Colors (backgrounds/text only): ${brandKit.primary1}. Portrait. Spanish text only.`,
+                        prompt: `${label} ad for ${brandKit.name}. Product shown exactly as in reference photo — do NOT rebrand or recolor it. ${productDescription.slice(0, 200)}. Format: ${stagePlan.format}. Headline: "${stagePlan.headline}". Colors (backgrounds/text only): ${brandKit.primary1}. Portrait. Spanish text only.${logoDataUrl ? ' Place brand logo in top-right corner, small (6-8% of image width). Reproduce it exactly — do NOT recreate or stylize it.' : ''}`,
                         size: '1024x1536',
                         quality: 'medium',
                         n: 1,
