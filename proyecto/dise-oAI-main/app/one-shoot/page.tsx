@@ -691,9 +691,17 @@ export default function OneShootPage() {
       let finalProdDesc = '';
       let finalPersonDesc = '';
 
+      let chunkTimer: ReturnType<typeof setTimeout> | null = null;
+      const resetChunkTimer = () => {
+        if (chunkTimer) clearTimeout(chunkTimer);
+        chunkTimer = setTimeout(() => controller.abort(), 90_000);
+      };
+      resetChunkTimer();
+
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) { if (chunkTimer) clearTimeout(chunkTimer); break; }
+        resetChunkTimer();
         buffer += dec.decode(value, { stream: true });
         const parts = buffer.split('\n\n');
         buffer = parts.pop() || '';
@@ -936,10 +944,20 @@ export default function OneShootPage() {
       const dec = new TextDecoder();
       let buffer = '';
       const collectedCreatives: PECCreative[] = [];
+      const capturedUserId = userId;
+      const capturedSessionId = sessionId;
+
+      let chunkTimer: ReturnType<typeof setTimeout> | null = null;
+      const resetChunkTimer = () => {
+        if (chunkTimer) clearTimeout(chunkTimer);
+        chunkTimer = setTimeout(() => controller.abort(), 90_000);
+      };
+      resetChunkTimer();
 
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) { if (chunkTimer) clearTimeout(chunkTimer); break; }
+        resetChunkTimer();
         buffer += dec.decode(value, { stream: true });
         const parts = buffer.split('\n\n');
         buffer = parts.pop() || '';
@@ -952,6 +970,9 @@ export default function OneShootPage() {
               collectedCreatives.push(data.creative);
               setP2Creatives(prev => [...prev, data.creative]);
               setP2Done(prev => prev + 1);
+              if (capturedUserId && capturedSessionId) {
+                void uploadBase64(supabase, `${capturedUserId}/${capturedSessionId}/p2_${data.creative.id}.jpg`, data.creative.base64);
+              }
             }
             if (data.creativeError) { setP2Done(prev => prev + 1); }
             if (data.angleError) { setP2Done(prev => prev + 3); } // whole angle plan failed — skip 3 slots
