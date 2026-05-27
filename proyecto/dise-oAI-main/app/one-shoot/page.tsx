@@ -141,14 +141,25 @@ async function uploadBase64(
   supabase: ReturnType<typeof createSupabaseBrowser>,
   path: string,
   base64: string
-): Promise<void> {
+): Promise<boolean> {
+  let bytes: Uint8Array;
   try {
     const b64 = base64.includes(',') ? base64.split(',')[1] : base64;
-    const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-    await supabase.storage
-      .from(STORAGE_BUCKET)
-      .upload(path, new Blob([bytes], { type: 'image/jpeg' }), { contentType: 'image/jpeg', upsert: true });
-  } catch { /* non-blocking */ }
+    const binary = atob(b64);
+    bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  } catch { return false; }
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const { error } = await supabase.storage
+        .from(STORAGE_BUCKET)
+        .upload(path, new Blob([bytes.buffer as ArrayBuffer], { type: 'image/jpeg' }), { contentType: 'image/jpeg', upsert: true });
+      if (!error) return true;
+    } catch { /* network error — retry */ }
+    if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 1000));
+  }
+  return false;
 }
 
 async function downloadBase64(
