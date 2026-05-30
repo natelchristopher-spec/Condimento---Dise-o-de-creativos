@@ -1124,6 +1124,7 @@ export default function OneShootPage() {
       const collectedCreatives: PECCreative[] = [];
       const capturedUserId = userId;
       const capturedSessionId = sessionId;
+      const uploadPromises: Promise<boolean>[] = [];
 
       let chunkTimer: ReturnType<typeof setTimeout> | null = null;
       const resetChunkTimer = () => {
@@ -1149,7 +1150,7 @@ export default function OneShootPage() {
               setP2Creatives(prev => [...prev, data.creative]);
               setP2Done(prev => prev + 1);
               if (capturedUserId && capturedSessionId) {
-                void uploadBase64(supabase, `${capturedUserId}/${capturedSessionId}/p2_${data.creative.id}.jpg`, data.creative.base64);
+                uploadPromises.push(uploadBase64(supabase, `${capturedUserId}/${capturedSessionId}/p2_${data.creative.id}.jpg`, data.creative.base64));
               }
             }
             if (data.creativeError) { setP2Done(prev => prev + 1); }
@@ -1174,12 +1175,8 @@ export default function OneShootPage() {
                 });
                 saveLsImages(sessionId, p1Images, angleStatuses, launchDate);
                 saveLsP2(sessionId, collectedCreatives);
-                if (userId) {
-                  const uploadResults = await Promise.allSettled(
-                    collectedCreatives.map(c =>
-                      uploadBase64(supabase, `${userId}/${sessionId}/p2_${c.id}.jpg`, c.base64)
-                    )
-                  );
+                if (capturedUserId && capturedSessionId && uploadPromises.length > 0) {
+                  const uploadResults = await Promise.allSettled(uploadPromises);
                   const failed = uploadResults.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value)).length;
                   if (failed > 0) setSyncWarning(`${failed} creativo${failed > 1 ? 's' : ''} no se pudo${failed > 1 ? 'ron' : ''} sincronizar con la nube. Están guardados en este dispositivo.`);
                 }
