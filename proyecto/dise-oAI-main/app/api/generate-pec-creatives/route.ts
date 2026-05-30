@@ -131,6 +131,9 @@ export async function POST(req: NextRequest) {
 
   const stream = new ReadableStream({
     async start(controller) {
+      const heartbeat = setInterval(() => {
+        try { send(controller, { ping: true }); } catch { /* controller closed */ }
+      }, 30_000);
       try {
         const total = winningAngles.length * 3;
         send(controller, { total });
@@ -353,6 +356,7 @@ Respondé SOLO con JSON válido:
       } catch (err) {
         send(controller, { error: getOpenAIErrorMessage(err) });
       } finally {
+        clearInterval(heartbeat);
         send(controller, { done: true });
         if (controller.desiredSize !== null) {
           try { controller.close(); } catch { /* already closed */ }

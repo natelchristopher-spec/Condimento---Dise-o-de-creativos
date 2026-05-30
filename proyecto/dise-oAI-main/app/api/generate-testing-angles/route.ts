@@ -253,6 +253,9 @@ export async function POST(req: NextRequest) {
 
   const stream = new ReadableStream({
     async start(controller) {
+      const heartbeat = setInterval(() => {
+        try { send(controller, { ping: true }); } catch { /* controller closed */ }
+      }, 30_000);
       try {
         // Step 3: generate product + category angles (text only) with GPT-4o
         const excludeNotice = excludeAngles.length > 0
@@ -610,6 +613,7 @@ Respondé SOLO con JSON:
       } catch (err) {
         send(controller, { error: getOpenAIErrorMessage(err) });
       } finally {
+        clearInterval(heartbeat);
         send(controller, { done: true, isFashionProduct, productDescription, personDescription });
         if (controller.desiredSize !== null) {
           try { controller.close(); } catch { /* already closed */ }
