@@ -786,7 +786,7 @@ export default function OneShootPage() {
       let chunkTimer: ReturnType<typeof setTimeout> | null = null;
       const resetChunkTimer = () => {
         if (chunkTimer) clearTimeout(chunkTimer);
-        chunkTimer = setTimeout(() => controller.abort(), 90_000);
+        chunkTimer = setTimeout(() => controller.abort(), peopleMode !== 'none' ? 150_000 : 90_000);
       };
       resetChunkTimer();
 
