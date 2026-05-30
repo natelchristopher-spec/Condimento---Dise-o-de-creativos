@@ -1124,6 +1124,9 @@ export default function OneShootPage() {
       const collectedCreatives: PECCreative[] = [];
       const capturedUserId = userId;
       const capturedSessionId = sessionId;
+      const capturedP1Images = p1Images;
+      const capturedAngleStatuses = angleStatuses;
+      const capturedLaunchDate = launchDate;
       const uploadPromises: Promise<boolean>[] = [];
 
       let chunkTimer: ReturnType<typeof setTimeout> | null = null;
@@ -1156,7 +1159,7 @@ export default function OneShootPage() {
             if (data.creativeError) { setP2Done(prev => prev + 1); }
             if (data.angleError) { setP2Done(prev => prev + 3); } // whole angle plan failed — skip 3 slots
             if (data.done) {
-              if (sessionId) {
+              if (capturedSessionId) {
                 const pecMeta = collectedCreatives.map(c => ({
                   id: c.id,
                   angleKey: c.angleKey,
@@ -1168,13 +1171,13 @@ export default function OneShootPage() {
                   headline: c.headline,
                   subline: c.subline,
                 }));
-                await fetch(`/api/one-shoot-sessions/${sessionId}`, {
+                await fetch(`/api/one-shoot-sessions/${capturedSessionId}`, {
                   method: 'PATCH',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ status: 'paso2_done', pecResults: pecMeta }),
                 });
-                saveLsImages(sessionId, p1Images, angleStatuses, launchDate);
-                saveLsP2(sessionId, collectedCreatives);
+                saveLsImages(capturedSessionId, capturedP1Images, capturedAngleStatuses, capturedLaunchDate);
+                saveLsP2(capturedSessionId, collectedCreatives);
                 if (capturedUserId && capturedSessionId && uploadPromises.length > 0) {
                   const uploadResults = await Promise.allSettled(uploadPromises);
                   const failed = uploadResults.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value)).length;
