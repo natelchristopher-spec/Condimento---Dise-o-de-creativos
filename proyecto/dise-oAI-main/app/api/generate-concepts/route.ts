@@ -448,7 +448,7 @@ El image_prompt debe mencionar colores hex exactos, disposición, estilo y eleme
               'IDIOMA — CRÍTICO: TODO el texto visible en la imagen debe estar en ESPAÑOL. Solo se permite inglés para nombres de marca o producto. NUNCA generar copy descriptivo, beneficios, claims o CTAs en inglés.',
               'ANTI-HALLUCINATION — do NOT invent or add any data not in the brief: phone numbers, URLs, social handles, QR codes, star ratings, testimonials, customer counts, certifications, ingredient/material claims, deadlines, discounts, promotional mechanics, awards, or any statistics. Only use what is explicitly in the brief.',
               'do NOT include button-style CTA elements in the image (e.g. "Compra ahora", "Ver más", "Buy Now", "Shop Now" rendered as a visual button, pill, or badge) — those CTAs are configured in the ad platform (Meta, Google), not inside the creative image itself.',
-              'BRAND LOGO RULE: Do NOT add or generate the advertiser brand name as a logo, wordmark, or separate graphic element anywhere in the creative. Brand identity is expressed only through colors, typography, and layout specified above.',
+              `BRAND LOGO RULE: Do NOT generate any logo, icon, symbol, or graphic brand element. If brand identification is needed, write only the brand name "${brandKit.name}" as plain text — no decoration, no icon, no invented wordmark.`,
             ].filter(Boolean).join(' ');
 
             try {

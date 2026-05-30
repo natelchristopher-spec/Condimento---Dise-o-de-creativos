@@ -255,7 +255,7 @@ Respondé SOLO con JSON válido:
                   'Portrait 1024x1536. ALL text in Spanish. Professional agency quality.',
                   'ANTI-HALLUCINATION: Do NOT invent prices, discounts, metrics, phone numbers, URLs, or statistics not in the brief. If the brief includes promotional terms (e.g. "3 y 6 cuotas sin interés"), reproduce them EXACTLY as-is in a single text element — never split into separate lines or restate differently. If no payment terms are in the brief, do NOT show any.',
                   'Do NOT include button-style CTAs in the image.',
-                  'BRAND LOGO RULE: Do NOT add or generate the advertiser brand name as a logo, wordmark, or separate graphic element anywhere in the creative. Brand identity is expressed only through the headline text, brand colors, and layout specified above.',
+                  `BRAND LOGO RULE: Do NOT generate any logo, icon, symbol, or graphic brand element. If brand identification is needed, write only the brand name "${brandKit.name}" as plain text — no decoration, no icon, no invented wordmark.`,
                   productDataUrl ? 'GARMENT COLOR FINAL CHECK — CRITICAL: the garment color in the generated image must exactly match the reference photo attached. Same hue, same saturation, same temperature. For warm neutrals (tostado, tan, camel, sand, beige): NEVER render as white or light gray — preserve the warm undertone from the reference.' : '',
                 ].filter(Boolean).join(' ');
 
