@@ -5,1095 +5,758 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Landing Preview — Condimento</title>
 <style>
-  /* ── Brand tokens (will be injected per-brand) ──────────────────── */
   :root {
-    --brand-primary:   #1a1a1a;
-    --brand-accent:    #e05c00;
-    --brand-accent-2:  #f5a623;
-    --brand-bg:        #ffffff;
-    --brand-surface:   #f8f8f6;
-    --brand-text:      #1a1a1a;
-    --brand-muted:     #6b6b6b;
-    --brand-border:    #e5e5e5;
-    --brand-success:   #2d7a3a;
-    --brand-font:      'Inter', system-ui, sans-serif;
+    --brand:        #1a1a1a;
+    --accent:       #e05c00;
+    --bg:           #ffffff;
+    --surface:      #f7f7f5;
+    --border:       #e8e8e4;
+    --text:         #1a1a1a;
+    --muted:        #767672;
+    --success:      #2f6b3a;
+    --font:         'Inter', system-ui, -apple-system, sans-serif;
   }
-
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html { font-size: 16px; scroll-behavior: smooth; }
-  body { font-family: var(--brand-font); color: var(--brand-text); background: var(--brand-bg); line-height: 1.6; }
+  body { font-family: var(--font); color: var(--text); background: var(--bg); line-height: 1.6; -webkit-font-smoothing: antialiased; }
   img { max-width: 100%; display: block; }
   a { color: inherit; text-decoration: none; }
-  button { cursor: pointer; font-family: inherit; border: none; }
+  button { cursor: pointer; font-family: inherit; border: none; background: none; }
 
-  /* ── Announcement bar ───────────────────────────────────────────── */
-  .announce-bar {
-    background: var(--brand-primary);
-    color: #fff;
-    text-align: center;
-    padding: 10px 16px;
-    font-size: 13px;
-    font-weight: 500;
-    letter-spacing: .3px;
+  /* ── Announce ──────────────────────────────────────────────────── */
+  .announce {
+    background: var(--brand); color: #fff;
+    text-align: center; padding: 10px 16px;
+    font-size: 13px; letter-spacing: .2px;
   }
-  .announce-bar strong { color: var(--brand-accent-2); }
+  .announce a { color: #fff; text-decoration: underline; opacity: .8; }
 
-  /* ── Nav ────────────────────────────────────────────────────────── */
+  /* ── Nav ───────────────────────────────────────────────────────── */
   .nav {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 16px 24px;
-    border-bottom: 1px solid var(--brand-border);
-    position: sticky; top: 0; background: var(--brand-bg); z-index: 100;
+    padding: 0 5%; height: 60px;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: var(--bg); z-index: 100;
   }
-  .nav-logo { font-size: 20px; font-weight: 800; letter-spacing: -1px; }
-  .nav-trust { font-size: 13px; color: var(--brand-muted); display: flex; gap: 20px; }
-  .nav-trust span { display: flex; align-items: center; gap: 5px; }
+  .nav-logo { font-size: 18px; font-weight: 800; letter-spacing: -0.5px; }
+  .nav-links { display: flex; gap: 28px; font-size: 14px; color: var(--muted); }
+  .nav-actions { display: flex; gap: 20px; font-size: 14px; align-items: center; }
 
-  /* ── Hero ───────────────────────────────────────────────────────── */
+  /* ── Hero ──────────────────────────────────────────────────────── */
   .hero {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0;
-    min-height: 600px;
+    display: grid; grid-template-columns: 1fr 1fr;
+    max-width: 1200px; margin: 0 auto;
+    padding: 40px 5% 64px;
+    gap: 56px;
   }
-  .hero-gallery {
-    background: var(--brand-surface);
+
+  /* Gallery */
+  .gallery { display: flex; flex-direction: column; gap: 12px; }
+  .gallery-main {
+    background: var(--surface); border-radius: 16px;
+    overflow: hidden; aspect-ratio: 1;
+    display: flex; align-items: center; justify-content: center;
     position: relative;
-    display: flex; flex-direction: column;
   }
-  .hero-gallery-main {
-    flex: 1;
+  .gallery-main .img-ph {
+    width: 60%; aspect-ratio: 1;
+    background: linear-gradient(145deg, #ddd, #eaeaea);
+    border-radius: 12px;
     display: flex; align-items: center; justify-content: center;
-    padding: 40px;
-    min-height: 460px;
+    font-size: 13px; color: #aaa;
   }
-  .hero-gallery-main .img-placeholder {
-    width: 340px; height: 380px;
-    background: linear-gradient(135deg, #ddd 0%, #eee 100%);
-    border-radius: 16px;
+  .gallery-thumbs { display: flex; gap: 8px; }
+  .gallery-thumb {
+    width: 68px; height: 68px; border-radius: 10px;
+    background: var(--surface); border: 2px solid transparent;
+    cursor: pointer; overflow: hidden;
     display: flex; align-items: center; justify-content: center;
-    font-size: 14px; color: #999;
+    font-size: 10px; color: #bbb;
+    transition: border-color .15s;
   }
-  .gallery-thumbs {
-    display: flex; gap: 10px; padding: 12px 24px 24px;
-    justify-content: center;
-  }
-  .gallery-thumbs .thumb {
-    width: 60px; height: 60px;
-    border-radius: 8px;
-    background: #ddd;
-    cursor: pointer;
-    border: 2px solid transparent;
-    overflow: hidden;
-    transition: border-color .2s;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 10px; color: #999;
-  }
-  .gallery-thumbs .thumb.active { border-color: var(--brand-accent); }
-  .badge-overlay {
-    position: absolute; top: 18px; left: 18px;
-    background: var(--brand-accent); color: #fff;
-    font-size: 12px; font-weight: 700; letter-spacing: .5px;
-    padding: 5px 12px; border-radius: 20px;
-    text-transform: uppercase;
-  }
+  .gallery-thumb.active { border-color: var(--brand); }
 
-  .hero-info {
-    padding: 40px 48px 40px 36px;
-    display: flex; flex-direction: column; gap: 20px;
-    overflow-y: auto;
-  }
+  /* Product info */
+  .product-info { display: flex; flex-direction: column; gap: 22px; padding-top: 8px; }
 
-  .product-category { font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--brand-muted); }
-  .product-title { font-size: 30px; font-weight: 800; line-height: 1.15; letter-spacing: -0.5px; }
+  .review-line {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 14px; color: var(--muted);
+  }
+  .stars { color: #f59e0b; letter-spacing: 1px; }
+  .review-line a { color: var(--muted); text-decoration: underline; }
 
-  .rating-row {
-    display: flex; align-items: center; gap: 12px;
-    font-size: 14px;
-  }
-  .stars { color: #f5a623; letter-spacing: 2px; }
-  .rating-count { color: var(--brand-muted); }
-  .rating-count a { color: var(--brand-accent); font-weight: 600; text-decoration: underline; }
-  .badge-pill {
-    background: #e8f5e9; color: var(--brand-success);
-    font-size: 12px; font-weight: 700;
-    padding: 3px 10px; border-radius: 20px;
-  }
+  .product-title { font-size: 28px; font-weight: 700; line-height: 1.2; letter-spacing: -.5px; }
 
-  /* proof bar */
-  .proof-bar {
-    display: flex; gap: 20px; flex-wrap: wrap;
-    padding: 14px 0;
-    border-top: 1px solid var(--brand-border);
-    border-bottom: 1px solid var(--brand-border);
+  /* Variant selector */
+  .selector-label { font-size: 12px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .variant-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+  .variant-pill {
+    padding: 8px 18px; border: 1.5px solid var(--border); border-radius: 8px;
+    font-size: 14px; font-weight: 500; background: #fff; cursor: pointer;
+    transition: all .15s;
   }
-  .proof-item { display: flex; flex-direction: column; }
-  .proof-num { font-size: 22px; font-weight: 800; color: var(--brand-accent); line-height: 1; }
-  .proof-label { font-size: 11px; color: var(--brand-muted); margin-top: 2px; }
-
-  /* Problem statement */
-  .problem-box {
-    background: var(--brand-surface);
-    border-left: 3px solid var(--brand-accent);
-    padding: 14px 16px;
-    border-radius: 0 8px 8px 0;
-    font-size: 14px; line-height: 1.6; color: #444;
-  }
-  .problem-box strong { color: var(--brand-text); }
-
-  /* Benefits list */
-  .benefits-list { display: flex; flex-direction: column; gap: 8px; }
-  .benefit-item {
-    display: flex; align-items: flex-start; gap: 10px;
-    font-size: 14px;
-  }
-  .benefit-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
-  .benefit-text strong { display: block; }
-  .benefit-text span { color: var(--brand-muted); font-size: 13px; }
+  .variant-pill.active { border-color: var(--brand); background: var(--brand); color: #fff; }
 
   /* Pack selector */
-  .pack-label { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
-  .pack-options { display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
-  .pack-opt {
-    flex: 1; min-width: 90px;
-    border: 2px solid var(--brand-border);
-    border-radius: 10px;
-    padding: 10px 8px;
-    text-align: center;
-    cursor: pointer;
-    position: relative;
-    transition: border-color .2s, background .2s;
+  .pack-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .pack-card {
+    border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 12px 8px; text-align: center; cursor: pointer;
+    position: relative; transition: border-color .15s;
     background: #fff;
   }
-  .pack-opt.active { border-color: var(--brand-accent); background: #fff5ef; }
-  .pack-opt .pack-qty { font-size: 14px; font-weight: 800; }
-  .pack-opt .pack-price { font-size: 13px; color: var(--brand-muted); }
-  .pack-opt .pack-save {
+  .pack-card.active { border-color: var(--brand); }
+  .pack-badge {
     position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
-    background: var(--brand-accent); color: #fff;
-    font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px;
-    white-space: nowrap;
+    background: var(--brand); color: #fff;
+    font-size: 10px; font-weight: 700; letter-spacing: .5px;
+    padding: 3px 10px; border-radius: 20px; white-space: nowrap;
+    text-transform: uppercase;
   }
+  .pack-qty { font-size: 14px; font-weight: 700; }
+  .pack-servings { font-size: 11px; color: var(--muted); margin-top: 2px; }
 
-  /* Subscription toggle */
-  .sub-toggle {
-    border: 2px solid var(--brand-border);
-    border-radius: 12px;
-    overflow: hidden;
+  /* Delivery options */
+  .delivery-opts { display: flex; flex-direction: column; gap: 0; border: 1.5px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .delivery-opt {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 16px 18px; cursor: pointer;
+    background: #fff; transition: background .15s;
   }
-  .sub-opt {
-    display: flex; align-items: center; gap: 12px;
-    padding: 12px 16px;
-    cursor: pointer;
-    transition: background .15s;
-  }
-  .sub-opt.active { background: #fff5ef; }
-  .sub-opt input[type="radio"] { accent-color: var(--brand-accent); width: 16px; height: 16px; }
-  .sub-opt-label { flex: 1; }
-  .sub-opt-label .opt-title { font-size: 14px; font-weight: 600; }
-  .sub-opt-label .opt-sub { font-size: 12px; color: var(--brand-muted); }
-  .sub-opt-badge {
-    background: #e8f5e9; color: var(--brand-success);
-    font-size: 11px; font-weight: 700;
-    padding: 3px 8px; border-radius: 20px;
-  }
-  .sub-divider { height: 1px; background: var(--brand-border); }
+  .delivery-opt + .delivery-opt { border-top: 1px solid var(--border); }
+  .delivery-opt.active { background: #fafaf8; }
+  .delivery-opt input[type="radio"] { margin-top: 3px; accent-color: var(--brand); flex-shrink: 0; width: 16px; height: 16px; }
+  .delivery-opt-body { flex: 1; }
+  .delivery-opt-title { font-size: 15px; font-weight: 700; }
+  .delivery-opt-detail { font-size: 13px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+  .delivery-opt-detail span { color: var(--text); }
+  .delivery-opt-price { text-align: right; flex-shrink: 0; }
+  .delivery-opt-price .price-now { font-size: 18px; font-weight: 800; display: block; }
+  .delivery-opt-price .price-was { font-size: 13px; color: var(--muted); text-decoration: line-through; display: block; }
+  .delivery-opt-price .per-serving { font-size: 11px; color: var(--muted); }
 
   /* Price */
-  .price-row { display: flex; align-items: center; gap: 12px; }
-  .price-main { font-size: 34px; font-weight: 900; color: var(--brand-text); line-height: 1; }
-  .price-compare { font-size: 20px; color: var(--brand-muted); text-decoration: line-through; }
-  .price-saving {
-    background: #fef3e2; color: #b45309;
-    font-size: 13px; font-weight: 700;
-    padding: 4px 10px; border-radius: 20px;
+  .price-block { display: flex; align-items: baseline; gap: 10px; }
+  .price-main { font-size: 30px; font-weight: 800; }
+  .price-compare { font-size: 18px; color: var(--muted); text-decoration: line-through; }
+  .price-save {
+    font-size: 13px; font-weight: 600; color: var(--success);
+    background: #edf7ee; padding: 3px 10px; border-radius: 20px;
   }
 
-  /* Scarcity */
-  .scarcity {
-    display: flex; align-items: center; gap: 8px;
-    font-size: 13px;
+  /* ATC */
+  .btn-atc {
+    width: 100%; padding: 17px 24px;
+    background: var(--brand); color: #fff;
+    font-size: 15px; font-weight: 700; letter-spacing: .2px;
+    border-radius: 10px; transition: opacity .15s;
   }
-  .scarcity-dot { width: 8px; height: 8px; background: #e53e3e; border-radius: 50%; animation: pulse 1.4s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-  .scarcity-text { color: #e53e3e; font-weight: 600; }
-  .scarcity-sub { color: var(--brand-muted); }
+  .btn-atc:hover { opacity: .88; }
 
-  /* CTA button */
-  .btn-cta {
-    display: block; width: 100%;
-    background: var(--brand-accent);
-    color: #fff;
-    font-size: 16px; font-weight: 800; letter-spacing: .3px;
-    padding: 18px 24px;
-    border-radius: 12px;
-    text-align: center;
-    transition: opacity .2s, transform .1s;
-  }
-  .btn-cta:hover { opacity: .9; }
-  .btn-cta:active { transform: scale(.99); }
-  .btn-cta-sub { font-size: 12px; opacity: .85; margin-top: 2px; display: block; }
+  /* Trust strip under ATC */
+  .trust-strip { display: flex; flex-direction: column; gap: 7px; }
+  .trust-item { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+  .trust-item .t-icon { font-size: 15px; }
 
-  /* Guarantees */
-  .guarantees { display: flex; gap: 6px; flex-wrap: wrap; }
-  .guarantee-chip {
+  /* Benefits chips */
+  .benefit-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .benefit-chip {
     display: flex; align-items: center; gap: 6px;
-    font-size: 12px; color: var(--brand-muted);
-    background: var(--brand-surface);
-    padding: 6px 12px; border-radius: 20px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 24px; padding: 7px 14px;
+    font-size: 13px; font-weight: 500;
   }
-  .guarantee-chip .icon { font-size: 14px; }
+  .benefit-chip .chip-icon { font-size: 15px; }
 
-  /* ── Section layout ─────────────────────────────────────────────── */
-  section { padding: 72px 24px; }
-  .container { max-width: 1100px; margin: 0 auto; }
-  .section-label {
-    font-size: 11px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase;
-    color: var(--brand-accent); margin-bottom: 12px;
-  }
-  .section-title { font-size: 36px; font-weight: 800; line-height: 1.15; letter-spacing: -0.5px; margin-bottom: 16px; }
-  .section-sub { font-size: 17px; color: var(--brand-muted); max-width: 600px; line-height: 1.7; }
-
-  /* ── Problem section ────────────────────────────────────────────── */
-  .problem-section { background: var(--brand-primary); color: #fff; }
-  .problem-section .section-sub { color: rgba(255,255,255,.7); }
-  .problem-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 48px; }
-  .problem-card {
-    background: rgba(255,255,255,.07);
-    border: 1px solid rgba(255,255,255,.1);
-    border-radius: 16px;
-    padding: 28px;
-  }
-  .problem-card .p-icon { font-size: 28px; margin-bottom: 14px; }
-  .problem-card .p-title { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
-  .problem-card .p-text { font-size: 14px; color: rgba(255,255,255,.65); line-height: 1.6; }
-  .problem-arrow {
-    text-align: center; margin-top: 48px;
-    font-size: 18px; font-weight: 700; color: var(--brand-accent-2);
-  }
-
-  /* ── How it works ───────────────────────────────────────────────── */
-  .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; margin-top: 48px; }
-  .step-card { text-align: center; padding: 32px 24px; }
-  .step-num {
-    width: 52px; height: 52px; border-radius: 50%;
-    background: var(--brand-accent); color: #fff;
-    font-size: 22px; font-weight: 800;
-    display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 20px;
-  }
-  .step-title { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
-  .step-text { font-size: 14px; color: var(--brand-muted); line-height: 1.7; }
-
-  /* ── Ingredients ────────────────────────────────────────────────── */
-  .ingredients-section { background: var(--brand-surface); }
-  .ingredient-list { margin-top: 40px; display: flex; flex-direction: column; gap: 12px; max-width: 780px; }
-  .ingredient-card {
-    background: #fff;
-    border: 1px solid var(--brand-border);
-    border-radius: 14px;
-    overflow: hidden;
-  }
-  .ingredient-header {
-    display: flex; align-items: center; gap: 16px;
-    padding: 18px 22px;
-    cursor: pointer;
-    transition: background .15s;
-  }
-  .ingredient-header:hover { background: var(--brand-surface); }
-  .ingredient-icon {
-    width: 52px; height: 52px;
-    background: var(--brand-surface);
-    border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 24px; flex-shrink: 0;
-  }
-  .ingredient-name { flex: 1; }
-  .ingredient-name strong { font-size: 16px; font-weight: 700; display: block; }
-  .ingredient-name span { font-size: 13px; color: var(--brand-muted); }
-  .ingredient-toggle { font-size: 20px; color: var(--brand-muted); transition: transform .2s; }
-  .ingredient-card.open .ingredient-toggle { transform: rotate(45deg); }
-  .ingredient-body {
-    display: none; padding: 0 22px 20px 90px;
-    font-size: 14px; color: #555; line-height: 1.7;
-  }
-  .ingredient-card.open .ingredient-body { display: block; }
-  .ingredient-evidence {
-    display: inline-flex; align-items: center; gap: 5px;
-    font-size: 12px; color: var(--brand-success); font-weight: 600;
-    margin-top: 8px;
-  }
-
-  /* ── Results timeline ───────────────────────────────────────────── */
-  .timeline { position: relative; margin-top: 48px; }
-  .timeline::before {
-    content: '';
-    position: absolute; left: 28px; top: 0; bottom: 0; width: 2px;
-    background: var(--brand-border);
-  }
-  .timeline-item { display: flex; gap: 24px; margin-bottom: 36px; position: relative; }
-  .timeline-dot {
-    width: 56px; height: 56px; border-radius: 50%;
-    background: var(--brand-accent); color: #fff;
-    font-size: 11px; font-weight: 700; text-align: center; line-height: 1.2;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0; z-index: 1;
-    text-transform: uppercase; padding: 4px;
-  }
-  .timeline-content { padding-top: 8px; }
-  .timeline-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
-  .timeline-text { font-size: 14px; color: var(--brand-muted); line-height: 1.6; }
-
-  /* ── Comparison ─────────────────────────────────────────────────── */
-  .comparison-section { background: var(--brand-surface); }
-  .comparison-table {
-    width: 100%; border-collapse: collapse; margin-top: 40px;
-    border-radius: 16px; overflow: hidden;
-    box-shadow: 0 2px 20px rgba(0,0,0,.08);
-  }
-  .comparison-table th {
-    padding: 18px 24px; font-size: 15px; font-weight: 700; text-align: center;
-  }
-  .comparison-table th:first-child { text-align: left; font-weight: 500; color: var(--brand-muted); }
-  .comparison-table th.col-brand {
-    background: var(--brand-accent); color: #fff;
-  }
-  .comparison-table th.col-alt { background: #e5e5e5; color: #888; }
-  .comparison-table td {
-    padding: 14px 24px; font-size: 14px;
-    border-top: 1px solid var(--brand-border);
-    text-align: center; background: #fff;
-  }
-  .comparison-table td:first-child { text-align: left; font-weight: 500; }
-  .comparison-table td.col-brand { background: #fff8f5; font-weight: 600; }
-  .comparison-table .check { color: var(--brand-success); font-size: 18px; }
-  .comparison-table .cross { color: #ccc; font-size: 18px; }
-
-  /* ── Social proof ───────────────────────────────────────────────── */
-  .proof-strip {
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
-    background: var(--brand-border); border: 1px solid var(--brand-border);
-    border-radius: 16px; overflow: hidden; margin-bottom: 64px;
-  }
-  .proof-strip-item {
-    background: var(--brand-bg);
-    padding: 28px 24px; text-align: center;
-  }
-  .proof-strip-num { font-size: 36px; font-weight: 900; color: var(--brand-accent); line-height: 1; }
-  .proof-strip-label { font-size: 13px; color: var(--brand-muted); margin-top: 6px; }
-
-  .reviews-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 40px; }
-  .review-card {
-    background: var(--brand-surface);
-    border: 1px solid var(--brand-border);
-    border-radius: 16px; padding: 24px;
-  }
-  .review-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
-  .review-avatar {
-    width: 44px; height: 44px; border-radius: 50%;
-    background: linear-gradient(135deg, var(--brand-accent-2) 0%, var(--brand-accent) 100%);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px; font-weight: 800; color: #fff; flex-shrink: 0;
-  }
-  .review-meta strong { font-size: 14px; display: block; }
-  .review-meta span { font-size: 12px; color: var(--brand-muted); }
-  .review-stars { color: #f5a623; font-size: 13px; margin-bottom: 10px; }
-  .review-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
-  .review-text { font-size: 13px; color: #555; line-height: 1.6; }
-  .review-verified {
-    display: inline-flex; align-items: center; gap: 4px;
-    font-size: 11px; color: var(--brand-success); font-weight: 600; margin-top: 10px;
-  }
-
-  /* Featured review */
-  .review-featured {
-    background: var(--brand-primary); color: #fff;
-    border-radius: 20px; padding: 40px;
-    margin-top: 40px; position: relative;
-    display: flex; gap: 32px; align-items: center;
-  }
-  .review-featured .quote-icon { font-size: 64px; line-height: 1; opacity: .2; position: absolute; top: 20px; left: 30px; }
-  .review-featured blockquote { font-size: 20px; font-weight: 600; line-height: 1.5; flex: 1; position: relative; z-index: 1; }
-  .review-featured cite { display: block; font-size: 14px; color: rgba(255,255,255,.6); margin-top: 16px; font-style: normal; }
-  .review-featured .featured-result {
-    background: var(--brand-accent);
-    color: #fff; font-size: 13px; font-weight: 700;
-    padding: 4px 12px; border-radius: 20px; display: inline-block; margin-bottom: 8px;
-  }
-
-  /* ── FAQ ────────────────────────────────────────────────────────── */
-  .faq-section { background: var(--brand-surface); }
-  .faq-list { max-width: 720px; margin: 40px auto 0; display: flex; flex-direction: column; gap: 8px; }
-  .faq-item {
-    background: #fff; border: 1px solid var(--brand-border);
-    border-radius: 12px; overflow: hidden;
-  }
-  .faq-question {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 18px 22px; cursor: pointer;
-    font-size: 15px; font-weight: 600;
-    transition: background .15s;
-  }
-  .faq-question:hover { background: var(--brand-surface); }
-  .faq-toggle { font-size: 22px; color: var(--brand-muted); transition: transform .2s; flex-shrink: 0; }
-  .faq-item.open .faq-toggle { transform: rotate(45deg); }
-  .faq-answer { display: none; padding: 0 22px 18px; font-size: 14px; color: #555; line-height: 1.7; }
-  .faq-item.open .faq-answer { display: block; }
-
-  /* ── Final CTA ──────────────────────────────────────────────────── */
-  .final-cta {
-    background: linear-gradient(135deg, var(--brand-primary) 0%, #333 100%);
-    color: #fff; text-align: center; padding: 80px 24px;
-  }
-  .final-cta .section-title { color: #fff; font-size: 42px; max-width: 700px; margin: 0 auto 16px; }
-  .final-cta .section-sub { color: rgba(255,255,255,.7); margin: 0 auto 40px; }
-  .final-cta-price { font-size: 48px; font-weight: 900; color: var(--brand-accent-2); margin-bottom: 8px; line-height: 1; }
-  .final-cta-price-sub { font-size: 14px; color: rgba(255,255,255,.5); margin-bottom: 32px; }
-  .btn-cta-lg {
-    display: inline-block;
-    background: var(--brand-accent);
-    color: #fff;
-    font-size: 18px; font-weight: 800; letter-spacing: .3px;
-    padding: 20px 56px;
-    border-radius: 14px;
-    transition: opacity .2s;
-  }
-  .btn-cta-lg:hover { opacity: .9; }
-  .final-cta-guarantee { font-size: 13px; color: rgba(255,255,255,.5); margin-top: 20px; }
-  .final-cta-guarantee strong { color: rgba(255,255,255,.8); }
-  .trust-badges {
-    display: flex; gap: 24px; justify-content: center; flex-wrap: wrap;
-    margin-top: 40px;
-  }
-  .trust-badge {
-    display: flex; flex-direction: column; align-items: center; gap: 8px;
-    font-size: 12px; color: rgba(255,255,255,.5);
-  }
-  .trust-badge .t-icon { font-size: 28px; }
-
-  /* ── Sticky bar ─────────────────────────────────────────────────── */
-  .sticky-bar {
-    position: fixed; bottom: 0; left: 0; right: 0;
-    background: var(--brand-primary);
-    color: #fff;
-    padding: 14px 24px;
-    display: flex; align-items: center; justify-content: space-between; gap: 16px;
-    transform: translateY(100%);
-    transition: transform .3s ease;
-    z-index: 999;
-    box-shadow: 0 -4px 20px rgba(0,0,0,.2);
-    padding-bottom: max(14px, env(safe-area-inset-bottom));
-  }
-  .sticky-bar.visible { transform: translateY(0); }
-  .sticky-bar-info { display: flex; flex-direction: column; }
-  .sticky-bar-name { font-size: 14px; font-weight: 700; }
-  .sticky-bar-price { font-size: 13px; color: rgba(255,255,255,.6); }
-  .sticky-bar-price strong { color: var(--brand-accent-2); }
-  .sticky-bar-btn {
-    background: var(--brand-accent);
-    color: #fff;
-    font-size: 14px; font-weight: 800;
-    padding: 12px 28px;
-    border-radius: 8px;
+  /* Product tabs */
+  .product-tabs { border-bottom: 1px solid var(--border); display: flex; gap: 0; }
+  .tab-btn {
+    padding: 14px 20px; font-size: 14px; font-weight: 500; color: var(--muted);
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+    cursor: pointer; transition: color .15s, border-color .15s;
     white-space: nowrap;
-    flex-shrink: 0;
   }
+  .tab-btn.active { color: var(--text); border-bottom-color: var(--brand); font-weight: 600; }
+  .tab-panel { display: none; padding: 20px 0; font-size: 14px; color: var(--muted); line-height: 1.8; }
+  .tab-panel.active { display: block; }
 
-  /* ── Mobile ─────────────────────────────────────────────────────── */
-  @media (max-width: 768px) {
-    .hero { grid-template-columns: 1fr; }
-    .hero-info { padding: 28px 20px; }
-    .problem-grid,
-    .steps-grid,
+  /* ── Sections ──────────────────────────────────────────────────── */
+  .section { padding: 72px 5%; }
+  .section-inner { max-width: 1200px; margin: 0 auto; }
+  .section-label { font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+  .section-title { font-size: 32px; font-weight: 700; line-height: 1.2; letter-spacing: -.5px; margin-bottom: 14px; }
+  .section-sub { font-size: 16px; color: var(--muted); max-width: 580px; line-height: 1.7; }
+
+  /* ── Specs ─────────────────────────────────────────────────────── */
+  .specs-section { background: var(--surface); }
+  .specs-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; background: var(--border); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-top: 40px; }
+  .spec-item { background: var(--bg); padding: 22px 20px; }
+  .spec-key { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .spec-val { font-size: 15px; font-weight: 600; }
+
+  /* ── Science badges ────────────────────────────────────────────── */
+  .science-badges { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 40px; }
+  .science-badge {
+    display: flex; align-items: center; gap: 8px;
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 16px; font-size: 13px; font-weight: 500;
+    background: var(--bg);
+  }
+  .science-badge .sb-icon { font-size: 16px; }
+
+  /* ── Ingredients ───────────────────────────────────────────────── */
+  .ingredients-section { background: var(--surface); }
+  .ingredient-cards { display: flex; flex-direction: column; gap: 10px; margin-top: 40px; max-width: 800px; }
+  .ing-card { background: var(--bg); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  .ing-header {
+    display: flex; align-items: center; gap: 16px;
+    padding: 18px 22px; cursor: pointer;
+  }
+  .ing-img {
+    width: 56px; height: 56px; border-radius: 10px;
+    background: linear-gradient(135deg, #ddd, #eee);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0;
+  }
+  .ing-meta { flex: 1; }
+  .ing-name { font-size: 15px; font-weight: 700; }
+  .ing-dose { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .ing-toggle { color: var(--muted); font-size: 20px; font-weight: 300; transition: transform .2s; }
+  .ing-card.open .ing-toggle { transform: rotate(45deg); }
+  .ing-body { display: none; padding: 0 22px 20px 94px; font-size: 14px; color: #555; line-height: 1.7; }
+  .ing-card.open .ing-body { display: block; }
+
+  /* ── Timeline ──────────────────────────────────────────────────── */
+  .timeline-section { background: var(--surface); }
+  .timeline { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; margin-top: 40px; }
+  .timeline-item { text-align: center; padding: 0 12px; }
+  .timeline-when { font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+  .timeline-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+  .timeline-text { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+  /* ── Comparison ────────────────────────────────────────────────── */
+  .comparison-section {}
+  .comparison-sub { font-size: 13px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 40px; }
+  .comparison-table { width: 100%; border-collapse: collapse; margin-top: 0; }
+  .comparison-table th { padding: 16px 20px; text-align: left; font-size: 14px; font-weight: 600; border-bottom: 2px solid var(--border); }
+  .comparison-table th:not(:first-child) { text-align: center; }
+  .comparison-table th.col-brand { color: var(--brand); font-weight: 800; }
+  .comparison-table td { padding: 14px 20px; font-size: 14px; border-bottom: 1px solid var(--border); }
+  .comparison-table td:not(:first-child) { text-align: center; }
+  .comparison-table .check { color: var(--success); font-weight: 700; font-size: 16px; }
+  .comparison-table .cross { color: #ccc; font-size: 16px; }
+  .comparison-table tr:last-child td { border-bottom: none; }
+
+  /* ── Reviews ───────────────────────────────────────────────────── */
+  .reviews-section {}
+  .review-summary { font-size: 48px; font-weight: 900; line-height: 1; margin-bottom: 4px; }
+  .review-summary-sub { font-size: 14px; color: var(--muted); }
+  .reviews-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 40px; }
+  .review-card { background: var(--surface); border-radius: 12px; padding: 22px; }
+  .review-stars { color: #f59e0b; font-size: 13px; margin-bottom: 12px; }
+  .review-title { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+  .review-text { font-size: 14px; color: #555; line-height: 1.6; }
+  .review-author { margin-top: 12px; font-size: 13px; color: var(--muted); }
+  .review-author strong { color: var(--text); }
+  .review-verified { font-size: 11px; color: var(--success); font-weight: 600; margin-top: 4px; }
+
+  /* ── FAQ ───────────────────────────────────────────────────────── */
+  .faq-section { background: var(--surface); }
+  .faq-list { max-width: 720px; margin: 40px auto 0; }
+  .faq-item { border-bottom: 1px solid var(--border); }
+  .faq-q {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 18px 0; cursor: pointer;
+    font-size: 15px; font-weight: 500; gap: 16px;
+  }
+  .faq-toggle { font-size: 22px; font-weight: 300; color: var(--muted); flex-shrink: 0; transition: transform .2s; }
+  .faq-item.open .faq-toggle { transform: rotate(45deg); }
+  .faq-a { display: none; padding: 0 0 18px; font-size: 14px; color: var(--muted); line-height: 1.7; }
+  .faq-item.open .faq-a { display: block; }
+
+  /* ── Final CTA ─────────────────────────────────────────────────── */
+  .final-cta { text-align: center; padding: 80px 5%; }
+  .final-cta .section-title { font-size: 38px; max-width: 700px; margin: 0 auto 16px; }
+  .final-cta .section-sub { margin: 0 auto 40px; }
+  .final-cta-btns { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .btn-atc-lg {
+    display: inline-block;
+    background: var(--brand); color: #fff;
+    font-size: 16px; font-weight: 700;
+    padding: 18px 52px; border-radius: 10px;
+    transition: opacity .15s;
+  }
+  .btn-atc-lg:hover { opacity: .88; }
+  .final-guarantee { font-size: 13px; color: var(--muted); }
+
+  /* ── Sticky bar ────────────────────────────────────────────────── */
+  .sticky {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--bg); border-top: 1px solid var(--border);
+    padding: 12px 5%; padding-bottom: max(12px, env(safe-area-inset-bottom));
+    display: flex; align-items: center; gap: 16px;
+    transform: translateY(100%); transition: transform .3s;
+    z-index: 200; box-shadow: 0 -4px 24px rgba(0,0,0,.07);
+  }
+  .sticky.visible { transform: translateY(0); }
+  .sticky-info { flex: 1; }
+  .sticky-name { font-size: 14px; font-weight: 600; }
+  .sticky-price { font-size: 13px; color: var(--muted); }
+  .sticky .btn-atc { width: auto; padding: 12px 28px; font-size: 14px; flex-shrink: 0; }
+
+  /* ── Mobile ────────────────────────────────────────────────────── */
+  @media (max-width: 860px) {
+    .hero { grid-template-columns: 1fr; gap: 28px; padding: 24px 4% 40px; }
+    .timeline { grid-template-columns: 1fr; gap: 24px; }
     .reviews-grid { grid-template-columns: 1fr; }
-    .proof-strip { grid-template-columns: repeat(2, 1fr); }
-    .hero-gallery-main .img-placeholder { width: 260px; height: 290px; }
-    .section-title { font-size: 28px; }
-    .final-cta .section-title { font-size: 28px; }
-    .comparison-table { font-size: 13px; }
-    .review-featured { flex-direction: column; }
-    .nav-trust { display: none; }
-    .product-title { font-size: 24px; }
+    .specs-grid { grid-template-columns: repeat(2, 1fr); }
+    .section-title { font-size: 26px; }
+    .final-cta .section-title { font-size: 26px; }
+    .nav-links { display: none; }
+    .pack-grid { grid-template-columns: repeat(3, 1fr); }
   }
 </style>
 </head>
 <body>
 
-<!-- ── Announcement bar ──────────────────────────────────────────── -->
-<div class="announce-bar">
-  🚚 Envío gratis en pedidos +$49 · <strong>⏰ Comprá antes de las 14hs y sale hoy</strong> · Garantía 30 días sin preguntas
+<!-- Announce -->
+<div class="announce">
+  30% de descuento en todas las nuevas suscripciones &nbsp;|&nbsp; <a href="#">Ver todo</a>
 </div>
 
-<!-- ── Nav ──────────────────────────────────────────────────────── -->
+<!-- Nav -->
 <nav class="nav">
   <div class="nav-logo">MARCA™</div>
-  <div class="nav-trust">
-    <span>⭐ 4.9/5 · 2,847 reseñas</span>
-    <span>🔒 Pago seguro</span>
-    <span>🔄 30 días de garantía</span>
+  <div class="nav-links">
+    <span>Comercio</span>
+    <span>Acerca de</span>
+  </div>
+  <div class="nav-actions">
+    <span>🔍</span>
+    <span>🛒</span>
   </div>
 </nav>
 
-<!-- ── Hero ─────────────────────────────────────────────────────── -->
+<!-- Hero -->
 <div class="hero">
-  <div class="hero-gallery">
-    <div class="badge-overlay">MÁS VENDIDO</div>
-    <div class="hero-gallery-main">
-      <div class="img-placeholder">📸 Foto producto</div>
+
+  <!-- Gallery -->
+  <div class="gallery">
+    <div class="gallery-main">
+      <div class="img-ph">📸 foto producto</div>
     </div>
     <div class="gallery-thumbs">
-      <div class="thumb active">1</div>
-      <div class="thumb">2</div>
-      <div class="thumb">3</div>
-      <div class="thumb">4</div>
+      <div class="gallery-thumb active">1</div>
+      <div class="gallery-thumb">2</div>
+      <div class="gallery-thumb">3</div>
+      <div class="gallery-thumb">4</div>
     </div>
   </div>
 
-  <div class="hero-info">
-    <p class="product-category">Categoría del producto</p>
-    <h1 class="product-title">Nombre del Producto — Beneficio Principal</h1>
+  <!-- Info -->
+  <div class="product-info">
 
-    <div class="rating-row">
+    <div class="review-line">
       <span class="stars">★★★★★</span>
-      <span class="rating-count"><a href="#reviews">2,847 reseñas</a></span>
-      <span class="badge-pill">✓ Verificado</span>
+      <a href="#reviews">6,008 reseñas</a>
     </div>
 
-    <div class="proof-bar">
-      <div class="proof-item">
-        <span class="proof-num">50K+</span>
-        <span class="proof-label">Clientes satisfechos</span>
-      </div>
-      <div class="proof-item">
-        <span class="proof-num">4.9★</span>
-        <span class="proof-label">Calificación promedio</span>
-      </div>
-      <div class="proof-item">
-        <span class="proof-num">30 días</span>
-        <span class="proof-label">Garantía de devolución</span>
-      </div>
-    </div>
+    <h1 class="product-title">Nombre del Producto</h1>
 
-    <div class="problem-box">
-      <strong>¿Te pasa que X no funciona?</strong><br/>
-      La mayoría de los productos en el mercado contienen rellenos baratos y dosis ineficaces. Este producto fue formulado para dar <strong>resultados reales en menos de 7 días</strong>.
-    </div>
-
-    <div class="benefits-list">
-      <div class="benefit-item">
-        <span class="benefit-icon">✅</span>
-        <div class="benefit-text">
-          <strong>Beneficio clave #1</strong>
-          <span>Explicación breve de por qué esto importa al consumidor</span>
-        </div>
-      </div>
-      <div class="benefit-item">
-        <span class="benefit-icon">✅</span>
-        <div class="benefit-text">
-          <strong>Beneficio clave #2</strong>
-          <span>Explicación breve de por qué esto importa al consumidor</span>
-        </div>
-      </div>
-      <div class="benefit-item">
-        <span class="benefit-icon">✅</span>
-        <div class="benefit-text">
-          <strong>Beneficio clave #3</strong>
-          <span>Explicación breve de por qué esto importa al consumidor</span>
-        </div>
+    <!-- Variant selector -->
+    <div>
+      <p class="selector-label">Elegí tu producto</p>
+      <div class="variant-pills">
+        <div class="variant-pill active" onclick="selectVariant(this)">Variante A</div>
+        <div class="variant-pill" onclick="selectVariant(this)">Variante B</div>
+        <div class="variant-pill" onclick="selectVariant(this)">Variante C</div>
       </div>
     </div>
 
     <!-- Pack selector -->
     <div>
-      <p class="pack-label">Elegí tu pack</p>
-      <div class="pack-options">
-        <div class="pack-opt" onclick="selectPack(this)">
+      <p class="selector-label">Tamaño del paquete</p>
+      <div class="pack-grid">
+        <div class="pack-card" onclick="selectPack(this)">
           <div class="pack-qty">x1</div>
-          <div class="pack-price">$29.99</div>
+          <div class="pack-servings">30 porciones</div>
         </div>
-        <div class="pack-opt active" onclick="selectPack(this)">
-          <div class="pack-save">MÁS POPULAR</div>
+        <div class="pack-card active" onclick="selectPack(this)">
+          <div class="pack-badge">Más popular</div>
+          <div class="pack-qty">x2</div>
+          <div class="pack-servings">26 porciones</div>
+        </div>
+        <div class="pack-card" onclick="selectPack(this)">
           <div class="pack-qty">x3</div>
-          <div class="pack-price">$24.99/u</div>
-        </div>
-        <div class="pack-opt" onclick="selectPack(this)">
-          <div class="pack-save">AHORRAS 33%</div>
-          <div class="pack-qty">x6</div>
-          <div class="pack-price">$19.99/u</div>
+          <div class="pack-servings">78 porciones</div>
         </div>
       </div>
     </div>
 
-    <!-- Subscription -->
-    <div class="sub-toggle">
-      <div class="sub-opt" onclick="selectSub('once', event)">
-        <input type="radio" name="sub" value="once" />
-        <div class="sub-opt-label">
-          <div class="opt-title">Compra única</div>
-          <div class="opt-sub">Sin compromiso</div>
+    <!-- Delivery options -->
+    <div>
+      <p class="selector-label">Seleccioná una opción</p>
+      <div class="delivery-opts">
+        <div class="delivery-opt active" onclick="selectDelivery(this, 'sub')">
+          <input type="radio" name="delivery" checked />
+          <div class="delivery-opt-body">
+            <div class="delivery-opt-title">Suscribite y ahorrá 30%</div>
+            <div class="delivery-opt-detail">
+              <span>30% de descuento</span> en el primer pedido<br/>
+              <span>20% de descuento</span> en pedidos recurrentes<br/>
+              Opción de precio más bajo · Cancelá cuando quieras
+            </div>
+          </div>
+          <div class="delivery-opt-price">
+            <span class="price-now">$28.00</span>
+            <span class="price-was">$40.00</span>
+            <span class="per-serving">$1.08/porción</span>
+          </div>
         </div>
-        <span style="font-weight:700">$29.99</span>
+        <div class="delivery-opt" onclick="selectDelivery(this, 'once')">
+          <input type="radio" name="delivery" />
+          <div class="delivery-opt-body">
+            <div class="delivery-opt-title">Inténtalo una vez</div>
+            <div class="delivery-opt-detail">Ahorrás 0%</div>
+          </div>
+          <div class="delivery-opt-price">
+            <span class="price-now">$40.00</span>
+            <span class="per-serving">$1.54/porción</span>
+          </div>
+        </div>
       </div>
-      <div class="sub-divider"></div>
-      <div class="sub-opt active" onclick="selectSub('sub', event)">
-        <input type="radio" name="sub" value="sub" checked />
-        <div class="sub-opt-label">
-          <div class="opt-title">Suscripción mensual</div>
-          <div class="opt-sub">Cancelá cuando quieras · Envío gratis siempre</div>
+    </div>
+
+    <!-- ATC -->
+    <button class="btn-atc">Añadir a la cesta</button>
+
+    <!-- Trust -->
+    <div class="trust-strip">
+      <div class="trust-item"><span class="t-icon">🚚</span> Envíos en 24 horas (de lunes a viernes)</div>
+      <div class="trust-item"><span class="t-icon">🔄</span> Garantía de devolución de dinero de 60 días</div>
+      <div class="trust-item"><span class="t-icon">☕</span> Más de 300 millones de unidades vendidas</div>
+    </div>
+
+    <!-- Product tabs -->
+    <div>
+      <div class="product-tabs">
+        <button class="tab-btn active" onclick="selectTab(this,'desc')">Descripción</button>
+        <button class="tab-btn" onclick="selectTab(this,'how')">Cómo usar</button>
+        <button class="tab-btn" onclick="selectTab(this,'benefits')">Beneficios</button>
+        <button class="tab-btn" onclick="selectTab(this,'ing')">Ingredientes</button>
+      </div>
+      <div id="tab-desc" class="tab-panel active">
+        Descripción del producto en 3-4 oraciones. Qué es, para quién, qué lo hace diferente.
+        Escrito con confianza, sin exagerar ni prometer milagros.
+      </div>
+      <div id="tab-how" class="tab-panel">
+        Instrucciones de uso en lenguaje simple. Cuándo tomarlo, cómo mezclarlo, con qué combinarlo.
+      </div>
+      <div id="tab-benefits" class="tab-panel">
+        <div class="benefit-chips">
+          <div class="benefit-chip"><span class="chip-icon">🧠</span> Enfoque mejorado</div>
+          <div class="benefit-chip"><span class="chip-icon">⚡</span> Aumento de energía</div>
+          <div class="benefit-chip"><span class="chip-icon">😌</span> Estado de ánimo positivo</div>
+          <div class="benefit-chip"><span class="chip-icon">✋</span> Sin nerviosismo</div>
+          <div class="benefit-chip"><span class="chip-icon">😋</span> Sabor delicioso</div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <span class="sub-opt-badge">-20%</span>
-          <span style="font-weight:700">$23.99</span>
-        </div>
+      </div>
+      <div id="tab-ing" class="tab-panel">
+        Lista completa de ingredientes con cantidades y origen.
       </div>
     </div>
 
-    <!-- Price -->
-    <div class="price-row">
-      <span class="price-main">$23.99</span>
-      <span class="price-compare">$29.99</span>
-      <span class="price-saving">Ahorrás $6</span>
-    </div>
-
-    <!-- Scarcity -->
-    <div class="scarcity">
-      <div class="scarcity-dot"></div>
-      <span class="scarcity-text">¡Solo quedan 8 unidades!</span>
-      <span class="scarcity-sub">· Pedido antes de las 14hs → sale hoy</span>
-    </div>
-
-    <!-- CTA -->
-    <button class="btn-cta">
-      Agregar al carrito — $23.99
-      <span class="btn-cta-sub">Garantía 30 días · Envío gratis</span>
-    </button>
-
-    <!-- Guarantees -->
-    <div class="guarantees">
-      <div class="guarantee-chip"><span class="icon">🔒</span> Pago 100% seguro</div>
-      <div class="guarantee-chip"><span class="icon">🔄</span> Devolución 30 días</div>
-      <div class="guarantee-chip"><span class="icon">🚚</span> Envío gratis</div>
-      <div class="guarantee-chip"><span class="icon">🌱</span> Natural · Sin rellenos</div>
-    </div>
   </div>
 </div>
 
-<!-- ── Problem section ───────────────────────────────────────────── -->
-<section class="problem-section">
-  <div class="container">
-    <p class="section-label" style="color:var(--brand-accent-2)">El Problema</p>
-    <h2 class="section-title">¿Por qué los demás productos no funcionan?</h2>
-    <p class="section-sub">La industria está llena de fórmulas baratas, dosis ineficaces y promesas vacías. Así es diferente.</p>
-    <div class="problem-grid">
-      <div class="problem-card">
-        <div class="p-icon">😤</div>
-        <div class="p-title">Problema #1</div>
-        <div class="p-text">Descripción de un dolor real que el consumidor reconoce. Cuanto más específico, más conecta con quien lee.</div>
-      </div>
-      <div class="problem-card">
-        <div class="p-icon">💸</div>
-        <div class="p-title">Problema #2</div>
-        <div class="p-text">Otro punto de dolor relacionado con la categoría. Hacé que el lector sienta que "esto me pasa a mí".</div>
-      </div>
-      <div class="problem-card">
-        <div class="p-icon">⏳</div>
-        <div class="p-title">Problema #3</div>
-        <div class="p-text">Un tercer obstáculo que impide al consumidor lograr el resultado que quiere. La frustración acumulada.</div>
-      </div>
+<!-- Specs -->
+<section class="section specs-section">
+  <div class="section-inner">
+    <p class="section-label">Detalles del producto</p>
+    <h2 class="section-title">Café de primera calidad,<br/>sabor delicioso.</h2>
+    <div class="specs-grid">
+      <div class="spec-item"><div class="spec-key">Tostado</div><div class="spec-val">Tostado oscuro</div></div>
+      <div class="spec-item"><div class="spec-key">Notas de cata</div><div class="spec-val">Notas de chocolate negro</div></div>
+      <div class="spec-item"><div class="spec-key">Uso</div><div class="spec-val">Cafetera de goteo, prensa francesa</div></div>
+      <div class="spec-item"><div class="spec-key">Tipo</div><div class="spec-val">Molido</div></div>
+      <div class="spec-item"><div class="spec-key">Nivel de cafeína</div><div class="spec-val">Cafeína regular</div></div>
+      <div class="spec-item"><div class="spec-key">Porciones</div><div class="spec-val">26 por paquete</div></div>
     </div>
-    <div class="problem-arrow">↓ Hay una solución mejor ↓</div>
-  </div>
-</section>
-
-<!-- ── How it works ──────────────────────────────────────────────── -->
-<section>
-  <div class="container">
-    <p class="section-label">Cómo funciona</p>
-    <h2 class="section-title">Simple. Efectivo. Sin complicaciones.</h2>
-    <p class="section-sub">Tres pasos para que empieces a ver resultados desde el primer día.</p>
-    <div class="steps-grid">
-      <div class="step-card">
-        <div class="step-num">1</div>
-        <h3 class="step-title">Paso uno</h3>
-        <p class="step-text">Descripción del primer paso. Enfocate en la facilidad de uso y en eliminar la fricción que siente el consumidor.</p>
-      </div>
-      <div class="step-card">
-        <div class="step-num">2</div>
-        <h3 class="step-title">Paso dos</h3>
-        <p class="step-text">Descripción del segundo paso. Contá qué pasa "por dentro" — el mecanismo de acción que genera confianza.</p>
-      </div>
-      <div class="step-card">
-        <div class="step-num">3</div>
-        <h3 class="step-title">Paso tres</h3>
-        <p class="step-text">El resultado. Describí la transformación que va a sentir el consumidor. Sé específico con el tiempo y el beneficio.</p>
-      </div>
+    <div class="science-badges">
+      <div class="science-badge"><span class="sb-icon">🔬</span> Respaldado por la ciencia</div>
+      <div class="science-badge"><span class="sb-icon">🚫</span> Sin azúcar</div>
+      <div class="science-badge"><span class="sb-icon">🌱</span> De origen vegetal</div>
+      <div class="science-badge"><span class="sb-icon">🌾</span> Sin gluten</div>
+      <div class="science-badge"><span class="sb-icon">✅</span> Certificado orgánico</div>
+      <div class="science-badge"><span class="sb-icon">🧪</span> Analizado para detectar toxinas</div>
+      <div class="science-badge"><span class="sb-icon">🥑</span> Keto</div>
     </div>
   </div>
 </section>
 
-<!-- ── Ingredients ───────────────────────────────────────────────── -->
-<section class="ingredients-section">
-  <div class="container">
-    <p class="section-label">Ingredientes</p>
-    <h2 class="section-title">¿Qué hay adentro y por qué importa?</h2>
-    <p class="section-sub">Cero rellenos. Solo ingredientes activos con respaldo científico a dosis efectivas.</p>
-    <div class="ingredient-list">
-      <div class="ingredient-card open">
-        <div class="ingredient-header" onclick="toggleIngredient(this)">
-          <div class="ingredient-icon">🌿</div>
-          <div class="ingredient-name">
-            <strong>Ingrediente Principal</strong>
-            <span>500mg · Concentración máxima</span>
+<!-- Ingredients -->
+<section class="section ingredients-section">
+  <div class="section-inner">
+    <p class="section-label">Lo que hay adentro</p>
+    <h2 class="section-title">Ingredientes respaldados<br/>por la ciencia</h2>
+    <div class="ingredient-cards">
+      <div class="ing-card open">
+        <div class="ing-header" onclick="toggleIng(this)">
+          <div class="ing-img">🌿</div>
+          <div class="ing-meta">
+            <div class="ing-name">Ingrediente Principal — Orgánico</div>
+            <div class="ing-dose">Ingrediente activo · origen certificado</div>
           </div>
-          <span class="ingredient-toggle">+</span>
+          <span class="ing-toggle">+</span>
         </div>
-        <div class="ingredient-body">
-          Explicación de qué hace este ingrediente y por qué la dosis importa. Conectalo con el beneficio principal del producto.
-          El mecanismo de acción escrito en lenguaje simple genera credibilidad sin aburrir.
-          <div class="ingredient-evidence">✓ Respaldado por 12 estudios clínicos</div>
+        <div class="ing-body">
+          Descripción del ingrediente: de dónde viene, cómo se obtiene y qué hace.
+          Escrito en lenguaje simple, enfocado en el beneficio real para el consumidor.
+          Sabe a lo que es porque lo es.
         </div>
       </div>
-      <div class="ingredient-card">
-        <div class="ingredient-header" onclick="toggleIngredient(this)">
-          <div class="ingredient-icon">💊</div>
-          <div class="ingredient-name">
-            <strong>Ingrediente Secundario</strong>
-            <span>250mg · Potencia la absorción</span>
+      <div class="ing-card">
+        <div class="ing-header" onclick="toggleIng(this)">
+          <div class="ing-img">🍄</div>
+          <div class="ing-meta">
+            <div class="ing-name">Extracto Secundario — Orgánico</div>
+            <div class="ing-dose">Concentración del cuerpo fructífero, sin micelio</div>
           </div>
-          <span class="ingredient-toggle">+</span>
+          <span class="ing-toggle">+</span>
         </div>
-        <div class="ingredient-body">
-          Este ingrediente actúa en sinergia con el anterior para maximizar los resultados.
-          Explicá cómo se complementan y por qué la fórmula es superior a tomar cada uno por separado.
-          <div class="ingredient-evidence">✓ Aprobado por organismos regulatorios</div>
+        <div class="ing-body">
+          Este ingrediente complementa al principal. Explicá el mecanismo de acción en términos que cualquiera entienda y por qué la dosis importa.
         </div>
       </div>
-      <div class="ingredient-card">
-        <div class="ingredient-header" onclick="toggleIngredient(this)">
-          <div class="ingredient-icon">⚡</div>
-          <div class="ingredient-name">
-            <strong>Ingrediente Potenciador</strong>
-            <span>100mg · Efecto acelerador</span>
+      <div class="ing-card">
+        <div class="ing-header" onclick="toggleIng(this)">
+          <div class="ing-img">⚗️</div>
+          <div class="ing-meta">
+            <div class="ing-name">Tercer Extracto — Silvestre</div>
+            <div class="ing-dose">Recolectado de forma sostenible</div>
           </div>
-          <span class="ingredient-toggle">+</span>
+          <span class="ing-toggle">+</span>
         </div>
-        <div class="ingredient-body">
-          El tercer ingrediente es el diferenciador. Mencioná si es exclusivo, patentado o difícil de encontrar en otras fórmulas.
-          Eso justifica el precio y reduce comparaciones.
-          <div class="ingredient-evidence">✓ Patentado · 3× más biodisponible</div>
+        <div class="ing-body">
+          El diferenciador. Qué lo hace especial, por qué no todos los competidores lo tienen y qué beneficio específico aporta.
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ── Results timeline ──────────────────────────────────────────── -->
-<section>
-  <div class="container" style="max-width:780px">
-    <p class="section-label">Resultados</p>
-    <h2 class="section-title">¿Cuándo voy a notar la diferencia?</h2>
-    <p class="section-sub">La mayoría de nuestros clientes empiezan a sentir cambios antes de terminar el primer frasco.</p>
+<!-- Timeline -->
+<section class="section timeline-section">
+  <div class="section-inner">
+    <p class="section-label">Formulado para cambiar tu día</p>
+    <h2 class="section-title">Suscribite y empezá<br/>a sentir los beneficios.</h2>
     <div class="timeline">
       <div class="timeline-item">
-        <div class="timeline-dot">Día 1</div>
-        <div class="timeline-content">
-          <h4 class="timeline-title">Primeras horas — el efecto inmediato</h4>
-          <p class="timeline-text">Describí qué siente el consumidor al tomar el producto por primera vez. Incluso sensaciones sutiles generan confianza de que "algo está pasando".</p>
-        </div>
+        <div class="timeline-when">Inmediatamente</div>
+        <div class="timeline-title">El beneficio desde la primera vez</div>
+        <div class="timeline-text">Qué nota el consumidor al usarlo por primera vez. Sin exagerar — algo real y tangible que valide la decisión de compra.</div>
       </div>
       <div class="timeline-item">
-        <div class="timeline-dot">Día 7</div>
-        <div class="timeline-content">
-          <h4 class="timeline-title">Primera semana — cambios visibles</h4>
-          <p class="timeline-text">El primer resultado concreto que el consumidor puede medir u observar. Sé específico: ¿qué mejora? ¿en cuánto? ¿cómo lo nota?</p>
-        </div>
+        <div class="timeline-when">En unos días</div>
+        <div class="timeline-title">El efecto se asienta</div>
+        <div class="timeline-text">El cambio que empieza a ser parte de la rutina. Energía más estable, sin picos ni caídas abruptas.</div>
       </div>
       <div class="timeline-item">
-        <div class="timeline-dot">Día 30</div>
-        <div class="timeline-content">
-          <h4 class="timeline-title">Un mes — la transformación completa</h4>
-          <p class="timeline-text">El resultado principal que prometiste al inicio. Este es el momento de mostrar el contraste antes/después y validarlo con datos de tus clientes reales.</p>
-        </div>
-      </div>
-      <div class="timeline-item">
-        <div class="timeline-dot">3 meses</div>
-        <div class="timeline-content">
-          <h4 class="timeline-title">Largo plazo — el resultado que se mantiene</h4>
-          <p class="timeline-text">Por eso la suscripción mensual tiene sentido. Los mejores resultados vienen con consistencia. Acá está el argumento más fuerte para retener al cliente.</p>
-        </div>
+        <div class="timeline-when">En 7 días</div>
+        <div class="timeline-title">La diferencia se nota</div>
+        <div class="timeline-text">El resultado principal que la mayoría de los clientes describe en sus reseñas. Específico, creíble y sin sobreprometer.</div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ── Comparison ────────────────────────────────────────────────── -->
-<section class="comparison-section">
-  <div class="container">
+<!-- Comparison -->
+<section class="section comparison-section">
+  <div class="section-inner">
     <p class="section-label">Comparativa</p>
-    <h2 class="section-title">¿Por qué no simplemente comprar otra marca?</h2>
-    <p class="section-sub">No todas las opciones son iguales. Esto es lo que nos diferencia.</p>
+    <h2 class="section-title">Preparado de forma más inteligente™</h2>
     <table class="comparison-table">
       <thead>
         <tr>
           <th></th>
-          <th class="col-brand">ESTA MARCA ✓</th>
-          <th class="col-alt">Competencia</th>
-          <th class="col-alt">Alternativa genérica</th>
+          <th class="col-brand">Esta Marca</th>
+          <th>La competencia</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td>Ingredientes activos verificados</td>
-          <td class="col-brand"><span class="check">✓</span></td>
-          <td><span class="cross">✗</span></td>
-          <td><span class="cross">✗</span></td>
+          <td>Calidad del ingrediente principal</td>
+          <td><span class="check">Premium · Arábica</span></td>
+          <td><span class="cross">Baja calidad</span></td>
         </tr>
         <tr>
-          <td>Dosis clínicamente efectiva</td>
-          <td class="col-brand"><span class="check">✓</span></td>
-          <td><span class="cross">✗</span></td>
-          <td><span class="cross">✗</span></td>
-        </tr>
-        <tr>
-          <td>Sin rellenos ni aditivos</td>
-          <td class="col-brand"><span class="check">✓</span></td>
+          <td>Sin nerviosismo</td>
           <td><span class="check">✓</span></td>
           <td><span class="cross">✗</span></td>
         </tr>
         <tr>
-          <td>Resultados desde la primera semana</td>
-          <td class="col-brand"><span class="check">✓</span></td>
-          <td><span class="cross">✗</span></td>
-          <td><span class="cross">✗</span></td>
-        </tr>
-        <tr>
-          <td>Garantía de satisfacción 30 días</td>
-          <td class="col-brand"><span class="check">✓</span></td>
-          <td><span class="cross">✗</span></td>
+          <td>Estado de ánimo positivo</td>
+          <td><span class="check">✓</span></td>
           <td><span class="cross">✗</span></td>
         </tr>
         <tr>
-          <td>Precio por dosis efectiva</td>
-          <td class="col-brand" style="font-weight:700;color:var(--brand-accent)">$0.80/día</td>
-          <td>$1.50/día</td>
-          <td>$1.20/día</td>
+          <td>Menos ácido</td>
+          <td><span class="check">✓</span></td>
+          <td><span class="cross">✗</span></td>
+        </tr>
+        <tr>
+          <td>Certificado orgánico USDA</td>
+          <td><span class="check">✓</span></td>
+          <td><span class="cross">✗</span></td>
+        </tr>
+        <tr>
+          <td>Ingrediente activo 100% real</td>
+          <td><span class="check">✓</span></td>
+          <td><span class="cross">Sin ingrediente activo</span></td>
         </tr>
       </tbody>
     </table>
   </div>
 </section>
 
-<!-- ── Social proof ──────────────────────────────────────────────── -->
-<section id="reviews">
-  <div class="container">
-    <div class="proof-strip">
-      <div class="proof-strip-item">
-        <div class="proof-strip-num">50,000+</div>
-        <div class="proof-strip-label">Clientes satisfechos</div>
-      </div>
-      <div class="proof-strip-item">
-        <div class="proof-strip-num">4.9 ★</div>
-        <div class="proof-strip-label">Calificación promedio</div>
-      </div>
-      <div class="proof-strip-item">
-        <div class="proof-strip-num">94%</div>
-        <div class="proof-strip-label">Repiten la compra</div>
-      </div>
-      <div class="proof-strip-item">
-        <div class="proof-strip-num">30 días</div>
-        <div class="proof-strip-label">Garantía total</div>
-      </div>
-    </div>
+<!-- Reviews -->
+<section class="section reviews-section" id="reviews">
+  <div class="section-inner">
+    <div class="review-summary">4.8 / 5</div>
+    <div class="review-summary-sub">6,008 reseñas · <span style="color:#f59e0b">★★★★★</span></div>
 
-    <div class="review-featured">
-      <div class="quote-icon">"</div>
-      <div>
-        <div class="featured-result">Resultado verificado en 14 días</div>
-        <blockquote>
-          "Llevaba meses probando otras marcas sin resultados reales. Con este producto empecé a notar la diferencia en la primera semana. No puedo creer que no lo había encontrado antes."
-          <cite>— Valentina M., 34 años · Compra verificada ✓</cite>
-        </blockquote>
-      </div>
-    </div>
-
-    <p class="section-label" style="margin-top:48px">Reseñas reales</p>
-    <h2 class="section-title">Lo que dicen nuestros clientes</h2>
-    <div class="reviews-grid">
+    <div class="reviews-grid" style="margin-top:40px">
       <div class="review-card">
-        <div class="review-header">
-          <div class="review-avatar">A</div>
-          <div class="review-meta">
-            <strong>Agustina R.</strong>
-            <span>Buenos Aires · hace 3 días</span>
-          </div>
-        </div>
         <div class="review-stars">★★★★★</div>
-        <div class="review-title">"Exactamente lo que necesitaba"</div>
-        <div class="review-text">Texto de reseña real. Lo más efectivo es citar el resultado concreto que tuvo el cliente y en cuánto tiempo lo logró.</div>
-        <div class="review-verified">✓ Compra verificada</div>
+        <div class="review-title">¡El mejor!</div>
+        <div class="review-text">¡Fantástico! Lo volveré a comprar. No solo se obtienen los beneficios del ingrediente activo, sino que además es un producto de excelente sabor. Solo tengo elogios.</div>
+        <div class="review-author"><strong>Alex R.</strong></div>
+        <div class="review-verified">✓ Comprador verificado</div>
       </div>
       <div class="review-card">
-        <div class="review-header">
-          <div class="review-avatar" style="background:linear-gradient(135deg,#667eea,#764ba2)">M</div>
-          <div class="review-meta">
-            <strong>Martín G.</strong>
-            <span>Córdoba · hace 1 semana</span>
-          </div>
-        </div>
         <div class="review-stars">★★★★★</div>
-        <div class="review-title">"Pensé que era otro producto más..."</div>
-        <div class="review-text">Era escéptico pero lo probé por la garantía. En 10 días ya noté el cambio. Ahora soy cliente de suscripción y se lo recomendé a tres personas.</div>
-        <div class="review-verified">✓ Compra verificada</div>
+        <div class="review-title">¡Me encantan todos sus productos!</div>
+        <div class="review-text">Llevo tres años usando sus productos y es mi forma favorita de empezar el día. ¡Gracias! ☕❤️</div>
+        <div class="review-author"><strong>Lori M.</strong></div>
+        <div class="review-verified">✓ Comprador verificado</div>
       </div>
       <div class="review-card">
-        <div class="review-header">
-          <div class="review-avatar" style="background:linear-gradient(135deg,#f093fb,#f5576c)">L</div>
-          <div class="review-meta">
-            <strong>Lucía T.</strong>
-            <span>Rosario · hace 2 semanas</span>
-          </div>
-        </div>
         <div class="review-stars">★★★★★</div>
-        <div class="review-title">"Los resultados hablan solos"</div>
-        <div class="review-text">La reseña más efectiva es la que conecta el problema inicial → el proceso → el resultado. Cuanto más específica, más confianza genera en quienes se identifican.</div>
-        <div class="review-verified">✓ Compra verificada</div>
+        <div class="review-title">¡Ambos estamos de acuerdo!</div>
+        <div class="review-text">Mi esposo y yo por fin nos ponemos de acuerdo en un producto que sabe bien y que además tiene beneficios reales. Ambos lo esperamos cada mañana.</div>
+        <div class="review-author"><strong>Patti W.</strong></div>
+        <div class="review-verified">✓ Comprador verificado</div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ── FAQ ───────────────────────────────────────────────────────── -->
-<section class="faq-section">
-  <div class="container" style="text-align:center">
+<!-- FAQ -->
+<section class="section faq-section">
+  <div class="section-inner" style="max-width:720px; margin:0 auto">
     <p class="section-label">Preguntas frecuentes</p>
-    <h2 class="section-title">Respondemos tus dudas antes de comprar</h2>
-    <p class="section-sub" style="margin:0 auto">Cada pregunta acá es una objeción real de compra que hay que eliminar.</p>
-  </div>
-  <div class="faq-list">
-    <div class="faq-item open">
-      <div class="faq-question" onclick="toggleFaq(this)">
-        ¿En cuánto tiempo veo resultados?
-        <span class="faq-toggle">+</span>
+    <h2 class="section-title">Preguntas frecuentes</h2>
+    <div class="faq-list">
+      <div class="faq-item open">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          ¿Cuál es el ingrediente principal de este producto?
+          <span class="faq-toggle">+</span>
+        </div>
+        <div class="faq-a">
+          Respuesta directa y honesta. Sin sobreprometer. Explicá el ingrediente principal y por qué está en la fórmula.
+        </div>
       </div>
-      <div class="faq-answer">
-        La mayoría de los clientes nota una diferencia en 7 a 10 días de uso consistente.
-        Los resultados completos se ven al mes. Si no notás cambios en 30 días, te devolvemos el 100% del dinero — sin preguntas.
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          ¿Este producto contiene algún edulcorante?
+          <span class="faq-toggle">+</span>
+        </div>
+        <div class="faq-a">No contiene edulcorantes artificiales ni azúcares añadidos.</div>
       </div>
-    </div>
-    <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaq(this)">
-        ¿Tiene efectos secundarios?
-        <span class="faq-toggle">+</span>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          ¿Cómo uso este producto?
+          <span class="faq-toggle">+</span>
+        </div>
+        <div class="faq-a">Instrucciones de uso simples y concretas. Cuándo, cuánto, con qué.</div>
       </div>
-      <div class="faq-answer">
-        La fórmula usa solo ingredientes naturales a dosis seguras. No contiene estimulantes, gluten, ni alérgenos comunes.
-        Si tenés alguna condición médica específica, consultá con tu médico antes de empezar.
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          ¿Cuándo voy a notar una diferencia?
+          <span class="faq-toggle">+</span>
+        </div>
+        <div class="faq-a">La mayoría de los clientes nota cambios en los primeros 7 días de uso consistente. Los resultados varían según la persona.</div>
       </div>
-    </div>
-    <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaq(this)">
-        ¿Cómo funciona la garantía de 30 días?
-        <span class="faq-toggle">+</span>
-      </div>
-      <div class="faq-answer">
-        Simple: si en los primeros 30 días no estás 100% satisfecho, escribinos y te devolvemos el importe completo.
-        No hace falta devolver el producto. Cero burocracia.
-      </div>
-    </div>
-    <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaq(this)">
-        ¿Puedo cancelar la suscripción cuando quiero?
-        <span class="faq-toggle">+</span>
-      </div>
-      <div class="faq-answer">
-        Sí, en cualquier momento desde tu cuenta, sin cargos adicionales ni plazos mínimos.
-        La suscripción existe para darte el mejor precio, no para atraparte.
-      </div>
-    </div>
-    <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaq(this)">
-        ¿Cuánto tarda el envío?
-        <span class="faq-toggle">+</span>
-      </div>
-      <div class="faq-answer">
-        Los pedidos realizados antes de las 14hs salen el mismo día.
-        Entrega en 24-72hs hábiles dependiendo de tu ciudad. El envío es gratis en pedidos mayores a $49.
-      </div>
-    </div>
-    <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaq(this)">
-        ¿Por qué no lo encuentro en farmacias?
-        <span class="faq-toggle">+</span>
-      </div>
-      <div class="faq-answer">
-        Vendemos exclusivamente directo al consumidor para mantener la calidad y el precio.
-        Sin intermediarios = mejor fórmula al mismo precio o menos que las alternativas inferiores de góndola.
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          ¿Puedo combinarlo con otros productos?
+          <span class="faq-toggle">+</span>
+        </div>
+        <div class="faq-a">Sí. Explicá con qué combina bien y por qué, si es relevante para la categoría del producto.</div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ── Final CTA ─────────────────────────────────────────────────── -->
+<!-- Final CTA -->
 <section class="final-cta">
-  <div class="container">
-    <p class="section-label" style="color:var(--brand-accent-2)">¿Listo para empezar?</p>
-    <h2 class="section-title">Transformá tu [resultado] en menos de 30 días o te devolvemos el dinero</h2>
-    <p class="section-sub">Sin riesgos. Sin excusas. Solo resultados.</p>
-    <div class="final-cta-price">$23.99 <span style="font-size:22px;color:rgba(255,255,255,.4)">/ mes</span></div>
-    <div class="final-cta-price-sub">Con suscripción · Envío gratis · Cancelá cuando quieras</div>
-    <a href="#" class="btn-cta-lg">Empezar ahora — Garantía 30 días</a>
-    <div class="final-cta-guarantee">
-      <strong>🔒 Garantía total:</strong> Si no ves resultados en 30 días, te devolvemos cada centavo. Sin preguntas.
-    </div>
-    <div class="trust-badges">
-      <div class="trust-badge"><span class="t-icon">🌱</span><span>100% Natural</span></div>
-      <div class="trust-badge"><span class="t-icon">🔬</span><span>Respaldo científico</span></div>
-      <div class="trust-badge"><span class="t-icon">🏭</span><span>Fab. certificada</span></div>
-      <div class="trust-badge"><span class="t-icon">🚚</span><span>Envío gratis</span></div>
-      <div class="trust-badge"><span class="t-icon">🔄</span><span>30 días garantía</span></div>
+  <div class="section-inner">
+    <p class="section-label" style="text-align:center">Empezá hoy</p>
+    <h2 class="section-title">Suscribite y empezá<br/>a sentir los beneficios.</h2>
+    <p class="section-sub" style="margin:0 auto 40px">Garantía de devolución de dinero de 60 días. Sin preguntas.</p>
+    <div class="final-cta-btns">
+      <a href="#" class="btn-atc-lg">Añadir a la cesta</a>
+      <p class="final-guarantee">🔄 Garantía de devolución de 60 días · 🚚 Envío en 24hs</p>
     </div>
   </div>
 </section>
 
-<!-- ── Sticky bar ────────────────────────────────────────────────── -->
-<div class="sticky-bar" id="stickyBar">
-  <div class="sticky-bar-info">
-    <span class="sticky-bar-name">Nombre del Producto</span>
-    <span class="sticky-bar-price">Compra única $29.99 · <strong>Suscripción $23.99/mes</strong></span>
+<!-- Sticky bar -->
+<div class="sticky" id="sticky">
+  <div class="sticky-info">
+    <div class="sticky-name">Nombre del Producto</div>
+    <div class="sticky-price">Desde $28.00 con suscripción</div>
   </div>
-  <button class="sticky-bar-btn">Agregar al carrito</button>
+  <button class="btn-atc sticky">Añadir a la cesta</button>
 </div>
 
 <script>
-  document.querySelectorAll('.gallery-thumbs .thumb').forEach(t => {
-    t.addEventListener('click', function() {
-      document.querySelectorAll('.gallery-thumbs .thumb').forEach(x => x.classList.remove('active'));
-      this.classList.add('active');
-    });
-  });
-
-  function selectPack(el) {
-    document.querySelectorAll('.pack-opt').forEach(x => x.classList.remove('active'));
+  function selectVariant(el) {
+    el.closest('.variant-pills').querySelectorAll('.variant-pill').forEach(x => x.classList.remove('active'));
     el.classList.add('active');
   }
-
-  function selectSub(val, e) {
-    document.querySelectorAll('.sub-opt').forEach(x => x.classList.remove('active'));
-    e.currentTarget.classList.add('active');
-    document.querySelectorAll('.sub-opt input').forEach(r => r.checked = r.value === val);
+  function selectPack(el) {
+    el.closest('.pack-grid').querySelectorAll('.pack-card').forEach(x => x.classList.remove('active'));
+    el.classList.add('active');
   }
-
-  function toggleIngredient(header) {
-    header.closest('.ingredient-card').classList.toggle('open');
+  function selectDelivery(el) {
+    el.closest('.delivery-opts').querySelectorAll('.delivery-opt').forEach(x => {
+      x.classList.remove('active');
+      x.querySelector('input').checked = false;
+    });
+    el.classList.add('active');
+    el.querySelector('input').checked = true;
   }
-
-  function toggleFaq(question) {
-    question.closest('.faq-item').classList.toggle('open');
+  function selectTab(btn, id) {
+    btn.closest('.product-info').querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+    btn.closest('.product-info').querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + id).classList.add('active');
   }
-
-  const stickyBar = document.getElementById('stickyBar');
-  window.addEventListener('scroll', () => {
-    stickyBar.classList.toggle('visible', window.scrollY > 600);
+  function toggleIng(header) {
+    header.closest('.ing-card').classList.toggle('open');
+  }
+  function toggleFaq(q) {
+    q.closest('.faq-item').classList.toggle('open');
+  }
+  const sticky = document.getElementById('sticky');
+  window.addEventListener('scroll', () => sticky.classList.toggle('visible', window.scrollY > 500));
+  document.querySelectorAll('.gallery-thumb').forEach(t => {
+    t.addEventListener('click', function() {
+      document.querySelectorAll('.gallery-thumb').forEach(x => x.classList.remove('active'));
+      this.classList.add('active');
+    });
   });
 </script>
 </body>
