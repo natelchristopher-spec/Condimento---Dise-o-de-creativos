@@ -792,7 +792,7 @@ export default function LandingBuilderPage() {
         throw new Error('Respuesta inesperada del servidor. Intentá de nuevo.');
       }
       if (!res.ok || data.error) throw new Error(data.error || 'Error al generar');
-      setCopy(data.copy);
+      setCopy(data.copy ?? null);
       setStep('resultado');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error inesperado');
