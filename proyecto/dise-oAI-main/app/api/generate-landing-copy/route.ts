@@ -91,7 +91,7 @@ Respondé SOLO con JSON válido:
       model: 'gpt-4o',
       messages: [{ role: 'user', content: prompt }],
       response_format: { type: 'json_object' },
-      max_tokens: 1800,
+      max_tokens: 2500,
     });
 
     const copy: LandingCopy = JSON.parse(response.choices[0].message.content || '{}');

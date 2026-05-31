@@ -44,7 +44,7 @@ function generateLiquidTemplate(
   @media (max-width: 768px) { .c-hero { grid-template-columns: 1fr; gap: 24px; padding: 16px 4% 24px; } }
 
   /* Gallery */
-  .c-gallery__main { position: relative; background: var(--c-surface); border-radius: 12px; overflow: hidden; aspect-ratio: 1/1; }
+  .c-gallery__main { position: relative; background: var(--c-surface); border-radius: 12px; overflow: hidden; aspect-ratio: 1/1; min-height: 280px; }
   .c-gallery__main img { width: 100%; height: 100%; object-fit: contain; display: none; }
   .c-gallery__main img.is-active { display: block; }
   .c-gallery__thumbs { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
@@ -108,6 +108,7 @@ function generateLiquidTemplate(
   /* Social Proof */
   .c-rating-summary { text-align: center; font-size: 18px; font-weight: 700; margin-bottom: 32px; }
   .c-testimonials { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  @media (max-width: 1024px) { .c-testimonials { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 768px) { .c-testimonials { grid-template-columns: 1fr; } }
   .c-testimonial-card { background: var(--c-surface); border-radius: 12px; padding: 24px; border: 1px solid var(--c-border); }
   .c-stars { color: #f59e0b; font-size: 14px; margin-bottom: 10px; }
@@ -133,7 +134,7 @@ function generateLiquidTemplate(
   .c-guarantee { font-size: 13px; opacity: 0.7; margin-top: 16px; }
 
   /* Sticky bar */
-  .c-sticky { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid var(--c-border); padding: 12px 5%; display: flex; align-items: center; gap: 16px; z-index: 100; transform: translateY(100%); transition: transform 0.3s ease; box-shadow: 0 -4px 20px rgba(0,0,0,0.08); }
+  .c-sticky { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid var(--c-border); padding: 12px 5%; padding-bottom: max(12px, env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 16px; z-index: 100; transform: translateY(100%); transition: transform 0.3s ease; box-shadow: 0 -4px 20px rgba(0,0,0,0.08); }
   .c-sticky.is-visible { transform: translateY(0); }
   .c-sticky__info { flex: 1; min-width: 0; }
   .c-sticky__title { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -171,7 +172,7 @@ function generateLiquidTemplate(
 
       <div class="c-price-row">
         <span class="c-price">{{ product.price | money }}</span>
-        {% if product.compare_at_price > product.price %}
+        {% if product.compare_at_price and product.compare_at_price > product.price %}
           <span style="text-decoration:line-through; color:var(--c-muted); font-size:18px;">{{ product.compare_at_price | money }}</span>
         {% endif %}
       </div>
@@ -304,7 +305,7 @@ function generateLiquidTemplate(
         </button>
       {% endform %}
       {% if section.settings.whatsapp_number != blank %}
-        <a class="c-wa-btn" href="https://wa.me/{{ section.settings.whatsapp_number | remove: '+' | remove: ' ' | remove: '-' }}" target="_blank" rel="noopener" style="margin-top:12px;">
+        <a class="c-wa-btn" href="https://wa.me/{{ section.settings.whatsapp_number | remove: '+' | remove: ' ' | remove: '-' }}?text={{ section.settings.whatsapp_text | url_encode }}" target="_blank" rel="noopener" style="margin-top:12px;">
           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
           Consultar por WhatsApp
         </a>
@@ -751,12 +752,14 @@ export default function LandingBuilderPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch('/api/brand-kits').then(r => r.json()).then(kit => {
+    const ac = new AbortController();
+    fetch('/api/brand-kits', { signal: ac.signal }).then(r => r.json()).then(kit => {
       if (kit && !kit.error) setBrandKit(kit);
-    }).catch(console.error).finally(() => setKitLoading(false));
-    fetch('/api/profile').then(r => r.json()).then(d => {
+    }).catch(e => { if (e.name !== 'AbortError') console.error(e); }).finally(() => setKitLoading(false));
+    fetch('/api/profile', { signal: ac.signal }).then(r => r.json()).then(d => {
       setHasApiKey(!!d.openai_api_key);
-    }).catch(() => setHasApiKey(false));
+    }).catch(e => { if (e.name !== 'AbortError') setHasApiKey(false); });
+    return () => ac.abort();
   }, []);
 
   const handleLogout = async () => {
@@ -782,7 +785,12 @@ export default function LandingBuilderPage() {
           testimonials: [t1, t2, t3],
         }),
       });
-      const data = await res.json();
+      let data: { copy?: LandingCopy; error?: string };
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error('Respuesta inesperada del servidor. Intentá de nuevo.');
+      }
       if (!res.ok || data.error) throw new Error(data.error || 'Error al generar');
       setCopy(data.copy);
       setStep('resultado');
