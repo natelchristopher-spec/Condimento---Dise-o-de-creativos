@@ -20,25 +20,35 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('openai_api_key')
+    .select('openai_api_key, shopify_domain, shopify_admin_token')
     .eq('id', userId)
     .single();
 
-  if (error && error.code === 'PGRST116') return NextResponse.json({ openai_api_key: null });
+  if (error && error.code === 'PGRST116') return NextResponse.json({ openai_api_key: null, shopify_domain: null, shopify_admin_token: null });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ openai_api_key: data.openai_api_key });
+  return NextResponse.json({
+    openai_api_key: data.openai_api_key,
+    shopify_domain: data.shopify_domain ?? null,
+    shopify_admin_token: data.shopify_admin_token ?? null,
+  });
 }
 
 export async function POST(req: NextRequest) {
   const userId = await getUserId();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { openai_api_key } = await req.json();
-  const { error } = await supabase.from('profiles').upsert({
+  const body = await req.json();
+  const { openai_api_key, shopify_domain, shopify_admin_token } = body;
+
+  const upsertData: Record<string, unknown> = {
     id: userId,
-    openai_api_key,
     updated_at: new Date().toISOString(),
-  });
+  };
+  if (openai_api_key !== undefined) upsertData.openai_api_key = openai_api_key;
+  if (shopify_domain !== undefined) upsertData.shopify_domain = shopify_domain;
+  if (shopify_admin_token !== undefined) upsertData.shopify_admin_token = shopify_admin_token;
+
+  const { error } = await supabase.from('profiles').upsert(upsertData);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

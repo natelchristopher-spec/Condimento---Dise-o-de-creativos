@@ -18,6 +18,15 @@ export default function PerfilPage() {
   const [email, setEmail] = useState('');
   const [showKey, setShowKey] = useState(false);
 
+  // Shopify
+  const [shopifyDomain, setShopifyDomain] = useState('');
+  const [shopifyToken, setShopifyToken] = useState('');
+  const [savedShopifyDomain, setSavedShopifyDomain] = useState('');
+  const [shopifyError, setShopifyError] = useState('');
+  const [shopifySaving, setShopifySaving] = useState(false);
+  const [shopifySaved, setShopifySaved] = useState(false);
+  const [showShopifyToken, setShowShopifyToken] = useState(false);
+
   useRequireAuth();
   const supabase = createSupabaseBrowser();
 
@@ -27,6 +36,8 @@ export default function PerfilPage() {
     });
     fetch('/api/profile').then(r => r.json()).then(data => {
       if (data.openai_api_key) { setApiKey(data.openai_api_key); setSavedKey(data.openai_api_key); }
+      if (data.shopify_domain) { setShopifyDomain(data.shopify_domain); setSavedShopifyDomain(data.shopify_domain); }
+      if (data.shopify_admin_token) setShopifyToken(data.shopify_admin_token);
     }).catch(console.error);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -80,6 +91,29 @@ export default function PerfilPage() {
       setError(e instanceof Error ? e.message : 'Error guardando. Intentá de nuevo.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSaveShopify = async () => {
+    setShopifyError('');
+    setShopifySaving(true);
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          shopify_domain: shopifyDomain.trim(),
+          shopify_admin_token: shopifyToken.trim(),
+        }),
+      });
+      if (!res.ok) throw new Error('Error guardando la conexión');
+      setSavedShopifyDomain(shopifyDomain.trim());
+      setShopifySaved(true);
+      setTimeout(() => setShopifySaved(false), 2000);
+    } catch (e) {
+      setShopifyError(e instanceof Error ? e.message : 'Error guardando. Intentá de nuevo.');
+    } finally {
+      setShopifySaving(false);
     }
   };
 
@@ -211,6 +245,88 @@ export default function PerfilPage() {
               </svg>
               Ver tutorial paso a paso en video
             </a>
+          </div>
+        </div>
+
+        {/* Shopify Connection */}
+        <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-5">
+          <div>
+            <h2 className="text-base font-semibold text-gray-900 mb-1">Conectar Shopify</h2>
+            <p className="text-gray-500 text-xs">Conectá tu tienda para publicar landings directamente desde el Landing Builder, sin descargar archivos.</p>
+          </div>
+
+          {savedShopifyDomain && (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 flex items-center gap-2">
+              <svg className="w-4 h-4 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              <span className="text-emerald-700 text-sm font-mono">{savedShopifyDomain} conectada</span>
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <label className="text-sm text-gray-600">Dominio de tu tienda</label>
+              <input
+                type="text"
+                value={shopifyDomain}
+                onChange={e => { setShopifyDomain(e.target.value); setShopifyError(''); }}
+                placeholder="mi-tienda.myshopify.com"
+                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] text-sm"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm text-gray-600">Admin API access token</label>
+              <div className="relative">
+                <input
+                  type={showShopifyToken ? 'text' : 'password'}
+                  value={shopifyToken}
+                  onChange={e => { setShopifyToken(e.target.value); setShopifyError(''); }}
+                  placeholder="shpat_..."
+                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 pr-12 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#e42820] text-sm font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowShopifyToken(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    {showShopifyToken
+                      ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                      : <><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></>
+                    }
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {shopifyError && (
+            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-700 text-sm">{shopifyError}</div>
+          )}
+
+          <button
+            onClick={handleSaveShopify}
+            disabled={!shopifyDomain.trim() || !shopifyToken.trim() || shopifySaving}
+            className={`w-full font-medium px-4 py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-sm ${
+              shopifySaved ? 'bg-emerald-600 text-white' : 'bg-[#e42820] hover:bg-[#c41f18] disabled:opacity-40 disabled:cursor-not-allowed text-white'
+            }`}
+          >
+            {shopifySaved ? (
+              <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>Guardado</>
+            ) : shopifySaving ? (
+              <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Guardando...</>
+            ) : 'Guardar conexión'}
+          </button>
+
+          <div className="border-t border-gray-200 pt-4 space-y-2">
+            <p className="text-xs text-gray-500 font-medium">Cómo obtener el token</p>
+            <ol className="text-xs text-gray-500 space-y-1 list-decimal list-inside">
+              <li>Shopify Admin → Settings → Apps → Develop apps</li>
+              <li>Create an app → Configure Admin API access</li>
+              <li>Scopes: <code className="bg-gray-100 px-1 rounded">read_themes</code> y <code className="bg-gray-100 px-1 rounded">write_themes</code></li>
+              <li>Install app → copiá el Admin API access token</li>
+            </ol>
           </div>
         </div>
 

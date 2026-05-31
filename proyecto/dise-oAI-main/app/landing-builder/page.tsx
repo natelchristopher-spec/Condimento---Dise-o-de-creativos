@@ -731,8 +731,12 @@ export default function LandingBuilderPage() {
 
   const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
   const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
+  const [shopifyConnected, setShopifyConnected] = useState(false);
   const [kitLoading, setKitLoading] = useState(true);
   const [step, setStep] = useState<Step>('producto');
+  const [publishStatus, setPublishStatus] = useState<'idle' | 'publishing' | 'ok' | 'error'>('idle');
+  const [publishError, setPublishError] = useState('');
+  const [publishedTheme, setPublishedTheme] = useState('');
 
   // Step 1 — Producto
   const [brief, setBrief] = useState('');
@@ -758,6 +762,7 @@ export default function LandingBuilderPage() {
     }).catch(e => { if (e.name !== 'AbortError') console.error(e); }).finally(() => setKitLoading(false));
     fetch('/api/profile', { signal: ac.signal }).then(r => r.json()).then(d => {
       setHasApiKey(!!d.openai_api_key);
+      setShopifyConnected(!!(d.shopify_domain && d.shopify_admin_token));
     }).catch(e => { if (e.name !== 'AbortError') setHasApiKey(false); });
     return () => ac.abort();
   }, []);
@@ -797,6 +802,27 @@ export default function LandingBuilderPage() {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error inesperado');
       setStep('merchant');
+    }
+  };
+
+  const publishToShopify = async () => {
+    if (!copy || !brandKit) return;
+    setPublishStatus('publishing');
+    setPublishError('');
+    const liquidContent = generateLiquidTemplate(copy, brandKit, [t1, t2, t3], whatsapp, shipping);
+    try {
+      const res = await fetch('/api/shopify/push-landing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ liquidContent }),
+      });
+      const data: { ok?: boolean; themeName?: string; error?: string } = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Error al publicar');
+      setPublishedTheme(data.themeName || '');
+      setPublishStatus('ok');
+    } catch (e) {
+      setPublishError(e instanceof Error ? e.message : 'Error inesperado');
+      setPublishStatus('error');
     }
   };
 
@@ -1023,6 +1049,60 @@ export default function LandingBuilderPage() {
                 </div>
               </div>
 
+              {/* Shopify Publish */}
+              <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h2 className="text-base font-bold text-gray-900">Publicar en Shopify</h2>
+                    {shopifyConnected ? (
+                      <p className="text-sm text-gray-500 mt-1">
+                        Subí el template directo a tu tema activo. Después agregalo desde el Theme Editor a la product page.
+                      </p>
+                    ) : (
+                      <p className="text-sm text-gray-500 mt-1">
+                        <a href="/perfil" className="font-semibold text-[#e42820] underline">Conectá tu tienda</a> en Perfil para publicar sin descargar archivos.
+                      </p>
+                    )}
+                  </div>
+                  {shopifyConnected && publishStatus !== 'ok' && (
+                    <button
+                      onClick={publishToShopify}
+                      disabled={publishStatus === 'publishing'}
+                      className="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-gray-700 disabled:opacity-40 transition-colors"
+                    >
+                      {publishStatus === 'publishing' ? (
+                        <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Publicando...</>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                          </svg>
+                          Publicar en Shopify
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+                {publishStatus === 'ok' && (
+                  <div className="mt-4 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-sm text-emerald-700 flex items-start gap-2">
+                    <svg className="w-4 h-4 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <div>
+                      <p className="font-semibold">Template publicado</p>
+                      <p className="text-emerald-600 mt-0.5">
+                        Subido al tema <strong>{publishedTheme}</strong>. Andá al Theme Editor, abrí una product page y agregá la sección &quot;Condimento Landing&quot;.
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {publishStatus === 'error' && (
+                  <div className="mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">
+                    {publishError}
+                  </div>
+                )}
+              </div>
+
               {/* Preview del copy generado */}
               <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-6">
                 <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest">Preview del copy generado</h3>
@@ -1082,7 +1162,7 @@ export default function LandingBuilderPage() {
               </div>
 
               <button
-                onClick={() => { setStep('producto'); setCopy(null); }}
+                onClick={() => { setStep('producto'); setCopy(null); setPublishStatus('idle'); setPublishError(''); setPublishedTheme(''); }}
                 className="w-full py-3 border border-gray-200 rounded-xl text-sm text-gray-500 hover:bg-gray-50 transition-colors"
               >
                 Generar otra landing
