@@ -111,6 +111,22 @@ export default function Sidebar({ active, onLogout, userEmail }: SidebarProps) {
           >
             Email
           </NavItem>
+          <NavItem
+            href="/landing-builder"
+            icon="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"
+            active={active === '/landing-builder'}
+            badge="Preview"
+          >
+            Landing Builder
+          </NavItem>
+          <NavItem
+            href="/winning-products"
+            icon="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            active={active === '/winning-products'}
+            badge="Preview"
+          >
+            Producto Spy
+          </NavItem>
         </nav>
 
         {/* Settings + logout */}
@@ -269,6 +285,24 @@ export default function Sidebar({ active, onLogout, userEmail }: SidebarProps) {
                 onClick={closeDrawer}
               >
                 Email
+              </NavItem>
+              <NavItem
+                href="/landing-builder"
+                icon="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"
+                active={active === '/landing-builder'}
+                badge="Preview"
+                onClick={closeDrawer}
+              >
+                Landing Builder
+              </NavItem>
+              <NavItem
+                href="/winning-products"
+                icon="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                active={active === '/winning-products'}
+                badge="Preview"
+                onClick={closeDrawer}
+              >
+                Producto Spy
               </NavItem>
             </nav>
 
