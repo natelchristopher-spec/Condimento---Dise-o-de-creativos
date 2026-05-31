@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { createSupabaseBrowser } from '@/app/lib/supabase-browser';
 import { useRequireAuth } from '@/app/lib/use-auth';
 import Sidebar from '@/app/components/Sidebar';
 
-type Mode = 'scanner' | 'meta';
+type Tab = 'feed' | 'meta';
 
 interface ScannedProduct {
   id: number;
@@ -22,104 +22,216 @@ interface ScannedProduct {
   available: boolean;
   published_at: string;
   url: string;
+  store_url: string;
+  store_domain: string;
 }
 
-const LATAM_COUNTRIES: { code: string; label: string }[] = [
+interface StoreEntry {
+  url: string;
+  domain: string;
+  addedAt: number;
+}
+
+interface CacheEntry {
+  products: ScannedProduct[];
+  crawledAt: number;
+}
+
+const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
+const LS_STORES_KEY = 'spy_stores_v1';
+const LS_CACHE_KEY = 'spy_cache_v1';
+
+const LATAM_COUNTRIES = [
   { code: 'AR', label: 'Argentina' },
   { code: 'MX', label: 'México' },
   { code: 'CO', label: 'Colombia' },
   { code: 'CL', label: 'Chile' },
   { code: 'PE', label: 'Perú' },
   { code: 'UY', label: 'Uruguay' },
-  { code: 'BO', label: 'Bolivia' },
-  { code: 'PY', label: 'Paraguay' },
 ];
 
-const AD_CATEGORIES = [
-  { value: '', label: 'Todas las categorías' },
-  { value: 'ECOMMERCE', label: 'E-commerce' },
-  { value: 'BEAUTY', label: 'Belleza' },
-  { value: 'FITNESS', label: 'Fitness' },
-  { value: 'HOME', label: 'Hogar' },
-  { value: 'FASHION', label: 'Moda' },
-  { value: 'PETS', label: 'Mascotas' },
-  { value: 'TECH', label: 'Tecnología' },
+const SUGGESTED_SEARCHES = [
+  'organizador cocina', 'collar led perro', 'mascarilla facial',
+  'soporte celular auto', 'cargador inalámbrico', 'funda iphone',
+  'ropa deportiva mujer', 'luz led rgb', 'bolso impermeable',
+  'comida para perro', 'suplemento proteína', 'taza térmica',
 ];
 
-function formatPrice(n: number): string {
-  return n.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 });
+function loadStores(): StoreEntry[] {
+  try { return JSON.parse(localStorage.getItem(LS_STORES_KEY) || '[]'); } catch { return []; }
+}
+
+function saveStores(stores: StoreEntry[]) {
+  localStorage.setItem(LS_STORES_KEY, JSON.stringify(stores));
+}
+
+function loadCache(): Record<string, CacheEntry> {
+  try { return JSON.parse(localStorage.getItem(LS_CACHE_KEY) || '{}'); } catch { return {}; }
+}
+
+function saveCache(cache: Record<string, CacheEntry>) {
+  localStorage.setItem(LS_CACHE_KEY, JSON.stringify(cache));
 }
 
 function buildMetaUrl(keyword: string, countries: string[]): string {
-  const countryStr = countries.join(',');
-  const q = encodeURIComponent(keyword);
-  return `https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=${countryStr}&q=${q}&search_type=keyword_unordered&media_type=all`;
+  return `https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=${countries.join(',')}&q=${encodeURIComponent(keyword)}&search_type=keyword_unordered&media_type=all`;
 }
 
 function daysSince(dateStr: string): number {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  return Math.floor(diff / (1000 * 60 * 60 * 24));
+  return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+}
+
+function normalizeDomain(url: string): string {
+  try { return new URL(url.startsWith('http') ? url : 'https://' + url).hostname; } catch { return url; }
+}
+
+function normalizeUrl(url: string): string {
+  const u = url.startsWith('http') ? url : 'https://' + url;
+  try { return new URL(u).origin; } catch { return u; }
 }
 
 export default function WinningProductsPage() {
   useRequireAuth();
   const supabase = createSupabaseBrowser();
 
-  const [mode, setMode] = useState<Mode>('scanner');
-
-  // Scanner state
-  const [storeUrl, setStoreUrl] = useState('');
-  const [scanning, setScanning] = useState(false);
-  const [scanError, setScanError] = useState('');
+  const [tab, setTab] = useState<Tab>('feed');
+  const [stores, setStores] = useState<StoreEntry[]>([]);
   const [products, setProducts] = useState<ScannedProduct[]>([]);
-  const [storeBase, setStoreBase] = useState('');
-  const [sortBy, setSortBy] = useState<'newest' | 'price_asc' | 'price_desc' | 'variants'>('newest');
+  const [loading, setLoading] = useState(false);
+  const [loadingStores, setLoadingStores] = useState<Set<string>>(new Set());
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [addUrl, setAddUrl] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [addError, setAddError] = useState('');
+  const [sortBy, setSortBy] = useState<'newest' | 'price_desc' | 'price_asc' | 'variants'>('newest');
   const [filterAvailable, setFilterAvailable] = useState(false);
-
-  // Meta state
   const [metaKeyword, setMetaKeyword] = useState('');
   const [selectedCountries, setSelectedCountries] = useState<string[]>(['AR']);
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     window.location.href = '/login';
   };
 
-  const scanStore = async () => {
-    if (!storeUrl.trim()) return;
-    setScanning(true);
-    setScanError('');
-    setProducts([]);
+  const crawlStore = useCallback(async (storeUrl: string, forceRefresh = false): Promise<ScannedProduct[]> => {
+    const cache = loadCache();
+    const cached = cache[storeUrl];
+    if (!forceRefresh && cached && Date.now() - cached.crawledAt < CACHE_TTL) {
+      return cached.products;
+    }
+
+    const res = await fetch('/api/scan-store', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ storeUrl }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Error al escanear');
+
+    const domain = normalizeDomain(storeUrl);
+    const enriched: ScannedProduct[] = (data.products || []).map((p: Omit<ScannedProduct, 'store_url' | 'store_domain'>) => ({
+      ...p,
+      store_url: storeUrl,
+      store_domain: domain,
+    }));
+
+    const newCache = loadCache();
+    newCache[storeUrl] = { products: enriched, crawledAt: Date.now() };
+    saveCache(newCache);
+    return enriched;
+  }, []);
+
+  const loadAllProducts = useCallback(async (storeList: StoreEntry[], forceRefresh = false) => {
+    if (storeList.length === 0) return;
+    setLoading(true);
+    setErrors({});
+
+    const newErrors: Record<string, string> = {};
+    const allProducts: ScannedProduct[] = [];
+
+    await Promise.allSettled(
+      storeList.map(async (s) => {
+        setLoadingStores(prev => new Set(prev).add(s.url));
+        try {
+          const prods = await crawlStore(s.url, forceRefresh);
+          allProducts.push(...prods);
+        } catch (e) {
+          newErrors[s.url] = e instanceof Error ? e.message : 'Error';
+        } finally {
+          setLoadingStores(prev => { const n = new Set(prev); n.delete(s.url); return n; });
+        }
+      })
+    );
+
+    setProducts(allProducts);
+    setErrors(newErrors);
+    setLastRefresh(new Date());
+    setLoading(false);
+  }, [crawlStore]);
+
+  // Load from localStorage on mount and auto-crawl
+  useEffect(() => {
+    const savedStores = loadStores();
+    setStores(savedStores);
+    if (savedStores.length > 0) {
+      loadAllProducts(savedStores);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const addStore = async () => {
+    if (!addUrl.trim()) return;
+    setAdding(true);
+    setAddError('');
+    const url = normalizeUrl(addUrl.trim());
+    const domain = normalizeDomain(url);
+
+    const existing = loadStores();
+    if (existing.some(s => s.url === url)) {
+      setAddError('Esa tienda ya está en tu lista.');
+      setAdding(false);
+      return;
+    }
+
     try {
-      const res = await fetch('/api/scan-store', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storeUrl: storeUrl.trim() }),
-      });
-      let data: { products?: ScannedProduct[]; store_url?: string; total?: number; error?: string };
-      try { data = await res.json(); } catch { throw new Error('Respuesta inesperada del servidor.'); }
-      if (!res.ok || data.error) throw new Error(data.error || 'Error al escanear');
-      setProducts(data.products || []);
-      setStoreBase(data.store_url || '');
+      const prods = await crawlStore(url);
+      if (prods.length === 0) {
+        setAddError('La tienda existe pero no tiene productos públicos.');
+        setAdding(false);
+        return;
+      }
+      const newEntry: StoreEntry = { url, domain, addedAt: Date.now() };
+      const updated = [...existing, newEntry];
+      saveStores(updated);
+      setStores(updated);
+      setProducts(prev => [...prev, ...prods]);
+      setAddUrl('');
+      setTab('feed');
     } catch (e) {
-      setScanError(e instanceof Error ? e.message : 'Error inesperado');
+      setAddError(e instanceof Error ? e.message : 'No se pudo conectar con la tienda.');
     } finally {
-      setScanning(false);
+      setAdding(false);
     }
   };
 
-  const toggleCountry = (code: string) => {
-    setSelectedCountries(prev =>
-      prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code]
-    );
+  const removeStore = (url: string) => {
+    const updated = stores.filter(s => s.url !== url);
+    saveStores(updated);
+    setStores(updated);
+    setProducts(prev => prev.filter(p => p.store_url !== url));
+    const cache = loadCache();
+    delete cache[url];
+    saveCache(cache);
   };
+
+  const refresh = () => loadAllProducts(stores, true);
 
   const sortedProducts = [...products]
     .filter(p => !filterAvailable || p.available)
     .sort((a, b) => {
       if (sortBy === 'newest') return new Date(b.published_at).getTime() - new Date(a.published_at).getTime();
-      if (sortBy === 'price_asc') return a.price_min - b.price_min;
       if (sortBy === 'price_desc') return b.price_min - a.price_min;
+      if (sortBy === 'price_asc') return a.price_min - b.price_min;
       if (sortBy === 'variants') return b.variants_count - a.variants_count;
       return 0;
     });
@@ -132,87 +244,154 @@ export default function WinningProductsPage() {
         <div className="max-w-5xl mx-auto px-4 py-8">
 
           {/* Header */}
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Producto Spy</h1>
-            <p className="text-sm text-gray-500 mt-1">Escaneá tiendas Shopify y encontrá oportunidades en Meta Ads LATAM</p>
+          <div className="flex items-start justify-between mb-6 gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Producto Spy</h1>
+              <p className="text-sm text-gray-500 mt-1">
+                {stores.length > 0
+                  ? `${stores.length} tienda${stores.length > 1 ? 's' : ''} rastreada${stores.length > 1 ? 's' : ''} · ${products.length} productos`
+                  : 'Rastreá tiendas Shopify y encontrá productos ganadores en LATAM'}
+              </p>
+            </div>
+            {stores.length > 0 && (
+              <button
+                onClick={refresh}
+                disabled={loading}
+                className="shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-40 transition-all"
+              >
+                <svg className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                {loading ? 'Actualizando...' : 'Actualizar'}
+              </button>
+            )}
           </div>
 
-          {/* Mode tabs */}
+          {/* Tabs */}
           <div className="flex gap-1 p-1 bg-gray-100 rounded-xl w-fit mb-6">
             {([
-              { id: 'scanner', label: '🔍  Escanear tienda', icon: '' },
-              { id: 'meta', label: '📣  Meta Ads LATAM', icon: '' },
-            ] as { id: Mode; label: string; icon: string }[]).map(tab => (
+              { id: 'feed' as Tab, label: '📦  Productos' },
+              { id: 'meta' as Tab, label: '📣  Meta Ads LATAM' },
+            ]).map(t => (
               <button
-                key={tab.id}
-                onClick={() => setMode(tab.id)}
+                key={t.id}
+                onClick={() => setTab(t.id)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  mode === tab.id
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
+                  tab === t.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                {tab.label}
+                {t.label}
               </button>
             ))}
           </div>
 
-          {/* ── SCANNER MODE ── */}
-          {mode === 'scanner' && (
+          {/* ── FEED TAB ── */}
+          {tab === 'feed' && (
             <div>
-              {/* URL input */}
-              <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-6">
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
-                  URL de la tienda Shopify
-                </label>
-                <div className="flex gap-3">
+              {/* Add store bar — always visible */}
+              <div className="bg-white rounded-2xl border border-gray-200 p-4 mb-5">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                  Agregar tienda para rastrear
+                </p>
+                <div className="flex gap-2">
                   <input
-                    value={storeUrl}
-                    onChange={e => setStoreUrl(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && scanStore()}
-                    placeholder="ej: sutienda.myshopify.com  o  www.sutienda.com"
-                    className="flex-1 px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]"
+                    value={addUrl}
+                    onChange={e => setAddUrl(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && addStore()}
+                    placeholder="URL de tienda Shopify — ej: superdogs.myshopify.com"
+                    className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]"
                   />
                   <button
-                    onClick={scanStore}
-                    disabled={scanning || !storeUrl.trim()}
-                    className="px-5 py-2.5 bg-[#e42820] text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-opacity hover:opacity-90"
+                    onClick={addStore}
+                    disabled={adding || !addUrl.trim()}
+                    className="px-4 py-2 bg-[#e42820] text-white text-sm font-semibold rounded-xl disabled:opacity-40 hover:opacity-90 transition-opacity whitespace-nowrap"
                   >
-                    {scanning ? 'Escaneando...' : 'Escanear'}
+                    {adding ? '...' : 'Agregar'}
                   </button>
                 </div>
-                {scanError && (
-                  <p className="mt-3 text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{scanError}</p>
+                {addError && (
+                  <p className="mt-2 text-xs text-red-600">{addError}</p>
                 )}
-                <p className="mt-2.5 text-xs text-gray-400">
-                  Funciona con cualquier tienda Shopify que tenga productos públicos. No requiere credenciales.
+                <p className="mt-2 text-xs text-gray-400">
+                  Encontrá URLs desde la pestaña Meta Ads — hacé click en un ad, copiá la URL de la tienda y pegala acá.
                 </p>
               </div>
 
-              {/* Scanning spinner */}
-              {scanning && (
-                <div className="flex flex-col items-center justify-center py-16 gap-4">
-                  <div className="w-10 h-10 rounded-full border-2 border-gray-200 border-t-[#e42820] animate-spin" />
-                  <p className="text-sm text-gray-400">Escaneando productos...</p>
+              {/* Tracked stores chips */}
+              {stores.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-5">
+                  {stores.map(s => (
+                    <div
+                      key={s.url}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                        loadingStores.has(s.url)
+                          ? 'bg-gray-50 border-gray-200 text-gray-400'
+                          : errors[s.url]
+                          ? 'bg-red-50 border-red-200 text-red-600'
+                          : 'bg-white border-gray-200 text-gray-700'
+                      }`}
+                    >
+                      {loadingStores.has(s.url) && (
+                        <span className="w-2 h-2 rounded-full bg-gray-300 animate-pulse shrink-0" />
+                      )}
+                      {errors[s.url] && (
+                        <span className="w-2 h-2 rounded-full bg-red-400 shrink-0" />
+                      )}
+                      {!loadingStores.has(s.url) && !errors[s.url] && (
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                      )}
+                      <span className="max-w-[140px] truncate">{s.domain}</span>
+                      <button
+                        onClick={() => removeStore(s.url)}
+                        className="text-gray-300 hover:text-red-400 transition-colors ml-0.5"
+                        aria-label="Eliminar"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
 
-              {/* Results */}
-              {products.length > 0 && !scanning && (
+              {/* Empty state */}
+              {stores.length === 0 && (
+                <div className="text-center py-20">
+                  <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                  </div>
+                  <h3 className="text-sm font-semibold text-gray-700 mb-2">Todavía no rastreás ninguna tienda</h3>
+                  <p className="text-xs text-gray-400 max-w-xs mx-auto mb-6 leading-relaxed">
+                    Andá a la pestaña <strong>Meta Ads LATAM</strong>, buscá productos por keyword, hacé click en algún ad para ver la tienda y pegá la URL arriba.
+                  </p>
+                  <button
+                    onClick={() => setTab('meta')}
+                    className="px-5 py-2.5 bg-[#1877f2] text-white text-sm font-semibold rounded-xl hover:opacity-90 transition-opacity"
+                  >
+                    Buscar en Meta Ads →
+                  </button>
+                </div>
+              )}
+
+              {/* Loading state */}
+              {loading && stores.length > 0 && products.length === 0 && (
+                <div className="flex flex-col items-center py-16 gap-3">
+                  <div className="w-8 h-8 rounded-full border-2 border-gray-200 border-t-[#e42820] animate-spin" />
+                  <p className="text-sm text-gray-400">Cargando productos...</p>
+                </div>
+              )}
+
+              {/* Product grid */}
+              {products.length > 0 && (
                 <>
-                  {/* Toolbar */}
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
                     <div>
-                      <p className="text-sm font-semibold text-gray-900">
-                        {products.length} productos en{' '}
-                        <a href={storeBase} target="_blank" rel="noopener" className="text-[#e42820] hover:underline">
-                          {new URL(storeBase).hostname}
-                        </a>
-                      </p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {products.filter(p => p.available).length} disponibles •{' '}
-                        {products.filter(p => p.images_count >= 4).length} con 4+ imágenes
-                      </p>
+                      {lastRefresh && (
+                        <p className="text-xs text-gray-400">
+                          Actualizado {lastRefresh.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
@@ -222,12 +401,12 @@ export default function WinningProductsPage() {
                           onChange={e => setFilterAvailable(e.target.checked)}
                           className="rounded"
                         />
-                        Solo disponibles
+                        Solo con stock
                       </label>
                       <select
                         value={sortBy}
                         onChange={e => setSortBy(e.target.value as typeof sortBy)}
-                        className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none"
+                        className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none"
                       >
                         <option value="newest">Más nuevos</option>
                         <option value="price_desc">Mayor precio</option>
@@ -237,87 +416,69 @@ export default function WinningProductsPage() {
                     </div>
                   </div>
 
-                  {/* Product grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                     {sortedProducts.map(p => (
-                      <div key={p.id} className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+                      <div key={`${p.store_url}-${p.id}`} className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow group">
                         {/* Image */}
-                        <div className="aspect-square bg-gray-50 relative overflow-hidden">
+                        <div className="aspect-square bg-gray-50 overflow-hidden relative">
                           {p.image ? (
                             <img
                               src={p.image}
                               alt={p.title}
-                              className="w-full h-full object-contain"
+                              className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
-                              <svg className="w-12 h-12 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <svg className="w-10 h-10 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                               </svg>
                             </div>
                           )}
-                          {/* Badges */}
-                          <div className="absolute top-2 left-2 flex flex-col gap-1">
-                            {!p.available && (
-                              <span className="text-[10px] font-bold bg-gray-800/80 text-white px-2 py-0.5 rounded-full">
-                                Sin stock
-                              </span>
-                            )}
-                            {p.images_count >= 4 && (
-                              <span className="text-[10px] font-bold bg-emerald-500/90 text-white px-2 py-0.5 rounded-full">
-                                {p.images_count} fotos
-                              </span>
-                            )}
-                          </div>
                           {/* Days badge */}
-                          <div className="absolute top-2 right-2">
-                            <span className="text-[10px] font-bold bg-black/60 text-white px-2 py-0.5 rounded-full">
+                          <div className="absolute top-1.5 right-1.5">
+                            <span className="text-[10px] font-bold bg-black/55 text-white px-1.5 py-0.5 rounded-full">
                               {daysSince(p.published_at)}d
                             </span>
                           </div>
+                          {!p.available && (
+                            <div className="absolute top-1.5 left-1.5">
+                              <span className="text-[10px] font-bold bg-gray-700/80 text-white px-1.5 py-0.5 rounded-full">
+                                Sin stock
+                              </span>
+                            </div>
+                          )}
                         </div>
 
                         {/* Info */}
-                        <div className="p-3.5">
-                          <p className="text-sm font-semibold text-gray-900 leading-tight line-clamp-2 mb-1">
+                        <div className="p-2.5">
+                          <p className="text-xs text-gray-400 truncate mb-0.5">{p.store_domain}</p>
+                          <p className="text-xs font-semibold text-gray-900 leading-tight line-clamp-2 mb-1.5">
                             {p.title}
                           </p>
-                          {p.vendor && (
-                            <p className="text-xs text-gray-400 mb-2">{p.vendor}</p>
-                          )}
-                          <div className="flex items-center justify-between mb-3">
-                            <span className="text-base font-bold text-gray-900">
+                          <div className="flex items-center justify-between mb-2.5">
+                            <span className="text-sm font-bold text-gray-900">
                               ${p.price_min.toLocaleString('es-AR')}
-                              {p.price_max > p.price_min && (
-                                <span className="text-xs font-normal text-gray-400 ml-1">
-                                  – ${p.price_max.toLocaleString('es-AR')}
-                                </span>
-                              )}
                             </span>
                             {p.variants_count > 1 && (
-                              <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                                {p.variants_count} variantes
-                              </span>
+                              <span className="text-[10px] text-gray-400">{p.variants_count}v</span>
                             )}
                           </div>
-
-                          {/* Action buttons */}
-                          <div className="flex gap-2">
+                          <div className="flex gap-1.5">
                             <a
                               href={p.url}
                               target="_blank"
                               rel="noopener"
-                              className="flex-1 text-center text-xs font-medium py-2 px-3 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
+                              className="flex-1 text-center text-[11px] font-medium py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
                             >
-                              Ver producto
+                              Ver
                             </a>
                             <a
                               href={buildMetaUrl(p.title, ['AR', 'MX', 'CO', 'CL'])}
                               target="_blank"
                               rel="noopener"
-                              className="flex-1 text-center text-xs font-medium py-2 px-3 bg-[#1877f2] text-white rounded-lg hover:opacity-90 transition-opacity"
+                              className="flex-1 text-center text-[11px] font-medium py-1.5 bg-[#1877f2] text-white rounded-lg hover:opacity-90 transition-opacity"
                             >
-                              Meta Ads
+                              Meta
                             </a>
                           </div>
                         </div>
@@ -329,17 +490,14 @@ export default function WinningProductsPage() {
             </div>
           )}
 
-          {/* ── META ADS MODE ── */}
-          {mode === 'meta' && (
+          {/* ── META ADS TAB ── */}
+          {tab === 'meta' && (
             <div className="space-y-5">
               <div className="bg-white rounded-2xl border border-gray-200 p-5">
-                <h2 className="text-sm font-semibold text-gray-700 mb-4">Construir búsqueda en Meta Ad Library</h2>
+                <h2 className="text-sm font-semibold text-gray-700 mb-4">Buscar ads activos en Meta Ad Library</h2>
 
-                {/* Keyword */}
                 <div className="mb-4">
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                    Keyword / producto
-                  </label>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Keyword</label>
                   <input
                     value={metaKeyword}
                     onChange={e => setMetaKeyword(e.target.value)}
@@ -348,16 +506,15 @@ export default function WinningProductsPage() {
                   />
                 </div>
 
-                {/* Countries */}
                 <div className="mb-5">
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                    Países LATAM
-                  </label>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Países LATAM</label>
                   <div className="flex flex-wrap gap-2">
                     {LATAM_COUNTRIES.map(c => (
                       <button
                         key={c.code}
-                        onClick={() => toggleCountry(c.code)}
+                        onClick={() => setSelectedCountries(prev =>
+                          prev.includes(c.code) ? prev.filter(x => x !== c.code) : [...prev, c.code]
+                        )}
                         className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
                           selectedCountries.includes(c.code)
                             ? 'bg-[#1877f2] text-white border-[#1877f2]'
@@ -369,16 +526,6 @@ export default function WinningProductsPage() {
                     ))}
                   </div>
                 </div>
-
-                {/* Preview URL */}
-                {metaKeyword && selectedCountries.length > 0 && (
-                  <div className="bg-gray-50 rounded-xl p-3 mb-4">
-                    <p className="text-xs text-gray-400 mb-1 font-medium">Vista previa del link:</p>
-                    <p className="text-xs text-gray-600 break-all font-mono leading-relaxed">
-                      {buildMetaUrl(metaKeyword, selectedCountries)}
-                    </p>
-                  </div>
-                )}
 
                 <a
                   href={metaKeyword && selectedCountries.length > 0
@@ -399,43 +546,11 @@ export default function WinningProductsPage() {
                 </a>
               </div>
 
-              {/* Tips */}
-              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
-                <h3 className="text-sm font-bold text-amber-800 mb-3">Cómo leer los ads para encontrar ganadores</h3>
-                <ul className="space-y-2.5 text-xs text-amber-700">
-                  <li className="flex gap-2">
-                    <span className="font-bold shrink-0">1.</span>
-                    <span><strong>Filtrá por "Active"</strong> — ads activos son los que están convirtiendo. Si alguien sigue pagando, es porque funciona.</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="font-bold shrink-0">2.</span>
-                    <span><strong>Revisá la fecha de inicio</strong> — un ad corriendo hace más de 30 días es señal fuerte de que está generando retorno.</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="font-bold shrink-0">3.</span>
-                    <span><strong>Múltiples creativos del mismo anunciante</strong> — si tienen 5+ variantes del mismo ad, están haciendo A/B testing serio = están escalando.</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="font-bold shrink-0">4.</span>
-                    <span><strong>Hacé click en el ad</strong> — te lleva a la landing del producto. Copiá la URL y escaneala en "Escanear tienda" para ver todos sus productos.</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="font-bold shrink-0">5.</span>
-                    <span><strong>Mirá el call to action</strong> — "Shop Now" y "Buy Now" indican venta directa. "Learn More" suele ser awareness o lead gen.</span>
-                  </li>
-                </ul>
-              </div>
-
-              {/* Useful searches */}
+              {/* Búsquedas sugeridas */}
               <div className="bg-white rounded-2xl border border-gray-200 p-5">
                 <h3 className="text-sm font-bold text-gray-700 mb-3">Búsquedas populares en LATAM</h3>
                 <div className="flex flex-wrap gap-2">
-                  {[
-                    'organizador cocina', 'collar led perro', 'mascarilla facial',
-                    'soporte celular auto', 'cargador inalámbrico', 'cepillo masajeador',
-                    'ropa deportiva mujer', 'luz led habitación', 'bolsa impermeable',
-                    'comida para perro', 'funda silicona', 'taza térmica',
-                  ].map(term => (
+                  {SUGGESTED_SEARCHES.map(term => (
                     <button
                       key={term}
                       onClick={() => setMetaKeyword(term)}
@@ -445,6 +560,35 @@ export default function WinningProductsPage() {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Cómo agregar tiendas */}
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
+                <h3 className="text-sm font-bold text-amber-800 mb-3">Cómo encontrar tiendas para rastrear</h3>
+                <ol className="space-y-3 text-xs text-amber-700">
+                  <li className="flex gap-2.5">
+                    <span className="font-bold w-4 shrink-0">1.</span>
+                    <span>Buscá una keyword arriba y abrí Meta Ad Library. Filtrá por <strong>activos</strong> y ordená por <strong>fecha más antigua</strong> — esos llevan más tiempo corriendo y probablemente estén convirtiendo.</span>
+                  </li>
+                  <li className="flex gap-2.5">
+                    <span className="font-bold w-4 shrink-0">2.</span>
+                    <span>Hacé click en un ad que te llame la atención. Te lleva a la landing del producto. Copiá la URL de la tienda (solo el dominio).</span>
+                  </li>
+                  <li className="flex gap-2.5">
+                    <span className="font-bold w-4 shrink-0">3.</span>
+                    <span>Andá a la pestaña <strong>Productos</strong> y pegá la URL en el campo "Agregar tienda". El módulo la escanea y la agrega al feed automáticamente.</span>
+                  </li>
+                  <li className="flex gap-2.5">
+                    <span className="font-bold w-4 shrink-0">4.</span>
+                    <span>A partir de ahí, cada vez que abras el módulo, se actualizan solas cada 6 horas. Ves todos los productos nuevos de las tiendas que seguís.</span>
+                  </li>
+                </ol>
+                <button
+                  onClick={() => setTab('feed')}
+                  className="mt-4 text-xs font-semibold text-amber-800 underline underline-offset-2"
+                >
+                  Ir a Productos →
+                </button>
               </div>
             </div>
           )}
