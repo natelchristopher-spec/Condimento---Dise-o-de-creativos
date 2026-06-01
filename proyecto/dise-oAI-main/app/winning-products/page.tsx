@@ -38,6 +38,17 @@ interface Analysis {
   meta_signal: string | null;
 }
 
+interface MarginResult {
+  dropi_price: number;
+  dropi_currency: string;
+  product_name: string | null;
+  sell_price: number;
+  sell_currency: string;
+  margin_pct: number | null;
+  profit_per_unit: number | null;
+  margin_note: string;
+}
+
 type DiscoverStep = 'input' | 'scanning' | 'opportunities' | 'analyzing' | 'result';
 
 interface ScannedProduct {
@@ -138,6 +149,10 @@ export default function WinningProductsPage() {
   const [selectedOpp, setSelectedOpp] = useState<Opportunity | null>(null);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [discoverError, setDiscoverError] = useState('');
+  const [dropiProductUrl, setDropiProductUrl] = useState('');
+  const [marginLoading, setMarginLoading] = useState(false);
+  const [marginResult, setMarginResult] = useState<MarginResult | null>(null);
+  const [marginError, setMarginError] = useState('');
 
   // ── Store tracker state ────────────────────────────────────────────────────
   const [stores, setStores] = useState<StoreEntry[]>([]);
@@ -321,6 +336,34 @@ export default function WinningProductsPage() {
     setSelectedOpp(null);
     setAnalysis(null);
     setDiscoverError('');
+    setDropiProductUrl('');
+    setMarginResult(null);
+    setMarginError('');
+  };
+
+  const calcMargin = async () => {
+    if (!dropiProductUrl.trim()) return;
+    setMarginLoading(true);
+    setMarginError('');
+    setMarginResult(null);
+    try {
+      const res = await fetch('/api/winning/margin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dropiUrl: dropiProductUrl.trim(),
+          mlPrice: analysis?.ml_product?.price ?? null,
+          mlCurrency: analysis?.ml_product?.currency ?? null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Error al calcular');
+      setMarginResult(data);
+    } catch (e) {
+      setMarginError(e instanceof Error ? e.message : 'Error inesperado');
+    } finally {
+      setMarginLoading(false);
+    }
   };
 
   const goToLanding = () => {
@@ -495,7 +538,7 @@ export default function WinningProductsPage() {
               {discoverStep === 'result' && analysis && selectedOpp && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <button onClick={() => setDiscoverStep('opportunities')} className="text-xs text-gray-400 hover:text-gray-600">← Volver</button>
+                    <button onClick={() => { setDiscoverStep('opportunities'); setMarginResult(null); setMarginError(''); setDropiProductUrl(''); }} className="text-xs text-gray-400 hover:text-gray-600">← Volver</button>
                     <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${confidenceColor[analysis.confidence]}`}>Confianza {analysis.confidence}</span>
                   </div>
                   {discoverError && <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-600">{discoverError}</div>}
@@ -546,6 +589,66 @@ export default function WinningProductsPage() {
                         Buscar en Dropi ↗
                       </a>
                     </div>
+                  </div>
+
+                  {/* MARGIN CALCULATOR */}
+                  <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
+                    <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Calcular margen</p>
+                    <div className="flex gap-2">
+                      <input
+                        value={dropiProductUrl}
+                        onChange={e => setDropiProductUrl(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && calcMargin()}
+                        placeholder="Pegá la URL del producto en Dropi"
+                        className="flex-1 px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]"
+                      />
+                      <button
+                        onClick={calcMargin}
+                        disabled={marginLoading || !dropiProductUrl.trim()}
+                        className="shrink-0 px-4 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-xl disabled:opacity-40 hover:bg-gray-700 transition-colors whitespace-nowrap"
+                      >
+                        {marginLoading ? '...' : 'Calcular'}
+                      </button>
+                    </div>
+                    {marginError && (
+                      <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-600">{marginError}</div>
+                    )}
+                    {marginResult && (
+                      <div className="space-y-3">
+                        {marginResult.product_name && (
+                          <p className="text-xs text-gray-500 truncate">{marginResult.product_name}</p>
+                        )}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-gray-50 rounded-xl p-3">
+                            <p className="text-xs text-gray-400 mb-1">Costo Dropi</p>
+                            <p className="text-base font-bold text-gray-900">{marginResult.dropi_currency} {marginResult.dropi_price.toLocaleString()}</p>
+                          </div>
+                          {marginResult.sell_price > 0 && (
+                            <div className="bg-gray-50 rounded-xl p-3">
+                              <p className="text-xs text-gray-400 mb-1">Precio venta (ML)</p>
+                              <p className="text-base font-bold text-gray-900">{marginResult.sell_currency} {marginResult.sell_price.toLocaleString()}</p>
+                            </div>
+                          )}
+                        </div>
+                        {marginResult.margin_pct !== null && (
+                          <div className={`rounded-xl p-4 flex items-center justify-between ${marginResult.margin_pct >= 40 ? 'bg-emerald-50 border border-emerald-200' : marginResult.margin_pct >= 20 ? 'bg-amber-50 border border-amber-200' : 'bg-red-50 border border-red-200'}`}>
+                            <div>
+                              <p className="text-xs font-semibold text-gray-500 mb-0.5">Margen</p>
+                              <p className={`text-2xl font-black ${marginResult.margin_pct >= 40 ? 'text-emerald-700' : marginResult.margin_pct >= 20 ? 'text-amber-700' : 'text-red-600'}`}>{marginResult.margin_pct}%</p>
+                            </div>
+                            {marginResult.profit_per_unit !== null && (
+                              <div className="text-right">
+                                <p className="text-xs font-semibold text-gray-500 mb-0.5">Ganancia x unidad</p>
+                                <p className="text-base font-bold text-gray-900">{marginResult.sell_currency} {marginResult.profit_per_unit.toLocaleString()}</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {marginResult.margin_note && (
+                          <p className="text-xs text-gray-500">{marginResult.margin_note}</p>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <button onClick={goToLanding}
