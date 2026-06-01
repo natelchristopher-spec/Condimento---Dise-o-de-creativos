@@ -86,6 +86,136 @@ Para PRODUCTOS SIN PACKAGING (electrónico, joyería, calzado, decoración, acce
 
 CRÍTICO: NO menciones ninguna marca ni logo de terceros. Solo describí el producto en sí.`;
 
+async function applyGarmentInline(
+  openai: OpenAI,
+  conceptBase64: string,
+  productDataUrls: string[],
+  productDescription: string,
+  peopleMode: string,
+  personDescription: string,
+): Promise<string> {
+  const conceptDataUrl = conceptBase64.startsWith('data:')
+    ? conceptBase64
+    : `data:image/png;base64,${conceptBase64}`;
+
+  const personPart = (peopleMode !== 'none' && personDescription)
+    ? `\nPERSONA: ${personDescription}. La persona lleva puesto exactamente este producto.`
+    : '';
+
+  const productPart = productDescription
+    ? `\nPRODUCTO A APLICAR (reproducir exactamente, sin simplificar):\n${productDescription}`
+    : '\nPRODUCTO A APLICAR: el producto exacto que aparece en las imágenes de referencia — usá las imágenes como fuente principal de verdad visual.';
+
+  const multiProductNote = productDataUrls.length > 1
+    ? `\nHay ${productDataUrls.length} imágenes de referencia de productos — aplicá TODOS los productos visibles (ej: remera + pantalón, campera + falda).`
+    : '';
+
+  const prompt = `Tomá este concepto visual de moda y ÚNICAMENTE reemplazá las prendas/productos de la persona por los productos exactos que aparecen en las imágenes de referencia. TODO lo demás debe quedar IDÉNTICO.
+${productPart}
+${personPart}
+${multiProductNote}
+
+IMPORTANTE — las imágenes de referencia del producto son la fuente principal de verdad visual. Reproducí el producto TAL CUAL se ve en la foto: mismo color de píxel, misma textura, misma silueta.
+
+QUÉ CAMBIAR:
+- Las prendas/ropa de la persona → reemplazarlas por los productos de referencia exactos
+
+QUÉ NO TOCAR (debe quedar pixel-perfect igual):
+- TODOS los textos, tipografías, títulos, subtítulos, slogans y copy que aparecen en la imagen
+- El fondo, colores del fondo, degradados y texturas
+- La composición y layout general
+- La iluminación y mood
+- Logos, íconos o elementos gráficos de marca
+- La pose y posición de la persona
+
+REGLAS DE COLOR — CRÍTICO:
+- El color de cada prenda debe ser IDÉNTICO al de la imagen de referencia. NO aclarar, NO oscurecer, NO desaturar, NO cambiar temperatura de color.
+- Tomá el valor de color directamente de los píxeles de la referencia — no lo interpetes ni lo idealices.
+- Para colores neutros cálidos (beige, arena, tostado, camel, crudo, khaki): NUNCA renderices como blanco ni gris claro. Mantené la temperatura cálida y saturación exacta del original.
+- Para colores oscuros (negro, azul marino, marrón): NUNCA los ilumines ni aclarés.
+
+PANTALONES Y PRENDAS INFERIORES — DOBLE ATENCIÓN:
+- Si la prenda es un pantalón: prestá máxima atención al color — es donde el modelo tiende a fallar más.
+- Telas lisas (twill, gabardina, cotton chino): superficie uniforme y suave, sin texturas artificiales ni arrugas exageradas.
+- Replicá largo, ancho de pierna y tiro tal cual se ven en la referencia.
+
+ESTAMPADO / PRINT — POSICIÓN Y TAMAÑO CRÍTICOS:
+- Si la prenda tiene un gráfico, logo, ilustración o print, replicá su posición exacta, tamaño relativo y distancia a los bordes.
+- NO reubiques ni redimensiones el estampado.
+
+TERMINACIONES DE PRENDAS — REPLICAR EXACTAMENTE:
+- Replicá cómo terminan todos los bordes visibles: tipo de ruedo, grosor del doblez, si queda suelto o ajustado.
+- Pantalones: si el tobillo termina suelto, con puño doblado, con elástico o ajustado al tobillo — replicar exactamente.
+
+REGLAS de producto:
+- Mismo color, mismo estampado, misma silueta, mismo tejido que la referencia visual
+- Si hay múltiples prendas, aplicá TODAS
+- Estilo fashion editorial premium, fotorrealista`;
+
+  const productImageContent = productDataUrls.map(img => ({
+    type: 'input_image' as const,
+    image_url: img,
+    detail: 'high' as const,
+  }));
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const response = await (openai.responses.create as any)({
+        model: 'gpt-4o',
+        input: [{
+          role: 'user',
+          content: [
+            { type: 'input_image', image_url: conceptDataUrl, detail: 'high' },
+            ...productImageContent,
+            { type: 'input_text', text: prompt },
+          ],
+        }],
+        tools: [{
+          type: 'image_generation',
+          model: 'gpt-image-2',
+          quality: 'high',
+          size: '1024x1536',
+        }],
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      for (const block of (response.output || [])) {
+        if (block.type === 'image_generation_call' && block.result) {
+          return block.result;
+        }
+      }
+      console.warn(`applyGarmentInline: attempt ${attempt} no image block`);
+    } catch (err) {
+      console.error(`applyGarmentInline attempt ${attempt}:`, err);
+      if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 1500));
+    }
+  }
+
+  // Fallback: images.edit with [concept + product files]
+  try {
+    const toImageFile = async (dataUrl: string, name: string) => {
+      const base64Data = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+      return toFile(Buffer.from(base64Data, 'base64'), name, { type: 'image/png' });
+    };
+    const conceptFile = await toImageFile(conceptDataUrl, 'concept.png');
+    const productFiles = await Promise.all(
+      productDataUrls.map((img, i) => toImageFile(img, `product-${i}.png`))
+    );
+    const response = await openai.images.edit({
+      model: 'gpt-image-2',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      image: [conceptFile, ...productFiles] as any,
+      prompt: 'Replace ONLY the clothing with the exact product from reference images. Preserve all text, background, layout, lighting, and pose. Pixel-accurate color and texture.',
+      size: '1024x1536',
+      quality: 'high',
+    });
+    return response.data?.[0]?.b64_json || '';
+  } catch (err) {
+    console.error('applyGarmentInline fallback failed:', err);
+    return '';
+  }
+}
+
 async function editProductForConcept(
   openai: OpenAI,
   productDataUrls: string[],
@@ -573,43 +703,99 @@ Respondé SOLO con JSON:
                 }
               }
             } else {
-              // Fashion, or non-fashion with person, or no product photo:
-              // Responses API — can compose person + product using reference images
-              const inputImages = [
-                ...productDataUrls.slice(0, 2),
-                // Include reference person images for both fashion and non-fashion person mode
-                ...((isFashionProduct || peopleMode === 'real') && refImageUrls.length > 0 ? refImageUrls : []),
-              ];
+              // Fashion with product photo: 2-step approach (concept → apply garment)
+              // Step A: generate scene/person/headline at medium quality, garment accuracy secondary
+              // Step B: apply exact garment via gpt-4o orchestration (same as apply-product module)
+              if (isFashionProduct && hasProductPhoto) {
+                const garmentType = productDescription.match(/TIPO DE PRENDA[:\s]+([^\n.,]+)/i)?.[1]?.trim() || 'prenda de moda';
 
-              const inputContent = [
-                ...inputImages.map(url => ({ type: 'input_image', image_url: url, detail: 'high' })),
-                { type: 'input_text', text: fullPrompt },
-              ];
+                const stepAPrompt = [
+                  personDescription
+                    ? `PERSONA: ${personDescription}. La persona lleva una prenda de tipo ${garmentType} — el color y diseño exactos de la prenda se aplican en el paso siguiente.`
+                    : `Persona: modelo fashion aspiracional, actitud natural y confiada. Lleva una prenda de tipo ${garmentType}.`,
+                  isCategory
+                    ? 'COMPOSICIÓN: Lifestyle fashion. Escena o contexto donde se usaría esta prenda — el foco es el lifestyle, la ocasión o la emoción. Aspiracional y relatable.'
+                    : 'COMPOSICIÓN: Fashion direct-response. La persona lleva la prenda. Fondo limpio o setting mínimo. Actitud aspiracional y directa.',
+                  `HEADLINE (mostrá este texto exacto, grande y en negrita): "${angle.hook}"`,
+                  angle.angle ? `ESTRATEGIA DEL ÁNGULO: ${angle.angle}` : '',
+                  `ÉNFASIS DEL MENSAJE: ${angle.emphasis}.`,
+                  `Marca: ${brandKit.name}. Colores de marca (SOLO para fondos, textos y elementos gráficos): ${brandKit.primary1}, ${brandKit.primary2}, ${brandKit.primary3}. Tipografía: ${brandKit.typography || 'bold sans-serif'}.`,
+                  `Contexto de marca: ${brandKitContext}`,
+                  'Fashion editorial photography — natural skin tones, soft studio or lifestyle lighting, 85mm lens equivalent, photorealistic.',
+                  'Portrait 1024x1536. Todo el texto en español. Calidad agencia profesional.',
+                  'ANTI-ALUCINACIÓN: NO inventés precios, descuentos, métricas ni estadísticas que no estén en el brief.',
+                  'NO incluyas botones CTA en la imagen.',
+                  `REGLA DE LOGO: NO generes ningún logo ni símbolo de marca. Si necesitás identificar la marca, escribí únicamente el nombre "${brandKit.name}" como texto plano.`,
+                ].filter(Boolean).join(' ');
 
-              for (let attempt = 1; attempt <= 3; attempt++) {
-                try {
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  const response = await (openai.responses.create as any)({
-                    model: 'gpt-image-2',
-                    input: [{ role: 'user', content: inputContent }],
-                    tools: [{
-                      type: 'image_generation',
+                const stepAContent = [
+                  ...(refImageUrls.length > 0 ? refImageUrls.map(url => ({ type: 'input_image' as const, image_url: url, detail: 'high' as const })) : []),
+                  { type: 'input_text' as const, text: stepAPrompt },
+                ];
+
+                let conceptBase64 = '';
+                for (let attempt = 1; attempt <= 2; attempt++) {
+                  try {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const r = await (openai.responses.create as any)({
                       model: 'gpt-image-2',
-                      quality: 'high',
-                      size: '1024x1536',
-                    }],
-                  });
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  for (const block of (response.output || [])) {
-                    if (block.type === 'image_generation_call' && block.result) {
-                      base64 = block.result;
-                      break;
+                      input: [{ role: 'user', content: stepAContent }],
+                      tools: [{ type: 'image_generation', model: 'gpt-image-2', quality: 'medium', size: '1024x1536' }],
+                    });
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    for (const block of (r.output || [])) {
+                      if (block.type === 'image_generation_call' && block.result) { conceptBase64 = block.result; break; }
                     }
+                    if (conceptBase64) break;
+                  } catch (err) {
+                    console.error(`testing-angles "${angle.name}" step A attempt ${attempt}:`, err);
+                    if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
                   }
-                  if (base64) break;
-                } catch (err) {
-                  console.error(`testing-angles "${angle.name}" attempt ${attempt} failed:`, err);
-                  if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 1500));
+                }
+
+                if (conceptBase64) {
+                  // Step B: apply exact garment via gpt-4o orchestration
+                  const applied = await applyGarmentInline(openai, conceptBase64, productDataUrls, productDescription, peopleMode, personDescription);
+                  base64 = applied || conceptBase64;
+                }
+
+              } else {
+                // Fashion without product photo, or non-fashion with person: 1-step Responses API
+                const inputImages = [
+                  ...productDataUrls.slice(0, 2),
+                  ...((isFashionProduct || peopleMode === 'real') && refImageUrls.length > 0 ? refImageUrls : []),
+                ];
+
+                const inputContent = [
+                  ...inputImages.map(url => ({ type: 'input_image', image_url: url, detail: 'high' })),
+                  { type: 'input_text', text: fullPrompt },
+                ];
+
+                for (let attempt = 1; attempt <= 3; attempt++) {
+                  try {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const response = await (openai.responses.create as any)({
+                      model: 'gpt-image-2',
+                      input: [{ role: 'user', content: inputContent }],
+                      tools: [{
+                        type: 'image_generation',
+                        model: 'gpt-image-2',
+                        quality: 'high',
+                        size: '1024x1536',
+                      }],
+                    });
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    for (const block of (response.output || [])) {
+                      if (block.type === 'image_generation_call' && block.result) {
+                        base64 = block.result;
+                        break;
+                      }
+                    }
+                    if (base64) break;
+                  } catch (err) {
+                    console.error(`testing-angles "${angle.name}" attempt ${attempt} failed:`, err);
+                    if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 1500));
+                  }
                 }
               }
             }
