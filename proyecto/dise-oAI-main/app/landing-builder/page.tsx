@@ -739,6 +739,160 @@ function generateTemplateJson(
   }, null, 2);
 }
 
+function generatePreviewHtml(copy: LandingCopy, brandKit: BrandKit, whatsapp: string, shipping: string): string {
+  const brand = brandKit.primary1 || '#1a1a1a';
+  const accent = brandKit.primary2 || '#e05c00';
+  const esc = (s: string) => s.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  const trustItems = shipping.split('•').filter(Boolean).map(t =>
+    `<div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#6b6b6b;">${esc(t.trim())}</div>`
+  ).join('');
+
+  const bulletsHtml = copy.bullets.map(b =>
+    `<li style="display:flex;align-items:flex-start;gap:8px;font-size:14px;color:#6b6b6b;line-height:1.5;margin-bottom:8px;"><span style="color:${brand};font-weight:700;flex-shrink:0;">✓</span>${esc(b)}</li>`
+  ).join('');
+
+  const specsHtml = (copy.specs || []).map(s =>
+    `<div style="background:#fff;padding:22px 20px;"><div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#6b6b6b;margin-bottom:8px;">${esc(s.key)}</div><div style="font-size:15px;font-weight:700;">${esc(s.value)}</div></div>`
+  ).join('');
+
+  const badgesHtml = (copy.badges || []).map(b =>
+    `<div style="display:flex;align-items:center;gap:8px;border:1.5px solid #e8e8e4;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:600;background:#fff;"><span style="font-size:16px;">${b.icon}</span>${esc(b.label)}</div>`
+  ).join('');
+
+  const ingsHtml = (copy.ingredients || []).map(ing =>
+    `<div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:14px;overflow:hidden;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:18px;padding:18px 22px;">
+        <div style="width:56px;height:56px;border-radius:12px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">${ing.icon}</div>
+        <div><div style="font-size:15px;font-weight:700;color:#fff;">${esc(ing.name)}</div><div style="font-size:13px;color:rgba(255,255,255,.55);margin-top:2px;">${esc(ing.dose)}</div></div>
+      </div>
+      <div style="padding:0 22px 20px 96px;font-size:14px;color:rgba(255,255,255,.7);line-height:1.75;border-top:1px solid rgba(255,255,255,.08);padding-top:14px;">${esc(ing.description)}</div>
+    </div>`
+  ).join('');
+
+  const tlHtml = (copy.timeline || []).map(t =>
+    `<div style="background:#fff;padding:32px 28px;position:relative;border-right:1.5px solid #e8e8e4;">
+      <div style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:${accent};background:rgba(0,0,0,.04);padding:4px 12px;border-radius:20px;margin-bottom:14px;">${esc(t.when)}</div>
+      <h4 style="font-size:16px;font-weight:700;margin:0 0 8px;">${esc(t.title)}</h4>
+      <p style="font-size:14px;color:#6b6b6b;line-height:1.65;margin:0;">${esc(t.text)}</p>
+    </div>`
+  ).join('');
+
+  const cmpRowsHtml = (copy.comparison || []).map(r =>
+    `<tr><td style="padding:13px 22px;font-size:14px;border-bottom:1px solid #e8e8e4;">${esc(r.label)}</td>
+    <td style="padding:13px 22px;font-size:14px;border-bottom:1px solid #e8e8e4;background:#fafaf7;font-weight:600;text-align:center;">${r.brand_check ? `<span style="color:#2b6636;font-weight:700;">✓</span> ` : ''}${esc(r.brand_value)}</td>
+    <td style="padding:13px 22px;font-size:14px;border-bottom:1px solid #e8e8e4;text-align:center;">${!r.alt_check ? `<span style="color:#ccc;">✗</span> ` : ''}${esc(r.alt_value)}</td></tr>`
+  ).join('');
+
+  const rvHtml = (copy.reviews || []).map(r =>
+    `<div style="background:#f7f7f5;border-radius:14px;padding:22px;border:1.5px solid #e8e8e4;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div style="width:38px;height:38px;border-radius:50%;background:${brand};color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;flex-shrink:0;">${esc(r.name.slice(0, 1).toUpperCase())}</div>
+        <strong style="font-size:14px;">${esc(r.name)}</strong>
+      </div>
+      <div style="color:#e8a920;font-size:13px;margin-bottom:6px;">★★★★★</div>
+      ${r.title ? `<div style="font-size:14px;font-weight:700;margin-bottom:4px;">${esc(r.title)}</div>` : ''}
+      <div style="font-size:13px;color:#555;line-height:1.65;">${esc(r.text)}</div>
+    </div>`
+  ).join('');
+
+  const faqHtml = (copy.faq || []).map(f =>
+    `<div style="background:#fff;border:1.5px solid #e8e8e4;border-radius:12px;overflow:hidden;margin-bottom:8px;padding:18px 20px;">
+      <div style="font-size:15px;font-weight:600;margin-bottom:8px;">${esc(f.q)}</div>
+      <div style="font-size:14px;color:#6b6b6b;line-height:1.7;">${esc(f.a)}</div>
+    </div>`
+  ).join('');
+
+  const waBtn = whatsapp ? `<a href="#" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:13px 24px;background:#25d366;color:white;border-radius:10px;font-size:15px;font-weight:600;text-decoration:none;margin-top:12px;">
+    <svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:white;"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+    Consultar por WhatsApp</a>` : '';
+
+  return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#1a1a1a;background:#fff;}
+  a{color:inherit;text-decoration:none;}
+</style>
+</head><body>
+
+<!-- HERO -->
+<div style="display:grid;grid-template-columns:55% 1fr;gap:56px;padding:48px 5% 72px;max-width:1240px;margin:0 auto;align-items:start;">
+  <div style="background:#f7f7f5;border-radius:20px;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:14px;">📸 Imágenes del producto (Shopify)</div>
+  <div style="display:flex;flex-direction:column;gap:22px;padding-top:8px;">
+    ${copy.rating_summary ? `<div style="display:flex;align-items:center;gap:10px;font-size:14px;color:#6b6b6b;"><span style="color:#e8a920;letter-spacing:2px;">★★★★★</span> ${esc(copy.rating_summary)}</div>` : ''}
+    <h1 style="font-size:28px;font-weight:700;line-height:1.15;letter-spacing:-.5px;">${esc(copy.headline)}</h1>
+    <p style="font-size:15px;color:#6b6b6b;">${esc(copy.subheadline)}</p>
+    <div style="display:flex;align-items:baseline;gap:12px;"><span style="font-size:28px;font-weight:800;color:${brand};">Precio del producto</span></div>
+    <ul style="list-style:none;">${bulletsHtml}</ul>
+    <button style="width:100%;padding:17px 24px;background:${brand};color:white;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;">Agregar al carrito</button>
+    ${waBtn}
+    ${shipping ? `<div style="display:flex;flex-direction:column;gap:7px;border-top:1px solid #e8e8e4;padding-top:16px;">${trustItems}</div>` : ''}
+    <details style="border-top:1px solid #e8e8e4;padding-top:16px;">
+      <summary style="cursor:pointer;font-size:14px;font-weight:600;">Descripción del producto</summary>
+      <div style="padding-top:12px;font-size:14px;color:#6b6b6b;line-height:1.7;">${esc(copy.description)}</div>
+    </details>
+  </div>
+</div>
+
+<!-- SPECS -->
+${specsHtml ? `<div style="background:#f7f7f5;"><div style="padding:72px 5%;max-width:1200px;margin:0 auto;">
+  <span style="font-size:11px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#6b6b6b;display:block;margin-bottom:12px;">Detalles</span>
+  <h2 style="font-size:32px;font-weight:700;margin-bottom:40px;">${esc(copy.specs_title)}</h2>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1.5px;background:#e8e8e4;border:1.5px solid #e8e8e4;border-radius:14px;overflow:hidden;">${specsHtml}</div>
+  ${badgesHtml ? `<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:40px;">${badgesHtml}</div>` : ''}
+</div></div>` : ''}
+
+<!-- INGREDIENTS -->
+${ingsHtml ? `<div style="background:${brand};color:#fff;"><div style="padding:72px 5%;max-width:1200px;margin:0 auto;">
+  <span style="font-size:11px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:rgba(255,255,255,.5);display:block;margin-bottom:12px;">Lo que hay adentro</span>
+  <h2 style="font-size:32px;font-weight:700;color:#fff;margin-bottom:40px;">${esc(copy.ingredients_title)}</h2>
+  <div style="max-width:820px;">${ingsHtml}</div>
+</div></div>` : ''}
+
+<!-- TIMELINE -->
+${tlHtml ? `<div style="background:#f7f7f5;"><div style="padding:72px 5%;max-width:1200px;margin:0 auto;">
+  <span style="font-size:11px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#6b6b6b;display:block;margin-bottom:12px;">Resultados</span>
+  <h2 style="font-size:32px;font-weight:700;margin-bottom:40px;">${esc(copy.timeline_title)}</h2>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1.5px;background:#e8e8e4;border:1.5px solid #e8e8e4;border-radius:18px;overflow:hidden;">${tlHtml}</div>
+</div></div>` : ''}
+
+<!-- COMPARISON -->
+${cmpRowsHtml ? `<div><div style="padding:72px 5%;max-width:1200px;margin:0 auto;">
+  <span style="font-size:11px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#6b6b6b;display:block;margin-bottom:12px;">Comparativa</span>
+  <h2 style="font-size:32px;font-weight:700;margin-bottom:40px;">${esc(copy.comparison_title)}</h2>
+  <table style="width:100%;border-collapse:separate;border-spacing:0;border-radius:14px;overflow:hidden;border:1.5px solid #e8e8e4;">
+    <thead style="background:#f2f2ef;"><tr>
+      <th style="padding:16px 22px;text-align:left;font-size:14px;font-weight:600;color:#6b6b6b;border-bottom:1.5px solid #e8e8e4;"></th>
+      <th style="padding:16px 22px;text-align:center;font-size:15px;font-weight:800;color:${brand};border-bottom:1.5px solid #e8e8e4;">${esc(copy.comparison_brand_col)}</th>
+      <th style="padding:16px 22px;text-align:center;font-size:14px;font-weight:600;color:#6b6b6b;border-bottom:1.5px solid #e8e8e4;">${esc(copy.comparison_alt_col)}</th>
+    </tr></thead>
+    <tbody>${cmpRowsHtml}</tbody>
+  </table>
+</div></div>` : ''}
+
+<!-- REVIEWS -->
+${rvHtml ? `<div style="background:#f7f7f5;"><div style="padding:72px 5%;max-width:1200px;margin:0 auto;">
+  ${copy.rating_summary ? `<div style="display:flex;align-items:baseline;gap:16px;padding-bottom:28px;border-bottom:1.5px solid #e8e8e4;margin-bottom:40px;"><div style="font-size:64px;font-weight:900;line-height:1;letter-spacing:-3px;">4.9</div><div><div style="color:#e8a920;font-size:20px;">★★★★★</div><div style="font-size:14px;color:#6b6b6b;">${esc(copy.rating_summary)}</div></div></div>` : ''}
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">${rvHtml}</div>
+</div></div>` : ''}
+
+<!-- FAQ -->
+${faqHtml ? `<div><div style="padding:72px 5%;max-width:1200px;margin:0 auto;text-align:center;">
+  <span style="font-size:11px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#6b6b6b;display:block;margin-bottom:12px;">Preguntas frecuentes</span>
+  <div style="max-width:720px;margin:40px auto 0;text-align:left;">${faqHtml}</div>
+</div></div>` : ''}
+
+<!-- CTA FINAL -->
+<div style="background:${brand};color:white;padding:72px 5%;text-align:center;">
+  <h2 style="font-size:32px;font-weight:700;color:white;margin-bottom:16px;">${esc(copy.cta_headline)}</h2>
+  <p style="font-size:16px;opacity:.85;margin-bottom:28px;">${esc(copy.cta_subtext)}</p>
+  <button style="width:100%;max-width:360px;padding:17px 24px;background:white;color:${brand};border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;display:block;margin:0 auto 12px;">Agregar al carrito</button>
+  ${waBtn}
+</div>
+
+</body></html>`;
+}
+
 export default function LandingBuilderPage() {
   useRequireAuth();
   const supabase = createSupabaseBrowser();
@@ -751,6 +905,7 @@ export default function LandingBuilderPage() {
   const [publishStatus, setPublishStatus] = useState<'idle' | 'publishing' | 'ok' | 'error'>('idle');
   const [publishError, setPublishError] = useState('');
   const [publishedTheme, setPublishedTheme] = useState('');
+  const [previewTab, setPreviewTab] = useState<'preview' | 'copy'>('preview');
 
   // Step 1 — Producto
   const [productUrl, setProductUrl] = useState('');
@@ -1174,9 +1329,29 @@ export default function LandingBuilderPage() {
                 )}
               </div>
 
-              {/* Preview del copy generado */}
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-6">
-                <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest">Preview del copy generado</h3>
+              {/* Vista previa / Copy */}
+              <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+                <div className="flex border-b border-gray-200">
+                  {(['preview', 'copy'] as const).map(tab => (
+                    <button key={tab} onClick={() => setPreviewTab(tab)}
+                      className={`flex-1 py-3 text-sm font-semibold transition-colors ${previewTab === tab ? 'bg-gray-900 text-white' : 'text-gray-500 hover:bg-gray-50'}`}>
+                      {tab === 'preview' ? '👁 Vista previa' : '📋 Copy generado'}
+                    </button>
+                  ))}
+                </div>
+
+                {previewTab === 'preview' && (
+                  <iframe
+                    srcDoc={generatePreviewHtml(copy, brandKit, whatsapp, shipping)}
+                    className="w-full border-0"
+                    style={{ height: '80vh' }}
+                    title="Vista previa landing"
+                  />
+                )}
+
+                {previewTab === 'copy' && (
+                <div className="p-6 space-y-6">
+                <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest">Copy generado</h3>
 
                 <div className="space-y-1">
                   <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Headline</p>
@@ -1260,6 +1435,8 @@ export default function LandingBuilderPage() {
                   <p className="text-base font-bold text-gray-900">{copy.cta_headline}</p>
                   <p className="text-sm text-gray-500 mt-1">{copy.cta_subtext}</p>
                 </div>
+                </div>
+                )}
               </div>
 
               <button
