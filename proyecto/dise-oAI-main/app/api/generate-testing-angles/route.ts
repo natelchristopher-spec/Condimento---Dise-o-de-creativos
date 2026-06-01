@@ -33,9 +33,29 @@ export interface MessageAngle {
   name: string;
   angle?: string;
   hook: string;
+  subline?: string;
   emphasis: string;
+  concept?: string;
+  format?: string;
   level?: 'product' | 'category';
 }
+
+const ANGLE_FORMAT_STYLES: Record<string, string> = {
+  // Fashion
+  'Fashion Editorial': 'High-fashion editorial photography. Magazine-quality composition. Premium, aspirational, slightly moody. Clean studio or cinematic urban setting. The garment is the absolute visual hero — every element of the composition built around it.',
+  'Street Style': 'Candid urban fashion. Natural outdoor setting, city environment. Person in motion or at ease. Authentic, contemporary, relatable energy. Brand elements minimal — colors only in graphic overlays.',
+  'Lifestyle Aspiracional': 'Aspirational lifestyle scene. Person embodying the identity this garment enables. Natural energy, in a setting that reinforces the aspiration. The garment is styled and present, not just worn.',
+  'Studio Directo': 'Clean studio direct-response. Garment is the hero. Solid or gradient background using brand colors. High-contrast bold typography. Conversion-focused, uncluttered.',
+  // Health / supplement / cosmetic
+  'Lifestyle Activo': 'Active lifestyle setting — gym, outdoor, kitchen post-training. Person in motion or post-activity. Product naturally integrated. Energetic, authentic, high-contrast mood.',
+  'Producto Hero': 'Product occupies 60-70% of frame. Clean brand-colored background. Typography prominent. No lifestyle distractions — pure product focus.',
+  'Demostración': 'Product in active use. Shows the benefit, the moment of use, or the result. Clear, action-oriented, informative without being clinical.',
+  'Problema-Solución': 'Visual tension narrative. Scene evokes the problem or frustration, product is the clear visual resolution. Mood shifts from tension to relief.',
+  // General
+  'Oferta-Precio': 'Bold direct-response graphic design. Brand color block prominent. Offer element clearly displayed. Product large and central. High-contrast, urgency-driven composition.',
+  'Ocasión de Uso': 'Specific moment or occasion where this product fits naturally. Context and setting are the visual hero. Product appears seamlessly within the scene.',
+  'Lifestyle con Mascota': 'Owner and pet sharing a natural, warm moment. Product integrated into their routine. Authentic, emotional, lifestyle-focused.',
+};
 
 const CLOTHING_TERMS = /\b(prenda|vestido|pantalón|remera|camiseta|camisa|campera|buzo|short|pollera|falda|indumentaria|calzado|zapatilla|zapato|tela|tejido|outfit|jean|jogger|bikini|traje|garment|clothing|apparel|fabric|dress|shirt|pants|jacket|hoodie|sneaker|shoe|top|blouse|skirt|coat|sleeve|collar|hem|knit|denim|cotton|polyester)\b/i;
 
@@ -505,22 +525,46 @@ Este es un producto alimenticio. Los ángulos DEBEN respetar estas reglas:
 ✅ CORRECTO: tensiones de sabor, ocasión, practicidad, placer, momento compartido
 ✅ CORRECTO: usar los claims nutricionales que el usuario incluyó textualmente en el brief` : ''}
 
+---
+
+FORMATO Y CONCEPTO VISUAL — para cada ángulo:
+
+Elegí el formato más adecuado de esta lista: ${isFashionProduct
+  ? 'Fashion Editorial / Street Style / Lifestyle Aspiracional / Studio Directo'
+  : (isHealthProduct || isCosmeticProduct)
+  ? 'Lifestyle Activo / Producto Hero / Problema-Solución / Oferta-Precio / Demostración'
+  : isPetProduct
+  ? 'Lifestyle con Mascota / Producto Hero / Ocasión de Uso / Problema-Solución'
+  : isFoodProduct
+  ? 'Ocasión de Uso / Producto Hero / Demostración / Lifestyle Aspiracional'
+  : 'Producto Hero / Lifestyle Aspiracional / Problema-Solución / Oferta-Precio / Ocasión de Uso'}
+
+CONCEPTO VISUAL: describí en 1-2 oraciones la ejecución específica de ESTE ángulo — qué hay en el frame, cómo está posicionado el producto/persona, qué mood y atmósfera transmite, qué elementos gráficos o de diseño refuerzan el mensaje. Sé específico para este ángulo y nicho — no genérico.
+
+SUBLINE: una línea corta de apoyo al headline, máx 7 palabras, que refuerce la tensión o propuesta del ángulo.
+
 Respondé SOLO con JSON:
 {
   "product_angles": [
     {
-      "name": "etiqueta descriptiva simple, máx 3 palabras, que diga DE QUÉ trata el ángulo — para que el cliente entienda de un vistazo (ej: 'Precio / Oferta', 'Falta de Tiempo', 'Sin Resultados', 'Primera Compra', 'Estilo de Vida'). NO uses frases de copy ni metáforas.",
-      "angle": "descripción de la hipótesis estratégica completa: persona específica + tensión concreta + por qué este producto la resuelve (2-3 oraciones)",
-      "hook": "cómo abrís el anuncio para que esa persona sienta que le hablás a ella (max 8 palabras, español, directo, que detenga el scroll)",
-      "emphasis": "qué aspecto de la tensión debe dominar el visual — qué tiene que SENTIR o VER la persona al ver la imagen"
+      "name": "etiqueta descriptiva simple, máx 3 palabras (ej: 'Precio / Oferta', 'Falta de Tiempo', 'Sin Resultados'). NO uses frases de copy.",
+      "angle": "hipótesis estratégica: persona específica + tensión concreta + por qué este producto la resuelve (2-3 oraciones)",
+      "hook": "máx 8 palabras, español, directo, que detenga el scroll",
+      "subline": "línea de apoyo al headline, máx 7 palabras",
+      "emphasis": "qué tiene que SENTIR o VER la persona al ver la imagen",
+      "format": "nombre del formato elegido de la lista",
+      "concept": "ejecución visual específica: qué hay en el frame, composición, mood, setting, elementos gráficos — 1-2 oraciones concretas"
     }
   ],
   "category_angles": [
     {
-      "name": "etiqueta descriptiva simple, máx 3 palabras, que diga DE QUÉ trata el ángulo — para que el cliente entienda de un vistazo (ej: 'Precio / Oferta', 'Falta de Tiempo', 'Sin Resultados', 'Primera Compra', 'Estilo de Vida'). NO uses frases de copy ni metáforas.",
-      "angle": "descripción de la hipótesis estratégica completa: persona específica + tensión de estilo de vida + por qué esta categoría de producto aparece como la solución (2-3 oraciones)",
-      "hook": "cómo abrís el anuncio para que esa persona sienta que le hablás a ella (max 8 palabras, español, directo, que detenga el scroll)",
-      "emphasis": "qué aspecto de la tensión debe dominar el visual — qué tiene que SENTIR o VER la persona al ver la imagen"
+      "name": "etiqueta descriptiva simple, máx 3 palabras (ej: 'Estilo de Vida', 'Ocasión', 'Primera Compra'). NO uses frases de copy.",
+      "angle": "hipótesis estratégica: persona + tensión de estilo de vida + por qué esta categoría la resuelve (2-3 oraciones)",
+      "hook": "máx 8 palabras, español, directo, que detenga el scroll",
+      "subline": "línea de apoyo al headline, máx 7 palabras",
+      "emphasis": "qué tiene que SENTIR o VER la persona al ver la imagen",
+      "format": "nombre del formato elegido de la lista",
+      "concept": "ejecución visual específica: qué hay en el frame, composición, mood, setting, elementos gráficos — 1-2 oraciones concretas"
     }
   ]
 }`;
@@ -535,7 +579,10 @@ Respondé SOLO con JSON:
               name: a.name || `Ángulo Producto ${idx}`,
               angle: a.angle || '',
               hook: a.hook || '',
+              subline: a.subline || '',
               emphasis: a.emphasis || '',
+              concept: a.concept || '',
+              format: a.format || '',
               level: 'product' as const,
             }));
           const categoryAngles: MessageAngle[] = ((parsed.category_angles as Omit<MessageAngle, 'key' | 'level'>[]) || [])
@@ -545,7 +592,10 @@ Respondé SOLO con JSON:
               name: a.name || `Ángulo Categoría ${idx}`,
               angle: a.angle || '',
               hook: a.hook || '',
+              subline: a.subline || '',
               emphasis: a.emphasis || '',
+              concept: a.concept || '',
+              format: a.format || '',
               level: 'category' as const,
             }));
           return { productAngles, categoryAngles };
@@ -557,7 +607,7 @@ Respondé SOLO con JSON:
               model: 'gpt-4o',
               messages: [{ role: 'user', content: anglesPrompt }],
               response_format: { type: 'json_object' },
-              max_tokens: 1500,
+              max_tokens: 2000,
               temperature: 0.9,
             });
             return JSON.parse(res.choices[0].message.content || '{}');
@@ -647,11 +697,12 @@ Respondé SOLO con JSON:
               fullPrompt = [
                 garmentSection,
                 personSection,
-                compositionSection,
+                angle.format ? `FORMATO VISUAL — ${angle.format}: ${ANGLE_FORMAT_STYLES[angle.format] || ''}` : compositionSection,
+                angle.concept ? `CONCEPTO VISUAL: ${angle.concept}` : '',
                 `HEADLINE (mostrá este texto exacto, grande y en negrita): "${angle.hook}"`,
-                angle.angle ? `[CONTEXTO CREATIVO INVISIBLE — SOLO ORIENTA EL VISUAL, NO MOSTRAR COMO TEXTO EN LA IMAGEN]: ${angle.angle}` : '',
-                `[DIRECCIÓN VISUAL — NO MOSTRAR COMO TEXTO]: ${angle.emphasis}.`,
-                'FORMATO META AD — REGLA CRÍTICA DE TEXTO: Este es un anuncio para Meta (Facebook/Instagram). Mantené el texto al mínimo y suficientemente grande para leer en pantalla de celular. SOLO el headline y opcionalmente una subline breve son texto visible. El contexto del ángulo de arriba es SOLO para orientar la composición — NUNCA se renderiza como body copy.',
+                angle.subline ? `SUBLINE (mostrá este texto más pequeño bajo el headline): "${angle.subline}"` : '',
+                angle.angle ? `[CONTEXTO ESTRATÉGICO — NO texto a mostrar en la imagen]: ${angle.angle}` : '',
+                'MOBILE-FIRST TEXT RULE: headline y subline son el único texto visible. Cero párrafos. Cero body copy.',
                 `Marca: ${brandKit.name}. Colores de marca (SOLO para fondos, textos y elementos gráficos — NUNCA aplicar al producto): ${brandKit.primary1}, ${brandKit.primary2}, ${brandKit.primary3}. Tipografía: ${brandKit.typography || 'bold sans-serif'}.`,
                 `Contexto de marca: ${brandKitContext}`,
                 'Fashion editorial photography — natural skin tones, soft studio or lifestyle lighting, 85mm lens equivalent, high-end fashion campaign quality, photorealistic.',
@@ -707,11 +758,12 @@ Respondé SOLO con JSON:
               fullPrompt = [
                 productConstraint,
                 personInstruction,
-                compositionInstruction,
+                angle.format ? `VISUAL STYLE — ${angle.format}: ${ANGLE_FORMAT_STYLES[angle.format] || ''}` : compositionInstruction,
+                angle.concept ? `VISUAL CONCEPT: ${angle.concept}` : '',
                 `HEADLINE (display this exact text, large and bold): "${angle.hook}"`,
-                angle.angle ? `[ANGLE CONTEXT — creative direction only, DO NOT render as text in image]: ${angle.angle}` : '',
-                `[VISUAL EMPHASIS — guides composition, DO NOT render as text]: ${angle.emphasis}.`,
-                'MOBILE-FIRST TEXT RULE: keep text minimal and large enough to read on a phone screen. ONLY the headline is visible text. Do NOT copy the angle context as body copy. Zero paragraphs. Zero extra phrases.',
+                angle.subline ? `SUBLINE (display this text smaller below headline): "${angle.subline}"` : '',
+                angle.angle ? `[ANGLE CONTEXT — strategic direction, DO NOT render as text in image]: ${angle.angle}` : '',
+                'MOBILE-FIRST TEXT RULE: headline and subline are the only visible text. Zero paragraphs. Zero body copy.',
                 `Brand palette FOR TEXT AND BACKGROUNDS ONLY — do not apply to product: ${brandKit.name} — ${brandKit.primary1}, ${brandKit.primary2}, ${brandKit.primary3}. Typography: ${brandKit.typography || 'bold sans-serif'}.`,
                 `Brand context: ${brandKitContext}`,
                 photographyStyle,
@@ -764,13 +816,12 @@ Respondé SOLO con JSON:
                   personDescription
                     ? `PERSONA: ${personDescription}. La persona lleva una prenda de tipo ${garmentType} — el color y diseño exactos de la prenda se aplican en el paso siguiente.`
                     : `Persona: modelo fashion aspiracional, actitud natural y confiada. Lleva una prenda de tipo ${garmentType}.`,
-                  isCategory
-                    ? 'COMPOSICIÓN: Lifestyle fashion. Escena o contexto donde se usaría esta prenda — el foco es el lifestyle, la ocasión o la emoción. Aspiracional y relatable.'
-                    : 'COMPOSICIÓN: Fashion direct-response. La persona lleva la prenda. Fondo limpio o setting mínimo. Actitud aspiracional y directa.',
+                  angle.format ? `FORMATO VISUAL — ${angle.format}: ${ANGLE_FORMAT_STYLES[angle.format] || ''}` : (isCategory ? 'COMPOSICIÓN: Lifestyle fashion aspiracional.' : 'COMPOSICIÓN: Fashion direct-response, prenda como héroe visual.'),
+                  angle.concept ? `CONCEPTO VISUAL: ${angle.concept}` : '',
                   `HEADLINE (mostrá este texto exacto, grande y en negrita): "${angle.hook}"`,
-                  angle.angle ? `[CONTEXTO DEL ÁNGULO — dirección creativa, NO texto a mostrar en la imagen]: ${angle.angle}` : '',
-                  `[ÉNFASIS VISUAL — orienta la composición, NO texto a mostrar]: ${angle.emphasis}.`,
-                  'MOBILE-FIRST TEXT RULE: mantené el texto al mínimo y suficientemente grande para leer en pantalla de celular. SOLO el headline es texto visible. No copies el contexto del ángulo como body copy. Cero párrafos. Cero frases adicionales.',
+                  angle.subline ? `SUBLINE (mostrá este texto más pequeño bajo el headline): "${angle.subline}"` : '',
+                  angle.angle ? `[CONTEXTO ESTRATÉGICO — NO texto a mostrar en la imagen]: ${angle.angle}` : '',
+                  'MOBILE-FIRST TEXT RULE: headline y subline son el único texto visible. Cero párrafos. Cero body copy.',
                   `Marca: ${brandKit.name}. Colores de marca (SOLO para fondos, textos y elementos gráficos): ${brandKit.primary1}, ${brandKit.primary2}, ${brandKit.primary3}. Tipografía: ${brandKit.typography || 'bold sans-serif'}.`,
                   `Contexto de marca: ${brandKitContext}`,
                   'Fashion editorial photography — natural skin tones, soft studio or lifestyle lighting, 85mm lens equivalent, photorealistic.',
