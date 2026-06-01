@@ -5,7 +5,40 @@ import { createSupabaseBrowser } from '@/app/lib/supabase-browser';
 import { useRequireAuth } from '@/app/lib/use-auth';
 import Sidebar from '@/app/components/Sidebar';
 
-type Tab = 'feed' | 'meta';
+type Tab = 'discover' | 'feed' | 'meta';
+
+// ── Discover types ──────────────────────────────────────────────────────────
+const NICHES = [
+  { icon: '💊', label: 'Suplementos' },
+  { icon: '🏋️', label: 'Fitness' },
+  { icon: '🏠', label: 'Hogar' },
+  { icon: '💄', label: 'Belleza' },
+  { icon: '🐾', label: 'Mascotas' },
+  { icon: '👶', label: 'Bebés' },
+  { icon: '🍃', label: 'Bienestar' },
+  { icon: '📱', label: 'Gadgets' },
+];
+
+interface Opportunity {
+  keyword: string;
+  need: string;
+  audience: string;
+  urgency: 'alta' | 'media';
+}
+
+interface Analysis {
+  pain_quote: string;
+  market_gap: string;
+  validation: string;
+  ad_angle: string;
+  dropi_es: string;
+  dropi_url: string;
+  confidence: 'alta' | 'media' | 'baja';
+  ml_product: { title: string; price: number; currency: string; permalink: string } | null;
+  meta_signal: string | null;
+}
+
+type DiscoverStep = 'input' | 'scanning' | 'opportunities' | 'analyzing' | 'result';
 
 interface ScannedProduct {
   id: number;
@@ -94,7 +127,19 @@ export default function WinningProductsPage() {
   useRequireAuth();
   const supabase = createSupabaseBrowser();
 
-  const [tab, setTab] = useState<Tab>('feed');
+  const [tab, setTab] = useState<Tab>('discover');
+
+  // ── Discover state ─────────────────────────────────────────────────────────
+  const [discoverStep, setDiscoverStep] = useState<DiscoverStep>('input');
+  const [niche, setNiche] = useState('');
+  const [customNiche, setCustomNiche] = useState('');
+  const [discoverGeo, setDiscoverGeo] = useState('MX');
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [selectedOpp, setSelectedOpp] = useState<Opportunity | null>(null);
+  const [analysis, setAnalysis] = useState<Analysis | null>(null);
+  const [discoverError, setDiscoverError] = useState('');
+
+  // ── Store tracker state ────────────────────────────────────────────────────
   const [stores, setStores] = useState<StoreEntry[]>([]);
   const [products, setProducts] = useState<ScannedProduct[]>([]);
   const [loading, setLoading] = useState(false);
@@ -226,6 +271,71 @@ export default function WinningProductsPage() {
 
   const refresh = () => loadAllProducts(stores, true);
 
+  // ── Discover handlers ──────────────────────────────────────────────────────
+  const activeNiche = customNiche.trim() || niche;
+
+  const scanTrends = async () => {
+    if (!activeNiche) return;
+    setDiscoverStep('scanning');
+    setDiscoverError('');
+    try {
+      const res = await fetch('/api/winning/trends', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ geo: discoverGeo, niche: activeNiche }),
+      });
+      const data: { opportunities?: Opportunity[]; error?: string } = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Error al escanear');
+      if (!data.opportunities?.length) throw new Error('No se encontraron oportunidades hoy. Probá otro nicho o país.');
+      setOpportunities(data.opportunities);
+      setDiscoverStep('opportunities');
+    } catch (e) {
+      setDiscoverError(e instanceof Error ? e.message : 'Error inesperado');
+      setDiscoverStep('input');
+    }
+  };
+
+  const analyzeOpportunity = async (opp: Opportunity) => {
+    setSelectedOpp(opp);
+    setDiscoverStep('analyzing');
+    setDiscoverError('');
+    try {
+      const res = await fetch('/api/winning/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keyword: opp.keyword, need: opp.need, audience: opp.audience, geo: discoverGeo }),
+      });
+      const data: Analysis & { error?: string } = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Error al analizar');
+      setAnalysis(data);
+      setDiscoverStep('result');
+    } catch (e) {
+      setDiscoverError(e instanceof Error ? e.message : 'Error inesperado');
+      setDiscoverStep('opportunities');
+    }
+  };
+
+  const resetDiscover = () => {
+    setDiscoverStep('input');
+    setOpportunities([]);
+    setSelectedOpp(null);
+    setAnalysis(null);
+    setDiscoverError('');
+  };
+
+  const goToLanding = () => {
+    if (!analysis || !selectedOpp) return;
+    const brief = `Necesidad: ${selectedOpp.need}\nAudiencia: ${selectedOpp.audience}\nÁngulo: ${analysis.ad_angle}\nGap del mercado: ${analysis.market_gap}`;
+    sessionStorage.setItem('winning_brief', brief);
+    window.location.href = '/landing-builder';
+  };
+
+  const confidenceColor: Record<string, string> = {
+    alta: 'bg-emerald-100 text-emerald-700',
+    media: 'bg-amber-100 text-amber-700',
+    baja: 'bg-gray-100 text-gray-500',
+  };
+
   const sortedProducts = [...products]
     .filter(p => !filterAvailable || p.available)
     .sort((a, b) => {
@@ -270,8 +380,9 @@ export default function WinningProductsPage() {
           {/* Tabs */}
           <div className="flex gap-1 p-1 bg-gray-100 rounded-xl w-fit mb-6">
             {([
-              { id: 'feed' as Tab, label: '📦  Productos' },
-              { id: 'meta' as Tab, label: '📣  Meta Ads LATAM' },
+              { id: 'discover' as Tab, label: '🔍  Descubrí' },
+              { id: 'feed' as Tab, label: '📦  Tiendas' },
+              { id: 'meta' as Tab, label: '📣  Meta Ads' },
             ]).map(t => (
               <button
                 key={t.id}
@@ -284,6 +395,171 @@ export default function WinningProductsPage() {
               </button>
             ))}
           </div>
+
+          {/* ── DISCOVER TAB ── */}
+          {tab === 'discover' && (
+            <div className="max-w-2xl space-y-4">
+
+              {/* INPUT */}
+              {discoverStep === 'input' && (
+                <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">¿En qué nicho?</label>
+                    <div className="grid grid-cols-4 gap-2 mb-3">
+                      {NICHES.map(n => (
+                        <button key={n.label} onClick={() => { setNiche(n.label); setCustomNiche(''); }}
+                          className={`flex flex-col items-center gap-1 py-3 rounded-xl border text-xs font-medium transition-all ${
+                            niche === n.label && !customNiche
+                              ? 'border-[#e42820] bg-[#e42820]/5 text-[#e42820]'
+                              : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+                          }`}>
+                          <span className="text-lg">{n.icon}</span>{n.label}
+                        </button>
+                      ))}
+                    </div>
+                    <input value={customNiche} onChange={e => { setCustomNiche(e.target.value); setNiche(''); }}
+                      placeholder="O escribí el tuyo: ropa deportiva, cocina, yoga..."
+                      className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">País</label>
+                    <div className="flex gap-2 flex-wrap">
+                      {LATAM_COUNTRIES.map(c => (
+                        <button key={c.code} onClick={() => setDiscoverGeo(c.code)}
+                          className={`px-4 py-2 rounded-xl border text-sm font-medium transition-all ${
+                            discoverGeo === c.code
+                              ? 'border-[#e42820] bg-[#e42820]/5 text-[#e42820]'
+                              : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                          }`}>
+                          {c.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {discoverError && <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-600">{discoverError}</div>}
+                  <button onClick={scanTrends} disabled={!activeNiche}
+                    className="w-full py-3 bg-[#e42820] text-white rounded-xl text-sm font-semibold disabled:opacity-40 hover:bg-[#c92218] transition-colors">
+                    Detectar oportunidades →
+                  </button>
+                </div>
+              )}
+
+              {/* SCANNING */}
+              {discoverStep === 'scanning' && (
+                <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
+                  <div className="w-12 h-12 rounded-full border-2 border-[#e42820] border-t-transparent animate-spin mx-auto mb-4" />
+                  <p className="text-sm font-semibold text-gray-700">Escaneando tendencias en {LATAM_COUNTRIES.find(c => c.code === discoverGeo)?.label}...</p>
+                  <p className="text-xs text-gray-400 mt-2">Google Trends → filtro de intención de compra → IA</p>
+                </div>
+              )}
+
+              {/* OPPORTUNITIES */}
+              {discoverStep === 'opportunities' && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-sm text-gray-500"><span className="font-semibold text-gray-900">{opportunities.length} oportunidades</span> en {LATAM_COUNTRIES.find(c => c.code === discoverGeo)?.label} — {activeNiche}</p>
+                    <button onClick={resetDiscover} className="text-xs text-gray-400 hover:text-gray-600">← Nueva búsqueda</button>
+                  </div>
+                  {discoverError && <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-600">{discoverError}</div>}
+                  {opportunities.map((opp, i) => (
+                    <div key={i} className="bg-white rounded-2xl border border-gray-200 p-5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded-full mb-2 ${opp.urgency === 'alta' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>
+                            {opp.urgency === 'alta' ? '🔴 Alta intención' : '🟡 Media intención'}
+                          </span>
+                          <p className="text-xs text-gray-400 font-mono mb-1">"{opp.keyword}"</p>
+                          <p className="text-sm font-semibold text-gray-900 mb-1">{opp.need}</p>
+                          <p className="text-xs text-gray-500">{opp.audience}</p>
+                        </div>
+                        <button onClick={() => analyzeOpportunity(opp)}
+                          className="shrink-0 px-4 py-2 bg-gray-900 text-white rounded-xl text-xs font-semibold hover:bg-gray-700 transition-colors whitespace-nowrap">
+                          Analizar →
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* ANALYZING */}
+              {discoverStep === 'analyzing' && selectedOpp && (
+                <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
+                  <div className="w-12 h-12 rounded-full border-2 border-[#e42820] border-t-transparent animate-spin mx-auto mb-4" />
+                  <p className="text-sm font-semibold text-gray-700">Analizando "{selectedOpp.keyword}"...</p>
+                  <p className="text-xs text-gray-400 mt-2">MercadoLibre reviews · Meta Ads · síntesis IA</p>
+                </div>
+              )}
+
+              {/* RESULT */}
+              {discoverStep === 'result' && analysis && selectedOpp && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <button onClick={() => setDiscoverStep('opportunities')} className="text-xs text-gray-400 hover:text-gray-600">← Volver</button>
+                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${confidenceColor[analysis.confidence]}`}>Confianza {analysis.confidence}</span>
+                  </div>
+                  {discoverError && <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-600">{discoverError}</div>}
+
+                  <div className="bg-gray-900 rounded-2xl p-6">
+                    <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-3">Lo que dice el comprador</p>
+                    <p className="text-white text-lg font-semibold leading-snug">&ldquo;{analysis.pain_quote}&rdquo;</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-white rounded-2xl border border-gray-200 p-4">
+                      <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-2">Gap del mercado</p>
+                      <p className="text-sm text-gray-700 leading-relaxed">{analysis.market_gap}</p>
+                    </div>
+                    <div className="bg-white rounded-2xl border border-gray-200 p-4">
+                      <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-2">Validación</p>
+                      <p className="text-sm text-gray-700 leading-relaxed">{analysis.validation}</p>
+                      {analysis.meta_signal && <p className="text-xs text-gray-500 mt-2 pt-2 border-t border-gray-100">{analysis.meta_signal}</p>}
+                    </div>
+                  </div>
+
+                  <div className="bg-[#e42820]/5 border border-[#e42820]/20 rounded-2xl p-5">
+                    <p className="text-xs text-[#e42820] font-semibold uppercase tracking-wider mb-2">Ángulo de ad listo</p>
+                    <p className="text-lg font-bold text-gray-900">&ldquo;{analysis.ad_angle}&rdquo;</p>
+                  </div>
+
+                  {analysis.ml_product && (
+                    <div className="bg-white rounded-2xl border border-gray-200 p-4 flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-1">Precio de venta referencia (ML)</p>
+                        <p className="text-sm text-gray-700 font-medium truncate">{analysis.ml_product.title}</p>
+                        <p className="text-base font-bold text-gray-900 mt-0.5">{analysis.ml_product.currency} {analysis.ml_product.price.toLocaleString()}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">Precio al que hoy lo vende la competencia</p>
+                      </div>
+                      <a href={analysis.ml_product.permalink} target="_blank" rel="noopener" className="shrink-0 text-xs text-gray-400 hover:text-gray-700 underline">Ver →</a>
+                    </div>
+                  )}
+
+                  <div className="bg-white rounded-2xl border border-gray-200 p-5">
+                    <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-3">Buscar proveedor</p>
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Término de búsqueda</p>
+                        <p className="text-sm font-bold text-gray-900 font-mono">&ldquo;{analysis.dropi_es}&rdquo;</p>
+                      </div>
+                      <a href={analysis.dropi_url} target="_blank" rel="noopener"
+                        className="shrink-0 flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-gray-700 transition-colors">
+                        Buscar en Dropi ↗
+                      </a>
+                    </div>
+                  </div>
+
+                  <button onClick={goToLanding}
+                    className="w-full py-3 bg-[#e42820] text-white rounded-xl text-sm font-semibold hover:bg-[#c92218] transition-colors">
+                    Crear landing con este brief →
+                  </button>
+                  <button onClick={resetDiscover}
+                    className="w-full py-3 border border-gray-200 rounded-xl text-sm text-gray-500 hover:bg-gray-50 transition-colors">
+                    Nueva búsqueda
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* ── FEED TAB ── */}
           {tab === 'feed' && (
