@@ -228,7 +228,10 @@ async function uploadBase64(
         .from(STORAGE_BUCKET)
         .upload(path, new Blob([bytes.buffer as ArrayBuffer], { type: 'image/jpeg' }), { contentType: 'image/jpeg', upsert: true });
       if (!error) return true;
-    } catch { /* network error — retry */ }
+      if (attempt === 3) console.error('[uploadBase64] Supabase error:', error.message, 'path:', path);
+    } catch (e) {
+      if (attempt === 3) console.error('[uploadBase64] Network error:', e, 'path:', path);
+    }
     if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 1000));
   }
   return false;
