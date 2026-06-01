@@ -24,7 +24,7 @@ function isRefusal(text: string): boolean {
     lower.includes("i'm sorry") || lower.includes("i cannot") || lower.includes("i can't") ||
     lower.includes("cannot assist") || lower.includes("can't assist") ||
     lower.includes("lo siento") || lower.includes("no puedo ayudar") || lower.includes("no puedo asistir") ||
-    lower.includes("no puedo") || lower.includes("no es posible") || lower.includes("lamentablemente no")
+    lower.includes("no es posible") || lower.includes("lamentablemente no")
   );
 }
 
@@ -33,9 +33,29 @@ export interface MessageAngle {
   name: string;
   angle?: string;
   hook: string;
+  subline?: string;
   emphasis: string;
+  concept?: string;
+  format?: string;
   level?: 'product' | 'category';
 }
+
+const ANGLE_FORMAT_STYLES: Record<string, string> = {
+  // Fashion
+  'Fashion Editorial': 'High-fashion editorial photography. Magazine-quality composition. Premium, aspirational, slightly moody. Clean studio or cinematic urban setting. The garment is the absolute visual hero — every element of the composition built around it.',
+  'Street Style': 'Candid urban fashion. Natural outdoor setting, city environment. Person in motion or at ease. Authentic, contemporary, relatable energy. Brand elements minimal — colors only in graphic overlays.',
+  'Lifestyle Aspiracional': 'Aspirational lifestyle scene. Person embodying the identity this garment enables. Natural energy, in a setting that reinforces the aspiration. The garment is styled and present, not just worn.',
+  'Studio Directo': 'Clean studio direct-response. Garment is the hero. Solid or gradient background using brand colors. High-contrast bold typography. Conversion-focused, uncluttered.',
+  // Health / supplement / cosmetic
+  'Lifestyle Activo': 'Active lifestyle setting — gym, outdoor, kitchen post-training. Person in motion or post-activity. Product naturally integrated. Energetic, authentic, high-contrast mood.',
+  'Producto Hero': 'Product occupies 60-70% of frame. Clean brand-colored background. Typography prominent. No lifestyle distractions — pure product focus.',
+  'Demostración': 'Product in active use. Shows the benefit, the moment of use, or the result. Clear, action-oriented, informative without being clinical.',
+  'Problema-Solución': 'Visual tension narrative. Scene evokes the problem or frustration, product is the clear visual resolution. Mood shifts from tension to relief.',
+  // General
+  'Oferta-Precio': 'Bold direct-response graphic design. Brand color block prominent. Offer element clearly displayed. Product large and central. High-contrast, urgency-driven composition.',
+  'Ocasión de Uso': 'Specific moment or occasion where this product fits naturally. Context and setting are the visual hero. Product appears seamlessly within the scene.',
+  'Lifestyle con Mascota': 'Owner and pet sharing a natural, warm moment. Product integrated into their routine. Authentic, emotional, lifestyle-focused.',
+};
 
 const CLOTHING_TERMS = /\b(prenda|vestido|pantalón|remera|camiseta|camisa|campera|buzo|short|pollera|falda|indumentaria|calzado|zapatilla|zapato|tela|tejido|outfit|jean|jogger|bikini|traje|garment|clothing|apparel|fabric|dress|shirt|pants|jacket|hoodie|sneaker|shoe|top|blouse|skirt|coat|sleeve|collar|hem|knit|denim|cotton|polyester)\b/i;
 
@@ -280,16 +300,23 @@ export async function POST(req: NextRequest) {
     count = 4,
     productCount,
     categoryCount,
-    peopleMode = 'auto',
+    peopleMode: rawPeopleMode = 'none',
     excludeAngles = [],
   } = parsedBody;
+
+  if (!brandKit) {
+    return new Response('data: {"error":"Configuración de marca requerida."}\n\ndata: {"done":true}\n\n', { headers: { 'Content-Type': 'text/event-stream' } });
+  }
+
+  // Normalize: treat any unknown value as 'none'
+  const peopleMode: 'none' | 'real' = rawPeopleMode === 'real' ? 'real' : 'none';
 
   // Resolve counts: if productCount/categoryCount provided use them, else split count 50/50
   let resolvedProductCount: number;
   let resolvedCategoryCount: number;
   if (productCount !== undefined && categoryCount !== undefined) {
-    resolvedProductCount = Math.max(0, Math.min(productCount, 4));
-    resolvedCategoryCount = Math.max(0, Math.min(categoryCount, 4));
+    resolvedProductCount = Math.max(0, Math.min(productCount, 3));
+    resolvedCategoryCount = Math.max(0, Math.min(categoryCount, 3));
   } else {
     const half = Math.max(1, Math.floor(count / 2));
     resolvedProductCount = half;
@@ -311,7 +338,7 @@ export async function POST(req: NextRequest) {
 
   // Step 0: detect if fashion product (text + vision) — always run when product photo available
   // so clothing items use fashion composition rules regardless of peopleMode.
-  const isFashionBrief = CLOTHING_TERMS.test(brief + ' ' + (brandKit.styleDescription || ''));
+  const isFashionBrief = CLOTHING_TERMS.test(brief + ' ' + (brandKit.clientRequest || '') + ' ' + (brandKit.styleDescription || ''));
   let isFashionProduct = isFashionBrief;
 
   if (productDataUrl && productDataUrl.length > 100) {
@@ -343,7 +370,7 @@ export async function POST(req: NextRequest) {
   const isCosmeticProduct = !isHealthProduct && COSMETIC_TERMS.test(briefFull);
 
   // Detect discount/offer in brief
-  const DISCOUNT_TERMS = /(\d+\s*%\s*(off|desc(uento)?|de\s+descuento)|2x1|3x2|cuotas?\s+sin\s+inter[eé]s|envío\s+(gratis|gratuito|libre)|free\s+shipping|promo(ción)?|oferta|liquidaci[oó]n|precio\s+especial|hasta\s+\d+%|bundle|combo|\$\s*\d|\d+\s*pesos?\s+de\s+desc)/i;
+  const DISCOUNT_TERMS = /(\d+\s*%\s*(off|desc(uento)?|de\s+descuento)|2x1|3x2|cuotas?\s+sin\s+inter[eé]s|envíos?\s+(gratis|gratuito|libre)|free\s+shipping|promo(ción)?|oferta|liquidaci[oó]n|precio\s+especial|hasta\s+\d+%|bundle|combo|\$\s*\d|\d+\s*pesos?\s+de\s+desc)/i;
   const hasDiscount = DISCOUNT_TERMS.test(brief + ' ' + (brandKit.clientRequest || ''));
 
   // Step 1: describe the product
@@ -358,10 +385,13 @@ export async function POST(req: NextRequest) {
             role: 'user',
             content: [
               { type: 'text', text: descPrompt },
-              { type: 'image_url', image_url: { url: productDataUrl, detail: 'high' } },
+              ...productDataUrls.slice(0, 3).map(url => ({
+                type: 'image_url' as const,
+                image_url: { url, detail: 'high' as const },
+              })),
             ],
           }],
-          max_tokens: 700,
+          max_tokens: 1200,
         });
         const desc = descResponse.choices[0].message.content || '';
         if (!isRefusal(desc)) { productDescription = desc; break; }
@@ -381,7 +411,7 @@ export async function POST(req: NextRequest) {
           role: 'user',
           content: [
             { type: 'text', text: 'Describí brevemente las características físicas de las personas en estas imágenes: tono de piel, cabello, complexión, edad aproximada. Máximo 2 oraciones.' },
-            ...referenceImages.map(img => ({
+            ...referenceImages.slice(0, 2).map(img => ({
               type: 'image_url' as const,
               image_url: { url: img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`, detail: 'low' as const },
             })),
@@ -408,8 +438,9 @@ export async function POST(req: NextRequest) {
 
         const anglesPrompt = `Sos un estratega de publicidad directa de performance para e-commerce. Tu especialidad es identificar ángulos publicitarios reales — no beneficios genéricos ni características del producto.
 
-PRODUCTO: ${productDescription}
-BRIEF: ${brief || '(sin brief adicional)'}
+${productDataUrl && productDataUrl.length > 100
+  ? `DESCRIPCIÓN DEL PRODUCTO (análisis visual): ${productDescription}\nBRIEF DE CAMPAÑA: ${brief || '(sin brief adicional)'}`
+  : `PRODUCTO / BRIEF: ${brief || '(sin brief adicional)'}`}
 MARCA: ${brandKit.name}${brandKit.clientRequest ? ` — ${brandKit.clientRequest}` : ''}${excludeNotice}
 
 ---
@@ -462,23 +493,82 @@ Este es un producto de salud/nutrición. Los ángulos DEBEN respetar estas regla
 ✅ CORRECTO: usar los claims que el usuario incluyó literalmente en el brief (si dice "alto en proteína", podés usarlo)
 ✅ CORRECTO: tensiones de estilo de vida como "no llegás a tu proteína diaria" en lugar de "tu cuerpo no sintetiza músculo"
 Los hooks deben sonar como algo que diría una persona real — NO como un estudio científico ni como una promesa de resultado.` : ''}
+${isPetProduct ? `
+RESTRICCIÓN — NICHO MASCOTAS:
+Este es un producto para mascotas. Los ángulos DEBEN respetar estas reglas:
+❌ PROHIBIDO: afirmaciones veterinarias o médicas que no estén literalmente en el brief ("aprobado por veterinarios", "cura enfermedades", "previene X condición")
+❌ PROHIBIDO: prometer resultados de salud garantizados para el animal
+✅ CORRECTO: tensiones del dueño — preocupación, amor, experiencia de cuidado
+✅ CORRECTO: comportamiento observable, disfrute o bienestar del animal según lo que dice el brief
+Los hooks deben hablar desde la perspectiva del dueño, no del animal.` : ''}
+${isBabyProduct ? `
+RESTRICCIÓN — NICHO BEBÉS / MATERNIDAD:
+Este es un producto para bebés o mamás. Los ángulos DEBEN respetar estas reglas:
+❌ PROHIBIDO: afirmaciones sobre desarrollo cognitivo, motor o emocional del bebé que no estén en el brief
+❌ PROHIBIDO: prometer seguridad absoluta o reemplazar consejo pediátrico
+✅ CORRECTO: tensiones de los padres — tranquilidad, practicidad, confianza, amor por su bebé
+✅ CORRECTO: contexto de uso cotidiano y experiencia familiar natural
+Los hooks deben sonar como algo que diría un papá o mamá real, no una promesa de marketing infantil.` : ''}
+${isCosmeticProduct ? `
+RESTRICCIÓN — NICHO COSMÉTICA Y SKINCARE:
+Este es un producto de belleza o cuidado de la piel. Los ángulos DEBEN respetar estas reglas:
+❌ PROHIBIDO: afirmaciones médicas o dermatológicas que no estén en el brief ("trata el acné", "aprobado dermatológicamente", "elimina arrugas clínicamente")
+❌ PROHIBIDO: prometer resultados estéticos garantizados más allá de lo que dice el brief
+✅ CORRECTO: tensiones de experiencia — cómo se siente la piel, confianza, rutina, acabado
+✅ CORRECTO: usar los claims que el usuario incluyó literalmente en el brief
+Los hooks deben sonar a algo que diría una persona real sobre su experiencia, no a copy regulatorio.` : ''}
+${isFoodProduct ? `
+RESTRICCIÓN — NICHO ALIMENTOS:
+Este es un producto alimenticio. Los ángulos DEBEN respetar estas reglas:
+❌ PROHIBIDO: afirmaciones de salud o nutrición que no estén literalmente en el brief
+❌ PROHIBIDO: prometer resultados de peso, energía o bienestar que el brief no mencione
+✅ CORRECTO: tensiones de sabor, ocasión, practicidad, placer, momento compartido
+✅ CORRECTO: usar los claims nutricionales que el usuario incluyó textualmente en el brief` : ''}
+
+---
+
+---
+
+FORMATO Y CONCEPTO VISUAL — para cada ángulo:
+
+REGLA CRÍTICA: el concepto visual debe expresar la TENSIÓN ESPECÍFICA de ese ángulo — no un visual genérico del nicho. Dos ángulos distintos DEBEN producir conceptos visualmente distintos. Si el ángulo habla de frustración por falta de resultados, el visual debe evocar esa frustración. Si habla de precio como barrera, debe evocar el alivio de superarla. Si habla de ocasión de uso, debe mostrar esa ocasión concreta. Un concepto que podría servir para cualquier ángulo del mismo nicho es un concepto fallido.
+
+Elegí el formato más adecuado de esta lista de referencia, O proponé un formato propio si ninguno captura bien la tensión específica del ángulo: ${isFashionProduct
+  ? 'Fashion Editorial / Street Style / Lifestyle Aspiracional / Studio Directo'
+  : (isHealthProduct || isCosmeticProduct)
+  ? 'Lifestyle Activo / Producto Hero / Problema-Solución / Oferta-Precio / Demostración'
+  : isPetProduct
+  ? 'Lifestyle con Mascota / Producto Hero / Ocasión de Uso / Problema-Solución'
+  : isFoodProduct
+  ? 'Ocasión de Uso / Producto Hero / Demostración / Lifestyle Aspiracional'
+  : 'Producto Hero / Lifestyle Aspiracional / Problema-Solución / Oferta-Precio / Ocasión de Uso'}
+
+CONCEPTO VISUAL: describí en 1-2 oraciones la ejecución específica de ESTE ángulo. Tiene que ser derivado de la tensión del ángulo — qué estado emocional o situación concreta transmite, qué hay en el frame y por qué eso refuerza ESA tensión particular. No describas una foto genérica del nicho.
+
+SUBLINE: una línea corta de apoyo al headline, máx 7 palabras, que refuerce la tensión del ángulo.
 
 Respondé SOLO con JSON:
 {
   "product_angles": [
     {
-      "name": "nombre estratégico del ángulo (3-4 palabras que capturen la tensión)",
-      "angle": "descripción de la hipótesis estratégica completa: persona específica + tensión concreta + por qué este producto la resuelve (2-3 oraciones)",
-      "hook": "cómo abrís el anuncio para que esa persona sienta que le hablás a ella (max 8 palabras, español, directo, que detenga el scroll)",
-      "emphasis": "qué aspecto de la tensión debe dominar el visual — qué tiene que SENTIR o VER la persona al ver la imagen"
+      "name": "etiqueta descriptiva simple, máx 3 palabras (ej: 'Precio / Oferta', 'Falta de Tiempo', 'Sin Resultados'). NO uses frases de copy.",
+      "angle": "hipótesis estratégica: persona específica + tensión concreta + por qué este producto la resuelve (2-3 oraciones)",
+      "hook": "máx 8 palabras, español, directo, que detenga el scroll",
+      "subline": "línea de apoyo al headline, máx 7 palabras",
+      "emphasis": "qué tiene que SENTIR o VER la persona al ver la imagen",
+      "format": "nombre del formato elegido de la lista",
+      "concept": "ejecución visual específica: qué hay en el frame, composición, mood, setting, elementos gráficos — 1-2 oraciones concretas"
     }
   ],
   "category_angles": [
     {
-      "name": "nombre estratégico del ángulo (3-4 palabras que capturen la tensión)",
-      "angle": "descripción de la hipótesis estratégica completa: persona específica + tensión de estilo de vida + por qué esta categoría de producto aparece como la solución (2-3 oraciones)",
-      "hook": "cómo abrís el anuncio para que esa persona sienta que le hablás a ella (max 8 palabras, español, directo, que detenga el scroll)",
-      "emphasis": "qué aspecto de la tensión debe dominar el visual — qué tiene que SENTIR o VER la persona al ver la imagen"
+      "name": "etiqueta descriptiva simple, máx 3 palabras (ej: 'Estilo de Vida', 'Ocasión', 'Primera Compra'). NO uses frases de copy.",
+      "angle": "hipótesis estratégica: persona + tensión de estilo de vida + por qué esta categoría la resuelve (2-3 oraciones)",
+      "hook": "máx 8 palabras, español, directo, que detenga el scroll",
+      "subline": "línea de apoyo al headline, máx 7 palabras",
+      "emphasis": "qué tiene que SENTIR o VER la persona al ver la imagen",
+      "format": "nombre del formato elegido de la lista",
+      "concept": "ejecución visual específica: qué hay en el frame, composición, mood, setting, elementos gráficos — 1-2 oraciones concretas"
     }
   ]
 }`;
@@ -493,7 +583,10 @@ Respondé SOLO con JSON:
               name: a.name || `Ángulo Producto ${idx}`,
               angle: a.angle || '',
               hook: a.hook || '',
+              subline: a.subline || '',
               emphasis: a.emphasis || '',
+              concept: a.concept || '',
+              format: a.format || '',
               level: 'product' as const,
             }));
           const categoryAngles: MessageAngle[] = ((parsed.category_angles as Omit<MessageAngle, 'key' | 'level'>[]) || [])
@@ -503,7 +596,10 @@ Respondé SOLO con JSON:
               name: a.name || `Ángulo Categoría ${idx}`,
               angle: a.angle || '',
               hook: a.hook || '',
+              subline: a.subline || '',
               emphasis: a.emphasis || '',
+              concept: a.concept || '',
+              format: a.format || '',
               level: 'category' as const,
             }));
           return { productAngles, categoryAngles };
@@ -515,7 +611,7 @@ Respondé SOLO con JSON:
               model: 'gpt-4o',
               messages: [{ role: 'user', content: anglesPrompt }],
               response_format: { type: 'json_object' },
-              max_tokens: 1500,
+              max_tokens: 2000,
               temperature: 0.9,
             });
             return JSON.parse(res.choices[0].message.content || '{}');
@@ -573,7 +669,8 @@ Respondé SOLO con JSON:
         );
 
         await Promise.allSettled(
-          angles.map(async (angle) => {
+          angles.map(async (angle, angleIndex) => {
+            if (angleIndex > 0) await new Promise(r => setTimeout(r, angleIndex * 600));
             const isCategory = angle.level === 'category';
 
             let fullPrompt: string;
@@ -604,15 +701,20 @@ Respondé SOLO con JSON:
               fullPrompt = [
                 garmentSection,
                 personSection,
-                compositionSection,
+                angle.format ? `FORMATO VISUAL — ${angle.format}: ${ANGLE_FORMAT_STYLES[angle.format] || ''}` : compositionSection,
+                angle.concept ? `CONCEPTO VISUAL: ${angle.concept}` : '',
                 `HEADLINE (mostrá este texto exacto, grande y en negrita): "${angle.hook}"`,
-                angle.angle ? `ESTRATEGIA DEL ÁNGULO (contexto para el visual): ${angle.angle}` : '',
-                `ÉNFASIS DEL MENSAJE: ${angle.emphasis}.`,
+                angle.subline ? `SUBLINE (mostrá este texto más pequeño bajo el headline): "${angle.subline}"` : '',
+                angle.angle ? `[CONTEXTO ESTRATÉGICO — NO texto a mostrar en la imagen]: ${angle.angle}` : '',
+                'MOBILE-FIRST TEXT RULE: headline y subline son el único texto visible. Cero párrafos. Cero body copy.',
                 `Marca: ${brandKit.name}. Colores de marca (SOLO para fondos, textos y elementos gráficos — NUNCA aplicar al producto): ${brandKit.primary1}, ${brandKit.primary2}, ${brandKit.primary3}. Tipografía: ${brandKit.typography || 'bold sans-serif'}.`,
                 `Contexto de marca: ${brandKitContext}`,
                 'Fashion editorial photography — natural skin tones, soft studio or lifestyle lighting, 85mm lens equivalent, high-end fashion campaign quality, photorealistic.',
                 'Portrait 1024x1536. Todo el texto en español. Calidad agencia profesional.',
                 'ANTI-ALUCINACIÓN: NO inventés precios, descuentos, métricas, teléfonos, URLs ni estadísticas que no estén en el brief.',
+                hasDiscount
+                  ? 'PRECIOS Y OFERTAS — REGLA: El brief incluye información promocional real. Podés mostrar en la imagen los valores exactos que aparecen en el brief (precio, porcentaje de descuento, cuotas sin interés, envío gratis). PROHIBIDO inventar o modificar cualquier valor. Reproducí EXACTAMENTE como aparece en el brief.'
+                  : 'PROHIBICIÓN ABSOLUTA DE PRECIOS: NO escribas ningún número de precio, precio tachado, porcentaje de descuento, etiqueta "ANTES/AHORA", ni ningún valor monetario en la imagen. Si el ángulo habla de precio o valor, expresalo SOLO con palabras en el headline — nunca con números.',
                 'NO incluyas botones CTA en la imagen.',
                 `REGLA DE LOGO: NO generes ningún logo, ícono, símbolo ni elemento gráfico de marca. Si necesitás identificar la marca, escribí únicamente el nombre "${brandKit.name}" como texto plano — sin decoración, sin ícono, sin wordmark inventado.`,
                 hasProductPhoto ? 'PRIORIDAD #1 — FIDELIDAD DE PRENDA: esta es una pieza de testeo publicitario. La prenda en la imagen generada DEBE ser idéntica a la foto de referencia — mismo color pixel-perfect, misma silueta, mismo tejido, mismo estampado en la misma posición exacta. NO interpretes, NO idealices, NO simplifiques. Cualquier diferencia hace inútil el testeo.' : '',
@@ -660,15 +762,20 @@ Respondé SOLO con JSON:
               fullPrompt = [
                 productConstraint,
                 personInstruction,
-                compositionInstruction,
+                angle.format ? `VISUAL STYLE — ${angle.format}: ${ANGLE_FORMAT_STYLES[angle.format] || ''}` : compositionInstruction,
+                angle.concept ? `VISUAL CONCEPT: ${angle.concept}` : '',
                 `HEADLINE (display this exact text, large and bold): "${angle.hook}"`,
-                angle.angle ? `ANGLE STRATEGY (context for the visual): ${angle.angle}` : '',
-                `MESSAGE EMPHASIS: ${angle.emphasis}.`,
+                angle.subline ? `SUBLINE (display this text smaller below headline): "${angle.subline}"` : '',
+                angle.angle ? `[ANGLE CONTEXT — strategic direction, DO NOT render as text in image]: ${angle.angle}` : '',
+                'MOBILE-FIRST TEXT RULE: headline and subline are the only visible text. Zero paragraphs. Zero body copy.',
                 `Brand palette FOR TEXT AND BACKGROUNDS ONLY — do not apply to product: ${brandKit.name} — ${brandKit.primary1}, ${brandKit.primary2}, ${brandKit.primary3}. Typography: ${brandKit.typography || 'bold sans-serif'}.`,
                 `Brand context: ${brandKitContext}`,
                 photographyStyle,
                 'Portrait 1024x1536. ALL text in Spanish. Professional agency quality.',
                 'ANTI-HALLUCINATION: Do NOT invent prices, discounts, metrics, phone numbers, URLs, or statistics not in the brief.',
+                hasDiscount
+                  ? 'PRICES AND OFFERS — RULE: The brief includes real promotional data. You MAY show exact values from the brief (price, discount %, installments, free shipping) in the image. NEVER invent or alter any value. Reproduce EXACTLY as written in the brief — do not paraphrase or recombine.'
+                  : 'ABSOLUTE PRICE PROHIBITION: Do NOT write any price number, crossed-out price, discount percentage, "BEFORE/NOW" label, or any monetary value in the image. If the angle is about price or value, express it ONLY with words in the headline — never with numbers.',
                 'Do NOT include button-style CTAs in the image.',
                 `BRAND LOGO RULE: Do NOT generate any logo, icon, symbol, or graphic brand element. If brand identification is needed, write only the brand name "${brandKit.name}" as plain text — no decoration, no icon, no invented wordmark.`,
                 hasProductPhoto ? '⚠️ FINAL COLOR CHECK: Before rendering, verify the product color matches the reference photo. If it does not match, correct it. The product color must not be shifted, lightened, darkened, or desaturated.' : '',
@@ -681,7 +788,7 @@ Respondé SOLO con JSON:
             // — preserves product colors, label, and design exactly.
             // Person mode (peopleMode real) or fashion: use Responses API so the model can compose a person + product.
             if (!isFashionProduct && hasProductPhoto && peopleMode === 'none') {
-              base64 = await editProductForConcept(openai, productDataUrls, fullPrompt);
+              base64 = await editProductForConcept(openai, productDataUrls.slice(0, 3), fullPrompt);
               // Fallback to Responses API if images.edit fails
               if (!base64) {
                 try {
@@ -689,7 +796,7 @@ Respondé SOLO con JSON:
                   const response = await (openai.responses.create as any)({
                     model: 'gpt-image-2',
                     input: [{ role: 'user', content: [
-                      ...productDataUrls.map(url => ({ type: 'input_image', image_url: url, detail: 'high' })),
+                      ...productDataUrls.slice(0, 3).map(url => ({ type: 'input_image', image_url: url, detail: 'high' })),
                       { type: 'input_text', text: fullPrompt },
                     ]}],
                     tools: [{ type: 'image_generation', model: 'gpt-image-2', quality: 'high', size: '1024x1536' }],
@@ -713,17 +820,20 @@ Respondé SOLO con JSON:
                   personDescription
                     ? `PERSONA: ${personDescription}. La persona lleva una prenda de tipo ${garmentType} — el color y diseño exactos de la prenda se aplican en el paso siguiente.`
                     : `Persona: modelo fashion aspiracional, actitud natural y confiada. Lleva una prenda de tipo ${garmentType}.`,
-                  isCategory
-                    ? 'COMPOSICIÓN: Lifestyle fashion. Escena o contexto donde se usaría esta prenda — el foco es el lifestyle, la ocasión o la emoción. Aspiracional y relatable.'
-                    : 'COMPOSICIÓN: Fashion direct-response. La persona lleva la prenda. Fondo limpio o setting mínimo. Actitud aspiracional y directa.',
+                  angle.format ? `FORMATO VISUAL — ${angle.format}: ${ANGLE_FORMAT_STYLES[angle.format] || ''}` : (isCategory ? 'COMPOSICIÓN: Lifestyle fashion aspiracional.' : 'COMPOSICIÓN: Fashion direct-response, prenda como héroe visual.'),
+                  angle.concept ? `CONCEPTO VISUAL: ${angle.concept}` : '',
                   `HEADLINE (mostrá este texto exacto, grande y en negrita): "${angle.hook}"`,
-                  angle.angle ? `ESTRATEGIA DEL ÁNGULO: ${angle.angle}` : '',
-                  `ÉNFASIS DEL MENSAJE: ${angle.emphasis}.`,
+                  angle.subline ? `SUBLINE (mostrá este texto más pequeño bajo el headline): "${angle.subline}"` : '',
+                  angle.angle ? `[CONTEXTO ESTRATÉGICO — NO texto a mostrar en la imagen]: ${angle.angle}` : '',
+                  'MOBILE-FIRST TEXT RULE: headline y subline son el único texto visible. Cero párrafos. Cero body copy.',
                   `Marca: ${brandKit.name}. Colores de marca (SOLO para fondos, textos y elementos gráficos): ${brandKit.primary1}, ${brandKit.primary2}, ${brandKit.primary3}. Tipografía: ${brandKit.typography || 'bold sans-serif'}.`,
                   `Contexto de marca: ${brandKitContext}`,
                   'Fashion editorial photography — natural skin tones, soft studio or lifestyle lighting, 85mm lens equivalent, photorealistic.',
                   'Portrait 1024x1536. Todo el texto en español. Calidad agencia profesional.',
                   'ANTI-ALUCINACIÓN: NO inventés precios, descuentos, métricas ni estadísticas que no estén en el brief.',
+                  hasDiscount
+                    ? 'PRECIOS Y OFERTAS — REGLA: El brief incluye información promocional real. Podés mostrar en la imagen los valores exactos que aparecen en el brief (precio, porcentaje de descuento, cuotas sin interés, envío gratis). PROHIBIDO inventar o modificar cualquier valor. Reproducí EXACTAMENTE como aparece en el brief — sin parafrasear, sin combinar de otra manera.'
+                    : 'PROHIBICIÓN ABSOLUTA DE PRECIOS: NO escribas ningún número de precio, precio tachado, porcentaje de descuento, etiqueta "ANTES/AHORA", ni ningún valor monetario en la imagen. Si el ángulo habla de precio o valor, expresalo SOLO con palabras en el headline — nunca con números.',
                   'NO incluyas botones CTA en la imagen.',
                   `REGLA DE LOGO: NO generes ningún logo ni símbolo de marca. Si necesitás identificar la marca, escribí únicamente el nombre "${brandKit.name}" como texto plano.`,
                 ].filter(Boolean).join(' ');
@@ -754,7 +864,6 @@ Respondé SOLO con JSON:
                 }
 
                 if (conceptBase64) {
-                  // Step B: apply exact garment via gpt-4o orchestration
                   const applied = await applyGarmentInline(openai, conceptBase64, productDataUrls, productDescription, peopleMode, personDescription);
                   base64 = applied || conceptBase64;
                 }
@@ -762,7 +871,7 @@ Respondé SOLO con JSON:
               } else {
                 // Fashion without product photo, or non-fashion with person: 1-step Responses API
                 const inputImages = [
-                  ...productDataUrls.slice(0, 2),
+                  ...productDataUrls.slice(0, 3),
                   ...((isFashionProduct || peopleMode === 'real') && refImageUrls.length > 0 ? refImageUrls : []),
                 ];
 
@@ -803,7 +912,7 @@ Respondé SOLO con JSON:
             if (!base64) {
               // Last resort fallback: images.edit with high quality if product photo available, else generate
               if (hasProductPhoto) {
-                base64 = await editProductForConcept(openai, productDataUrls, fullPrompt);
+                base64 = await editProductForConcept(openai, productDataUrls.slice(0, 3), fullPrompt);
               }
               if (!base64) {
                 try {

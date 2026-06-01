@@ -827,49 +827,71 @@ export default function OneShootPage() {
 
       // Save session to Supabase (no images in DB)
       if (finalAngles.length > 0) {
-        const saveRes = await fetch('/api/one-shoot-sessions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            status: 'paso1_done',
-            brief,
-            count: finalAngles.length,
-            isFashionProduct: finalIsFashion,
-            productDescription: finalProdDesc,
-            personDescription: finalPersonDesc,
-            angles: finalAngles,
-            winningAngleKeys: [],
-            pecResults: [],
-          }),
-        });
+        // Generate a client-side fallback ID so we can save to localStorage immediately,
+        // before waiting for Supabase — if the DB call fails, images are still cached locally.
+        const fallbackId = crypto.randomUUID();
+        const generatedAt = new Date().toISOString();
+        saveLsImages(fallbackId, finalImages, {}, generatedAt);
+        setSessionId(fallbackId);
 
-        if (saveRes.ok) {
-          const { id } = await saveRes.json();
-          setSessionId(id);
-          // Store images in localStorage (fast cache) and Supabase Storage (cross-device persistence)
-          const generatedAt = new Date().toISOString();
-          saveLsImages(id, finalImages, {}, generatedAt);
-          // Await uploads so navigating away doesn't abort them mid-flight
-          if (userId) {
-            const uploadResults = await Promise.allSettled(
-              finalImages.map(img =>
-                uploadBase64(supabase, `${userId}/${id}/p1_${img.angleKey}.jpg`, img.base64)
-              )
-            );
-            const failed = uploadResults.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value)).length;
-            if (failed > 0) setSyncWarning(`${failed} imagen${failed > 1 ? 'es' : ''} no se pudo${failed > 1 ? 'ron' : ''} sincronizar con la nube. Están guardadas en este dispositivo.`);
+        let supabaseId: string | null = null;
+        try {
+          const saveRes = await fetch('/api/one-shoot-sessions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              status: 'paso1_done',
+              brief,
+              count: finalAngles.length,
+              isFashionProduct: finalIsFashion,
+              productDescription: finalProdDesc,
+              personDescription: finalPersonDesc,
+              angles: finalAngles,
+              winningAngleKeys: [],
+              pecResults: [],
+            }),
+          });
+          if (saveRes.ok) {
+            const { id } = await saveRes.json();
+            supabaseId = id;
           }
-          // Also store product/ref images for P2 generation
-          try {
-            if (productImagesCompressed.length > 0) {
-              localStorage.setItem(`one_shoot_product_imgs_${id}`, JSON.stringify(productImagesCompressed));
-            }
-            if (refImagesCompressed.length > 0) {
-              localStorage.setItem(`one_shoot_ref_imgs_${id}`, JSON.stringify(refImagesCompressed));
-            }
-          } catch { /* storage full */ }
-          await loadSessions();
+        } catch { /* network error — local save already done */ }
+
+        const id = supabaseId || fallbackId;
+        if (supabaseId && supabaseId !== fallbackId) {
+          // Save under the real Supabase ID so resumeSession can find it by session.id.
+          // Only remove the fallback entry after verifying the new save actually landed —
+          // saveLsImages catches quota errors silently, so we check by reading it back.
+          saveLsImages(supabaseId, finalImages, {}, generatedAt);
+          const verify = loadLsImages(supabaseId);
+          if (verify.p1.length > 0) {
+            try { localStorage.removeItem(lsKey(fallbackId)); } catch { /* ok */ }
+          }
+          setSessionId(supabaseId);
         }
+
+        // Supabase Storage uploads (cross-device persistence)
+        if (userId && supabaseId) {
+          const uploadResults = await Promise.allSettled(
+            finalImages.map(img =>
+              uploadBase64(supabase, `${userId}/${id}/p1_${img.angleKey}.jpg`, img.base64)
+            )
+          );
+          const failed = uploadResults.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value)).length;
+          if (failed > 0) setSyncWarning(`${failed} imagen${failed > 1 ? 'es' : ''} no se pudo${failed > 1 ? 'ron' : ''} sincronizar con la nube. Están guardadas en este dispositivo.`);
+        }
+
+        // Also store product/ref images for P2 generation
+        try {
+          if (productImagesCompressed.length > 0) {
+            localStorage.setItem(`one_shoot_product_imgs_${id}`, JSON.stringify(productImagesCompressed));
+          }
+          if (refImagesCompressed.length > 0) {
+            localStorage.setItem(`one_shoot_ref_imgs_${id}`, JSON.stringify(refImagesCompressed));
+          }
+        } catch { /* storage full */ }
+
+        if (supabaseId) await loadSessions();
       }
 
       setView('p1-live');
@@ -1814,12 +1836,12 @@ export default function OneShootPage() {
                 </div>
                 <p className="text-xs text-blue-600 mb-3">El argumento habla del producto (características, materiales, precio)</p>
                 <input
-                  type="range" min={0} max={4} value={productCount}
+                  type="range" min={0} max={3} value={productCount}
                   onChange={e => setProductCount(Number(e.target.value))}
                   className="w-full accent-blue-600"
                 />
                 <div className="flex justify-between text-xs text-blue-400 mt-1">
-                  <span>0</span><span>1</span><span>2</span><span>3</span><span>4</span>
+                  <span>0</span><span>1</span><span>2</span><span>3</span>
                 </div>
               </div>
 
@@ -1831,12 +1853,12 @@ export default function OneShootPage() {
                 </div>
                 <p className="text-xs text-orange-600 mb-3">El argumento habla del contexto, necesidad o estilo de vida</p>
                 <input
-                  type="range" min={0} max={4} value={categoryCount}
+                  type="range" min={0} max={3} value={categoryCount}
                   onChange={e => setCategoryCount(Number(e.target.value))}
                   className="w-full accent-orange-500"
                 />
                 <div className="flex justify-between text-xs text-orange-400 mt-1">
-                  <span>0</span><span>1</span><span>2</span><span>3</span><span>4</span>
+                  <span>0</span><span>1</span><span>2</span><span>3</span>
                 </div>
               </div>
 
@@ -1978,9 +2000,9 @@ export default function OneShootPage() {
                   </svg>
                 </div>
               )}
-              <div className="p-2">
-                <p className="text-xs font-semibold text-gray-700 truncate">{angle.name}</p>
-                <p className="text-xs text-gray-400 truncate mt-0.5">&ldquo;{angle.hook}&rdquo;</p>
+              <div className="p-2 border-t border-gray-100">
+                <p className="text-xs font-bold text-gray-900 truncate">{angle.name}</p>
+                <p className="text-xs text-gray-600 truncate mt-0.5">&ldquo;{angle.hook}&rdquo;</p>
               </div>
               {img && (
                 <button
@@ -2484,7 +2506,7 @@ export default function OneShootPage() {
                     Costo objetivo por venta ($)
                     <span className="ml-1 group relative inline-block cursor-help">
                       <span className="text-blue-500 text-[11px] border border-blue-300 rounded-full px-1 bg-blue-50">?</span>
-                      <span className="hidden group-hover:block absolute left-0 bottom-full mb-1.5 w-56 bg-gray-900 text-white text-[11px] rounded-lg p-2.5 z-10 leading-relaxed shadow-lg">
+                      <span className="hidden group-hover:block absolute left-0 bottom-full mb-1.5 w-56 bg-gray-900 text-gray-100 text-[11px] rounded-lg p-2.5 z-10 leading-relaxed shadow-lg">
                         Lo máximo que querés gastar en publicidad para conseguir una venta. Ej: si tu producto vale $10.000, poné $3.000 o $4.000.
                       </span>
                     </span>
@@ -2497,7 +2519,7 @@ export default function OneShootPage() {
                     Presupuesto diario ($)
                     <span className="ml-1 group relative inline-block cursor-help">
                       <span className="text-blue-500 text-[11px] border border-blue-300 rounded-full px-1 bg-blue-50">?</span>
-                      <span className="hidden group-hover:block absolute left-0 bottom-full mb-1.5 w-56 bg-gray-900 text-white text-[11px] rounded-lg p-2.5 z-10 leading-relaxed shadow-lg">
+                      <span className="hidden group-hover:block absolute left-0 bottom-full mb-1.5 w-56 bg-gray-900 text-gray-100 text-[11px] rounded-lg p-2.5 z-10 leading-relaxed shadow-lg">
                         Lo que gastás por día en total en la campaña. Con menos de $20/día los umbrales para apagar son más estrictos.
                       </span>
                     </span>
@@ -2510,7 +2532,7 @@ export default function OneShootPage() {
                     Tipo de cuenta
                     <span className="ml-1 group relative inline-block cursor-help">
                       <span className="text-blue-500 text-[11px] border border-blue-300 rounded-full px-1 bg-blue-50">?</span>
-                      <span className="hidden group-hover:block absolute left-0 bottom-full mb-1.5 w-60 bg-gray-900 text-white text-[11px] rounded-lg p-2.5 z-10 leading-relaxed shadow-lg">
+                      <span className="hidden group-hover:block absolute left-0 bottom-full mb-1.5 w-60 bg-gray-900 text-gray-100 text-[11px] rounded-lg p-2.5 z-10 leading-relaxed shadow-lg">
                         <strong>Nueva:</strong> menos de 50 compras en el historial de la cuenta en ese nicho. Los umbrales son más tolerantes — el algoritmo necesita tiempo para aprender.<br/><br/>
                         <strong>Con historial:</strong> la cuenta ya tiene datos suficientes para tomar decisiones rápidas.
                       </span>
