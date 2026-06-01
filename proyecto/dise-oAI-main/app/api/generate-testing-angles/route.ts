@@ -171,11 +171,12 @@ export async function POST(req: NextRequest) {
   const send = (controller: ReadableStreamDefaultController, data: object) =>
     controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
 
-  // Step 0: detect if fashion product (text + vision) — skipped if peopleMode === 'none'
+  // Step 0: detect if fashion product (text + vision) — always run when product photo available
+  // so clothing items use fashion composition rules regardless of peopleMode.
   const isFashionBrief = CLOTHING_TERMS.test(brief + ' ' + (brandKit.styleDescription || ''));
-  let isFashionProduct = peopleMode === 'none' ? false : isFashionBrief;
+  let isFashionProduct = isFashionBrief;
 
-  if (peopleMode !== 'none' && productDataUrl && productDataUrl.length > 100) {
+  if (productDataUrl && productDataUrl.length > 100) {
     try {
       const classifyRes = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
@@ -227,9 +228,9 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Step 2: describe reference person (fashion + peopleMode real only)
+  // Step 2: describe reference person (any product type when peopleMode real and reference provided)
   let personDescription = '';
-  if (isFashionProduct && peopleMode !== 'none' && referenceImages.length > 0) {
+  if (peopleMode !== 'none' && referenceImages.length > 0) {
     try {
       const personRes = await openai.chat.completions.create({
         model: 'gpt-4o',
@@ -485,18 +486,35 @@ Respondé SOLO con JSON:
                   ].filter(Boolean).join(' ')
                 : `PRODUCT: ${productDescription}.`;
 
+              // Person instruction for non-fashion products — mirrors the rule from generate-concepts
+              const personInstruction = peopleMode === 'real'
+                ? personDescription
+                  ? `PERSON: ${personDescription}. The person is naturally using or holding the product in context. Aspirational attitude. The product must appear in its exact original form — do NOT show direct consumption, application on skin, or direct use on the body.`
+                  : 'PERSON: Include a person naturally using or holding the product. Aspirational attitude, lifestyle context. The product must appear in its exact original form — do NOT show direct consumption, application on skin, or direct use on the body. Photorealistic, natural lighting.'
+                : '';
+
               const compositionInstruction = isCategory
-                ? 'CREATIVE FORMAT: Lifestyle/context. Show the context, lifestyle, or situation where this product is used. The product is present but the CONTEXT is the visual hero. ONE bold headline, large and prominent. One short supporting subline.'
-                : 'CREATIVE FORMAT: Direct response. Product occupies 60-70% of the frame, prominent and clear. No lifestyle, no editorial — pure direct response. ONE bold headline, large and prominent. One short supporting subline.';
+                ? peopleMode === 'real'
+                  ? 'CREATIVE FORMAT: Lifestyle/context. Person naturally interacting with the product in their everyday context. The product is present and faithful to the reference. Context is the visual hero. ONE bold headline, ONE short subline.'
+                  : 'CREATIVE FORMAT: Lifestyle/context. Show the context, lifestyle, or situation where this product is used. The product is present but the CONTEXT is the visual hero. ONE bold headline, large and prominent. One short supporting subline.'
+                : peopleMode === 'real'
+                  ? 'CREATIVE FORMAT: Lifestyle direct response. Person naturally using or holding the exact product from the reference photo. Product clearly visible and faithful to reference. Aspirational mood, photorealistic. ONE bold headline, ONE short subline.'
+                  : 'CREATIVE FORMAT: Direct response. Product occupies 60-70% of the frame, prominent and clear. No lifestyle, no editorial — pure direct response. ONE bold headline, large and prominent. One short supporting subline.';
+
+              const photographyStyle = peopleMode === 'real'
+                ? 'Lifestyle photography, person interacting naturally with the product in context. The product must appear in its exact original form. Photorealistic, natural lighting, authentic mood.'
+                : 'Professional product photography or high-end retail graphic design, agency quality.';
 
               fullPrompt = [
                 productConstraint,
+                personInstruction,
                 compositionInstruction,
                 `HEADLINE (display this exact text, large and bold): "${angle.hook}"`,
                 angle.angle ? `ANGLE STRATEGY (context for the visual): ${angle.angle}` : '',
                 `MESSAGE EMPHASIS: ${angle.emphasis}.`,
                 `Brand palette FOR TEXT AND BACKGROUNDS ONLY — do not apply to product: ${brandKit.name} — ${brandKit.primary1}, ${brandKit.primary2}, ${brandKit.primary3}. Typography: ${brandKit.typography || 'bold sans-serif'}.`,
                 `Brand context: ${brandKitContext}`,
+                photographyStyle,
                 'Portrait 1024x1536. ALL text in Spanish. Professional agency quality.',
                 'ANTI-HALLUCINATION: Do NOT invent prices, discounts, metrics, phone numbers, URLs, or statistics not in the brief.',
                 'Do NOT include button-style CTAs in the image.',
@@ -507,9 +525,10 @@ Respondé SOLO con JSON:
 
             let base64 = '';
 
-            // Non-fashion with product photo: use images.edit starting FROM the product photo
-            // (same approach as anuncios module) — preserves product colors, label, and design exactly
-            if (!isFashionProduct && hasProductPhoto) {
+            // Product-only mode (no person) with product photo: use images.edit starting FROM the product photo
+            // — preserves product colors, label, and design exactly.
+            // Person mode (peopleMode real) or fashion: use Responses API so the model can compose a person + product.
+            if (!isFashionProduct && hasProductPhoto && peopleMode === 'none') {
               base64 = await editProductForConcept(openai, productDataUrls, fullPrompt);
               // Fallback to Responses API if images.edit fails
               if (!base64) {
@@ -532,10 +551,12 @@ Respondé SOLO con JSON:
                 }
               }
             } else {
-              // Fashion products or no product photo: Responses API with product + reference images
+              // Fashion, or non-fashion with person, or no product photo:
+              // Responses API — can compose person + product using reference images
               const inputImages = [
                 ...productDataUrls.slice(0, 2),
-                ...(isFashionProduct && refImageUrls.length > 0 ? refImageUrls : []),
+                // Include reference person images for both fashion and non-fashion person mode
+                ...((isFashionProduct || peopleMode === 'real') && refImageUrls.length > 0 ? refImageUrls : []),
               ];
 
               const inputContent = [
