@@ -418,8 +418,9 @@ export async function POST(req: NextRequest) {
 
         const anglesPrompt = `Sos un estratega de publicidad directa de performance para e-commerce. Tu especialidad es identificar ángulos publicitarios reales — no beneficios genéricos ni características del producto.
 
-PRODUCTO: ${productDescription}
-BRIEF: ${brief || '(sin brief adicional)'}
+${productDataUrl && productDataUrl.length > 100
+  ? `DESCRIPCIÓN DEL PRODUCTO (análisis visual): ${productDescription}\nBRIEF DE CAMPAÑA: ${brief || '(sin brief adicional)'}`
+  : `PRODUCTO / BRIEF: ${brief || '(sin brief adicional)'}`}
 MARCA: ${brandKit.name}${brandKit.clientRequest ? ` — ${brandKit.clientRequest}` : ''}${excludeNotice}
 
 ---
@@ -472,6 +473,37 @@ Este es un producto de salud/nutrición. Los ángulos DEBEN respetar estas regla
 ✅ CORRECTO: usar los claims que el usuario incluyó literalmente en el brief (si dice "alto en proteína", podés usarlo)
 ✅ CORRECTO: tensiones de estilo de vida como "no llegás a tu proteína diaria" en lugar de "tu cuerpo no sintetiza músculo"
 Los hooks deben sonar como algo que diría una persona real — NO como un estudio científico ni como una promesa de resultado.` : ''}
+${isPetProduct ? `
+RESTRICCIÓN — NICHO MASCOTAS:
+Este es un producto para mascotas. Los ángulos DEBEN respetar estas reglas:
+❌ PROHIBIDO: afirmaciones veterinarias o médicas que no estén literalmente en el brief ("aprobado por veterinarios", "cura enfermedades", "previene X condición")
+❌ PROHIBIDO: prometer resultados de salud garantizados para el animal
+✅ CORRECTO: tensiones del dueño — preocupación, amor, experiencia de cuidado
+✅ CORRECTO: comportamiento observable, disfrute o bienestar del animal según lo que dice el brief
+Los hooks deben hablar desde la perspectiva del dueño, no del animal.` : ''}
+${isBabyProduct ? `
+RESTRICCIÓN — NICHO BEBÉS / MATERNIDAD:
+Este es un producto para bebés o mamás. Los ángulos DEBEN respetar estas reglas:
+❌ PROHIBIDO: afirmaciones sobre desarrollo cognitivo, motor o emocional del bebé que no estén en el brief
+❌ PROHIBIDO: prometer seguridad absoluta o reemplazar consejo pediátrico
+✅ CORRECTO: tensiones de los padres — tranquilidad, practicidad, confianza, amor por su bebé
+✅ CORRECTO: contexto de uso cotidiano y experiencia familiar natural
+Los hooks deben sonar como algo que diría un papá o mamá real, no una promesa de marketing infantil.` : ''}
+${isCosmeticProduct ? `
+RESTRICCIÓN — NICHO COSMÉTICA Y SKINCARE:
+Este es un producto de belleza o cuidado de la piel. Los ángulos DEBEN respetar estas reglas:
+❌ PROHIBIDO: afirmaciones médicas o dermatológicas que no estén en el brief ("trata el acné", "aprobado dermatológicamente", "elimina arrugas clínicamente")
+❌ PROHIBIDO: prometer resultados estéticos garantizados más allá de lo que dice el brief
+✅ CORRECTO: tensiones de experiencia — cómo se siente la piel, confianza, rutina, acabado
+✅ CORRECTO: usar los claims que el usuario incluyó literalmente en el brief
+Los hooks deben sonar a algo que diría una persona real sobre su experiencia, no a copy regulatorio.` : ''}
+${isFoodProduct ? `
+RESTRICCIÓN — NICHO ALIMENTOS:
+Este es un producto alimenticio. Los ángulos DEBEN respetar estas reglas:
+❌ PROHIBIDO: afirmaciones de salud o nutrición que no estén literalmente en el brief
+❌ PROHIBIDO: prometer resultados de peso, energía o bienestar que el brief no mencione
+✅ CORRECTO: tensiones de sabor, ocasión, practicidad, placer, momento compartido
+✅ CORRECTO: usar los claims nutricionales que el usuario incluyó textualmente en el brief` : ''}
 
 Respondé SOLO con JSON:
 {
