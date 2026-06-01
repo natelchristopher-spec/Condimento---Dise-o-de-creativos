@@ -827,49 +827,66 @@ export default function OneShootPage() {
 
       // Save session to Supabase (no images in DB)
       if (finalAngles.length > 0) {
-        const saveRes = await fetch('/api/one-shoot-sessions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            status: 'paso1_done',
-            brief,
-            count: finalAngles.length,
-            isFashionProduct: finalIsFashion,
-            productDescription: finalProdDesc,
-            personDescription: finalPersonDesc,
-            angles: finalAngles,
-            winningAngleKeys: [],
-            pecResults: [],
-          }),
-        });
+        // Generate a client-side fallback ID so we can save to localStorage immediately,
+        // before waiting for Supabase — if the DB call fails, images are still cached locally.
+        const fallbackId = crypto.randomUUID();
+        const generatedAt = new Date().toISOString();
+        saveLsImages(fallbackId, finalImages, {}, generatedAt);
+        setSessionId(fallbackId);
 
-        if (saveRes.ok) {
-          const { id } = await saveRes.json();
-          setSessionId(id);
-          // Store images in localStorage (fast cache) and Supabase Storage (cross-device persistence)
-          const generatedAt = new Date().toISOString();
-          saveLsImages(id, finalImages, {}, generatedAt);
-          // Await uploads so navigating away doesn't abort them mid-flight
-          if (userId) {
-            const uploadResults = await Promise.allSettled(
-              finalImages.map(img =>
-                uploadBase64(supabase, `${userId}/${id}/p1_${img.angleKey}.jpg`, img.base64)
-              )
-            );
-            const failed = uploadResults.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value)).length;
-            if (failed > 0) setSyncWarning(`${failed} imagen${failed > 1 ? 'es' : ''} no se pudo${failed > 1 ? 'ron' : ''} sincronizar con la nube. Están guardadas en este dispositivo.`);
+        let supabaseId: string | null = null;
+        try {
+          const saveRes = await fetch('/api/one-shoot-sessions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              status: 'paso1_done',
+              brief,
+              count: finalAngles.length,
+              isFashionProduct: finalIsFashion,
+              productDescription: finalProdDesc,
+              personDescription: finalPersonDesc,
+              angles: finalAngles,
+              winningAngleKeys: [],
+              pecResults: [],
+            }),
+          });
+          if (saveRes.ok) {
+            const { id } = await saveRes.json();
+            supabaseId = id;
           }
-          // Also store product/ref images for P2 generation
-          try {
-            if (productImagesCompressed.length > 0) {
-              localStorage.setItem(`one_shoot_product_imgs_${id}`, JSON.stringify(productImagesCompressed));
-            }
-            if (refImagesCompressed.length > 0) {
-              localStorage.setItem(`one_shoot_ref_imgs_${id}`, JSON.stringify(refImagesCompressed));
-            }
-          } catch { /* storage full */ }
-          await loadSessions();
+        } catch { /* network error — local save already done */ }
+
+        const id = supabaseId || fallbackId;
+        if (supabaseId && supabaseId !== fallbackId) {
+          // Move the localStorage entry from fallback ID to the real Supabase ID
+          saveLsImages(supabaseId, finalImages, {}, generatedAt);
+          try { localStorage.removeItem(lsKey(fallbackId)); } catch { /* ok */ }
+          setSessionId(supabaseId);
         }
+
+        // Supabase Storage uploads (cross-device persistence)
+        if (userId && supabaseId) {
+          const uploadResults = await Promise.allSettled(
+            finalImages.map(img =>
+              uploadBase64(supabase, `${userId}/${id}/p1_${img.angleKey}.jpg`, img.base64)
+            )
+          );
+          const failed = uploadResults.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value)).length;
+          if (failed > 0) setSyncWarning(`${failed} imagen${failed > 1 ? 'es' : ''} no se pudo${failed > 1 ? 'ron' : ''} sincronizar con la nube. Están guardadas en este dispositivo.`);
+        }
+
+        // Also store product/ref images for P2 generation
+        try {
+          if (productImagesCompressed.length > 0) {
+            localStorage.setItem(`one_shoot_product_imgs_${id}`, JSON.stringify(productImagesCompressed));
+          }
+          if (refImagesCompressed.length > 0) {
+            localStorage.setItem(`one_shoot_ref_imgs_${id}`, JSON.stringify(refImagesCompressed));
+          }
+        } catch { /* storage full */ }
+
+        if (supabaseId) await loadSessions();
       }
 
       setView('p1-live');
