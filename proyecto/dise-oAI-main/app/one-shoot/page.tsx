@@ -1978,9 +1978,9 @@ export default function OneShootPage() {
                   </svg>
                 </div>
               )}
-              <div className="p-2">
-                <p className="text-xs font-semibold text-gray-700 truncate">{angle.name}</p>
-                <p className="text-xs text-gray-400 truncate mt-0.5">&ldquo;{angle.hook}&rdquo;</p>
+              <div className="p-2 border-t border-gray-100">
+                <p className="text-xs font-bold text-gray-900 truncate">{angle.name}</p>
+                <p className="text-xs text-gray-600 truncate mt-0.5">&ldquo;{angle.hook}&rdquo;</p>
               </div>
               {img && (
                 <button
