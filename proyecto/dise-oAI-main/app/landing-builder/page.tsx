@@ -915,6 +915,7 @@ export default function LandingBuilderPage() {
   const [publishStatus, setPublishStatus] = useState<'idle' | 'publishing' | 'ok' | 'error'>('idle');
   const [publishError, setPublishError] = useState('');
   const [publishedTheme, setPublishedTheme] = useState('');
+  const [publishWarning, setPublishWarning] = useState('');
   const [previewTab, setPreviewTab] = useState<'preview' | 'copy'>('preview');
 
   // Step 1 — Producto
@@ -1030,9 +1031,10 @@ export default function LandingBuilderPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ liquidContent, templateJson }),
       });
-      const data: { ok?: boolean; themeName?: string; error?: string } = await res.json();
+      const data: { ok?: boolean; themeName?: string; error?: string; templateJsonWarning?: string } = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'Error al publicar');
       setPublishedTheme(data.themeName || '');
+      setPublishWarning(data.templateJsonWarning || '');
       setPublishStatus('ok');
     } catch (e) {
       setPublishError(e instanceof Error ? e.message : 'Error inesperado');
@@ -1320,15 +1322,28 @@ export default function LandingBuilderPage() {
                   )}
                 </div>
                 {publishStatus === 'ok' && (
-                  <div className="mt-4 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-sm text-emerald-700 flex items-start gap-2">
-                    <svg className="w-4 h-4 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <div>
-                      <p className="font-semibold">Template publicado</p>
-                      <p className="text-emerald-600 mt-0.5">
-                        Subido al tema <strong>{publishedTheme}</strong>. Creá una nueva página en Shopify y asignale el template <strong>page.condimento-landing</strong>, o agregá la sección desde el Theme Editor.
-                      </p>
+                  <div className="mt-4 flex flex-col gap-2">
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-sm text-emerald-700 flex items-start gap-2">
+                      <svg className="w-4 h-4 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <div>
+                        <p className="font-semibold">Sección instalada en el tema <strong>{publishedTheme}</strong></p>
+                        {!publishWarning && (
+                          <p className="text-emerald-600 mt-0.5">
+                            Creá una nueva página en Shopify y asignale el template <strong>page.condimento-landing</strong>, o agregá la sección directamente desde el Theme Editor.
+                          </p>
+                        )}
+                        {publishWarning && (
+                          <p className="text-emerald-600 mt-0.5">{publishWarning}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-700 flex items-start gap-2">
+                      <svg className="w-3.5 h-3.5 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                      </svg>
+                      <p>Si editás el template desde el Theme Editor de Shopify, hacé Push de nuevo desde Condimento <strong>pisará esos cambios</strong>. Editá desde un solo lugar.</p>
                     </div>
                   </div>
                 )}

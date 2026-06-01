@@ -78,6 +78,8 @@ export async function POST(req: NextRequest) {
   }
 
   // Push template JSON (pre-populated page template)
+  // Non-fatal: older (non-OS 2.0) themes reject JSON templates — section is already installed.
+  let templateJsonWarning: string | undefined;
   if (templateJson) {
     try {
       const res = await fetch(`https://${shop}/admin/api/2025-01/themes/${activeThemeId}/assets.json`, {
@@ -88,16 +90,12 @@ export async function POST(req: NextRequest) {
         }),
       });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({})) as { errors?: unknown };
-        return NextResponse.json(
-          { error: `Error al subir el template JSON: ${JSON.stringify(err.errors ?? err)}` },
-          { status: 400 }
-        );
+        templateJsonWarning = 'Tu tema no soporta templates JSON (Online Store 2.0). La sección quedó instalada igual — podés agregarla desde el Theme Editor manualmente.';
       }
     } catch {
-      return NextResponse.json({ error: 'Error de red al subir el template JSON.' }, { status: 500 });
+      templateJsonWarning = 'No se pudo subir el template de página, pero la sección quedó instalada. Agregala manualmente desde el Theme Editor.';
     }
   }
 
-  return NextResponse.json({ ok: true, themeName: activeThemeName });
+  return NextResponse.json({ ok: true, themeName: activeThemeName, templateJsonWarning });
 }
