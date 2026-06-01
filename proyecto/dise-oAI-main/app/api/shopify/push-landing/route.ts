@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
   let activeThemeId: number;
   let activeThemeName: string;
   try {
-    const res = await fetch(`https://${shop}/admin/api/2024-01/themes.json?role=main`, {
+    const res = await fetch(`https://${shop}/admin/api/2025-01/themes.json?role=main`, {
       headers: { 'X-Shopify-Access-Token': token },
     });
     if (!res.ok) {
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
 
   // Push section liquid
   try {
-    const res = await fetch(`https://${shop}/admin/api/2024-01/themes/${activeThemeId}/assets.json`, {
+    const res = await fetch(`https://${shop}/admin/api/2025-01/themes/${activeThemeId}/assets.json`, {
       method: 'PUT',
       headers: { 'X-Shopify-Access-Token': token, 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
   // Push template JSON (pre-populated page template)
   if (templateJson) {
     try {
-      const res = await fetch(`https://${shop}/admin/api/2024-01/themes/${activeThemeId}/assets.json`, {
+      const res = await fetch(`https://${shop}/admin/api/2025-01/themes/${activeThemeId}/assets.json`, {
         method: 'PUT',
         headers: { 'X-Shopify-Access-Token': token, 'Content-Type': 'application/json' },
         body: JSON.stringify({
