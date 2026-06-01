@@ -467,7 +467,7 @@ Respondé SOLO con JSON:
 {
   "product_angles": [
     {
-      "name": "nombre estratégico del ángulo (3-4 palabras que capturen la tensión)",
+      "name": "etiqueta descriptiva simple, máx 3 palabras, que diga DE QUÉ trata el ángulo — para que el cliente entienda de un vistazo (ej: 'Precio / Oferta', 'Falta de Tiempo', 'Sin Resultados', 'Primera Compra', 'Estilo de Vida'). NO uses frases de copy ni metáforas.",
       "angle": "descripción de la hipótesis estratégica completa: persona específica + tensión concreta + por qué este producto la resuelve (2-3 oraciones)",
       "hook": "cómo abrís el anuncio para que esa persona sienta que le hablás a ella (max 8 palabras, español, directo, que detenga el scroll)",
       "emphasis": "qué aspecto de la tensión debe dominar el visual — qué tiene que SENTIR o VER la persona al ver la imagen"
@@ -475,7 +475,7 @@ Respondé SOLO con JSON:
   ],
   "category_angles": [
     {
-      "name": "nombre estratégico del ángulo (3-4 palabras que capturen la tensión)",
+      "name": "etiqueta descriptiva simple, máx 3 palabras, que diga DE QUÉ trata el ángulo — para que el cliente entienda de un vistazo (ej: 'Precio / Oferta', 'Falta de Tiempo', 'Sin Resultados', 'Primera Compra', 'Estilo de Vida'). NO uses frases de copy ni metáforas.",
       "angle": "descripción de la hipótesis estratégica completa: persona específica + tensión de estilo de vida + por qué esta categoría de producto aparece como la solución (2-3 oraciones)",
       "hook": "cómo abrís el anuncio para que esa persona sienta que le hablás a ella (max 8 palabras, español, directo, que detenga el scroll)",
       "emphasis": "qué aspecto de la tensión debe dominar el visual — qué tiene que SENTIR o VER la persona al ver la imagen"
