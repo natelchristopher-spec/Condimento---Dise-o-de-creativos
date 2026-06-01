@@ -280,9 +280,16 @@ export async function POST(req: NextRequest) {
     count = 4,
     productCount,
     categoryCount,
-    peopleMode = 'auto',
+    peopleMode: rawPeopleMode = 'none',
     excludeAngles = [],
   } = parsedBody;
+
+  if (!brandKit) {
+    return new Response('data: {"error":"Configuración de marca requerida."}\n\ndata: {"done":true}\n\n', { headers: { 'Content-Type': 'text/event-stream' } });
+  }
+
+  // Normalize: treat any unknown value as 'none'
+  const peopleMode: 'none' | 'real' = rawPeopleMode === 'real' ? 'real' : 'none';
 
   // Resolve counts: if productCount/categoryCount provided use them, else split count 50/50
   let resolvedProductCount: number;
@@ -766,7 +773,7 @@ Respondé SOLO con JSON:
               } else {
                 // Fashion without product photo, or non-fashion with person: 1-step Responses API
                 const inputImages = [
-                  ...productDataUrls.slice(0, 2),
+                  ...productDataUrls.slice(0, 3),
                   ...((isFashionProduct || peopleMode === 'real') && refImageUrls.length > 0 ? refImageUrls : []),
                 ];
 
