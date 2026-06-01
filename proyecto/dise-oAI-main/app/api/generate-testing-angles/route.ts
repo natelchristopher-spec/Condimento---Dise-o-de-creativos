@@ -527,7 +527,11 @@ Este es un producto alimenticio. Los ángulos DEBEN respetar estas reglas:
 
 ---
 
+---
+
 FORMATO Y CONCEPTO VISUAL — para cada ángulo:
+
+REGLA CRÍTICA: el concepto visual debe expresar la TENSIÓN ESPECÍFICA de ese ángulo — no un visual genérico del nicho. Dos ángulos distintos DEBEN producir conceptos visualmente distintos. Si el ángulo habla de frustración por falta de resultados, el visual debe evocar esa frustración. Si habla de precio como barrera, debe evocar el alivio de superarla. Si habla de ocasión de uso, debe mostrar esa ocasión concreta. Un concepto que podría servir para cualquier ángulo del mismo nicho es un concepto fallido.
 
 Elegí el formato más adecuado de esta lista: ${isFashionProduct
   ? 'Fashion Editorial / Street Style / Lifestyle Aspiracional / Studio Directo'
@@ -539,9 +543,9 @@ Elegí el formato más adecuado de esta lista: ${isFashionProduct
   ? 'Ocasión de Uso / Producto Hero / Demostración / Lifestyle Aspiracional'
   : 'Producto Hero / Lifestyle Aspiracional / Problema-Solución / Oferta-Precio / Ocasión de Uso'}
 
-CONCEPTO VISUAL: describí en 1-2 oraciones la ejecución específica de ESTE ángulo — qué hay en el frame, cómo está posicionado el producto/persona, qué mood y atmósfera transmite, qué elementos gráficos o de diseño refuerzan el mensaje. Sé específico para este ángulo y nicho — no genérico.
+CONCEPTO VISUAL: describí en 1-2 oraciones la ejecución específica de ESTE ángulo. Tiene que ser derivado de la tensión del ángulo — qué estado emocional o situación concreta transmite, qué hay en el frame y por qué eso refuerza ESA tensión particular. No describas una foto genérica del nicho.
 
-SUBLINE: una línea corta de apoyo al headline, máx 7 palabras, que refuerce la tensión o propuesta del ángulo.
+SUBLINE: una línea corta de apoyo al headline, máx 7 palabras, que refuerce la tensión del ángulo.
 
 Respondé SOLO con JSON:
 {
