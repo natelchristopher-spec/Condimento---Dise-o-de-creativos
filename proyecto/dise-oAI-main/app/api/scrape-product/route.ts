@@ -83,28 +83,47 @@ export async function POST(req: NextRequest) {
     const clientRequest = choices[0].message.content?.trim() || '';
 
     if (mode === 'landing') {
-      const bulletsRes = await openai.chat.completions.create({
+      const landingRes = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
-            content: 'Sos un copywriter de e-commerce LATAM. Dado el texto de una página de producto, generás exactamente 3 bullets de beneficio concisos. Tono natural, humano, no vendedor. Cada bullet máx 10 palabras. Respondé SOLO con JSON: {"bullets": ["bullet1", "bullet2", "bullet3"]}',
+            content: `Sos un copywriter de e-commerce LATAM. Dado el texto de una página de producto, extraés y generás datos para pre-completar un formulario de landing page.
+
+Respondé SOLO con JSON válido:
+{
+  "bullets": ["beneficio 1 (máx 10 palabras)", "beneficio 2", "beneficio 3"],
+  "shippingText": "texto de envío y garantía extraído de la página, o '' si no hay",
+  "reviews": [
+    {"name": "Nombre del reviewer", "quote": "Testimonio real extraído de la página"},
+    {"name": "...", "quote": "..."}
+  ]
+}
+
+REGLAS:
+- bullets: 3 beneficios concisos, naturales, no vendedores
+- shippingText: si la página menciona envío gratis, plazo, garantía — armá una línea con emojis (ej: "🚚 Envío gratis • 🔄 30 días de devolución"). Si no hay info, devolvé ""
+- reviews: extraé hasta 3 testimonios REALES de la página. Si no hay reviews reales, devolvé array vacío []`,
           },
           {
             role: 'user',
             content: `Página de producto:\n\n${pageText}`,
           },
         ],
-        max_tokens: 150,
-        temperature: 0.4,
+        max_tokens: 400,
+        temperature: 0.3,
         response_format: { type: 'json_object' },
       });
       let bullets: string[] = [];
+      let shippingText = '';
+      let reviews: { name: string; quote: string }[] = [];
       try {
-        const parsed = JSON.parse(bulletsRes.choices[0].message.content || '{}');
+        const parsed = JSON.parse(landingRes.choices[0].message.content || '{}');
         if (Array.isArray(parsed.bullets)) bullets = parsed.bullets.slice(0, 3);
-      } catch { /* use empty */ }
-      return NextResponse.json({ clientRequest, bullets });
+        if (typeof parsed.shippingText === 'string') shippingText = parsed.shippingText;
+        if (Array.isArray(parsed.reviews)) reviews = parsed.reviews.slice(0, 3);
+      } catch { /* use defaults */ }
+      return NextResponse.json({ clientRequest, bullets, shippingText, reviews });
     }
 
     return NextResponse.json({ clientRequest });

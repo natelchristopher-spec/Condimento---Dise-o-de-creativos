@@ -799,13 +799,19 @@ export default function LandingBuilderPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: productUrl.trim(), mode: 'landing' }),
       });
-      const data: { clientRequest?: string; bullets?: string[]; error?: string } = await res.json();
+      const data: { clientRequest?: string; bullets?: string[]; shippingText?: string; reviews?: { name: string; quote: string }[]; error?: string } = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'No se pudo importar el producto');
       if (data.clientRequest) setBrief(data.clientRequest);
       if (data.bullets) {
         if (data.bullets[0]) setBullet1(data.bullets[0]);
         if (data.bullets[1]) setBullet2(data.bullets[1]);
         if (data.bullets[2]) setBullet3(data.bullets[2]);
+      }
+      if (data.shippingText) setShipping(data.shippingText);
+      if (data.reviews) {
+        if (data.reviews[0]) setT1(data.reviews[0]);
+        if (data.reviews[1]) setT2(data.reviews[1]);
+        if (data.reviews[2]) setT3(data.reviews[2]);
       }
     } catch (e) {
       setScrapeError(e instanceof Error ? e.message : 'Error al importar');
