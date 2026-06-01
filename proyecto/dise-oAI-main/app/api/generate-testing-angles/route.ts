@@ -24,7 +24,7 @@ function isRefusal(text: string): boolean {
     lower.includes("i'm sorry") || lower.includes("i cannot") || lower.includes("i can't") ||
     lower.includes("cannot assist") || lower.includes("can't assist") ||
     lower.includes("lo siento") || lower.includes("no puedo ayudar") || lower.includes("no puedo asistir") ||
-    lower.includes("no puedo") || lower.includes("no es posible") || lower.includes("lamentablemente no")
+    lower.includes("no es posible") || lower.includes("lamentablemente no")
   );
 }
 
@@ -318,7 +318,7 @@ export async function POST(req: NextRequest) {
 
   // Step 0: detect if fashion product (text + vision) — always run when product photo available
   // so clothing items use fashion composition rules regardless of peopleMode.
-  const isFashionBrief = CLOTHING_TERMS.test(brief + ' ' + (brandKit.styleDescription || ''));
+  const isFashionBrief = CLOTHING_TERMS.test(brief + ' ' + (brandKit.clientRequest || '') + ' ' + (brandKit.styleDescription || ''));
   let isFashionProduct = isFashionBrief;
 
   if (productDataUrl && productDataUrl.length > 100) {
@@ -371,7 +371,7 @@ export async function POST(req: NextRequest) {
               })),
             ],
           }],
-          max_tokens: 700,
+          max_tokens: 1200,
         });
         const desc = descResponse.choices[0].message.content || '';
         if (!isRefusal(desc)) { productDescription = desc; break; }
@@ -391,7 +391,7 @@ export async function POST(req: NextRequest) {
           role: 'user',
           content: [
             { type: 'text', text: 'Describí brevemente las características físicas de las personas en estas imágenes: tono de piel, cabello, complexión, edad aproximada. Máximo 2 oraciones.' },
-            ...referenceImages.map(img => ({
+            ...referenceImages.slice(0, 2).map(img => ({
               type: 'image_url' as const,
               image_url: { url: img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`, detail: 'low' as const },
             })),
