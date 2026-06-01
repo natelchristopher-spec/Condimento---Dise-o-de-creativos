@@ -1814,12 +1814,12 @@ export default function OneShootPage() {
                 </div>
                 <p className="text-xs text-blue-600 mb-3">El argumento habla del producto (características, materiales, precio)</p>
                 <input
-                  type="range" min={0} max={4} value={productCount}
+                  type="range" min={0} max={3} value={productCount}
                   onChange={e => setProductCount(Number(e.target.value))}
                   className="w-full accent-blue-600"
                 />
                 <div className="flex justify-between text-xs text-blue-400 mt-1">
-                  <span>0</span><span>1</span><span>2</span><span>3</span><span>4</span>
+                  <span>0</span><span>1</span><span>2</span><span>3</span>
                 </div>
               </div>
 
@@ -1831,12 +1831,12 @@ export default function OneShootPage() {
                 </div>
                 <p className="text-xs text-orange-600 mb-3">El argumento habla del contexto, necesidad o estilo de vida</p>
                 <input
-                  type="range" min={0} max={4} value={categoryCount}
+                  type="range" min={0} max={3} value={categoryCount}
                   onChange={e => setCategoryCount(Number(e.target.value))}
                   className="w-full accent-orange-500"
                 />
                 <div className="flex justify-between text-xs text-orange-400 mt-1">
-                  <span>0</span><span>1</span><span>2</span><span>3</span><span>4</span>
+                  <span>0</span><span>1</span><span>2</span><span>3</span>
                 </div>
               </div>
 

@@ -288,8 +288,8 @@ export async function POST(req: NextRequest) {
   let resolvedProductCount: number;
   let resolvedCategoryCount: number;
   if (productCount !== undefined && categoryCount !== undefined) {
-    resolvedProductCount = Math.max(0, Math.min(productCount, 4));
-    resolvedCategoryCount = Math.max(0, Math.min(categoryCount, 4));
+    resolvedProductCount = Math.max(0, Math.min(productCount, 3));
+    resolvedCategoryCount = Math.max(0, Math.min(categoryCount, 3));
   } else {
     const half = Math.max(1, Math.floor(count / 2));
     resolvedProductCount = half;
