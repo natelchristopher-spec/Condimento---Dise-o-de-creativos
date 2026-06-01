@@ -41,6 +41,14 @@ const CLOTHING_TERMS = /\b(prenda|vestido|pantalón|remera|camiseta|camisa|campe
 
 const HEALTH_TERMS = /\b(suplemento|proteína|proteina|creatina|colágeno|colageno|vitamina|omega|probiótico|probiotico|prebiótico|prebiotico|aminoácido|aminoacido|bcaa|whey|caseína|caseina|glutamina|magnesio|zinc|hierro|calcio|biotina|melatonina|curcumina|ashwagandha|spirulina|chlorella|antioxidante|quemador|fat burner|pre-workout|preworkout|mass gainer|suero|nutrición|nutricion|dieta|adelgazar|bajar de peso|perder peso|déficit calórico|deficit calorico|salud|bienestar|wellness|health|supplement|multivitamínico|multivitaminico|enzimas digestivas|fibra dietética|fibra dietetica|colesterol|glucosa|tensión arterial|tension arterial|inmunidad|sistema inmune)\b/i;
 
+const PET_TERMS = /\b(mascota|perro|gato|cachorro|gatito|dog|cat|puppy|kitten|pet|collar.*perro|correa|leash|juguete.*perro|juguete.*gato|comida.*perro|comida.*gato|alimento.*perro|alimento.*gato|alimento.*mascota|pienso|croqueta|snack.*perro|snack.*gato|pelaje|pulga|garrapata|antiparasit|veterinar|canino|felino|pet food|raza)\b/i;
+
+const BABY_TERMS = /\b(bebé|bebe|baby|infante|infant|recién nacido|recien nacido|newborn|lactante|pañal|panal|diaper|cuna|carriola|cochecito|stroller|biberón|biberon|mamadera|chupete|pacifier|ropa.*beb[eé]|juguete.*beb[eé]|silla.*beb[eé]|portabeb[eé]|babero|bib|embarazada|maternidad|nursery)\b/i;
+
+const FOOD_TERMS = /\b(receta|cocina|gastronomía|snack[^s]|golosina|chocolate|galleta|cereal|granola|pasta|arroz|harina|aceite|salsa|condimento|especia|mermelada|miel|café|cafe|infusión|infusion|proteína vegetal|proteina vegetal|vegano|vegana|orgánico|organico|sin gluten|gluten.?free|keto|paleo|plant.?based|comida casera|helado|postre|bebida energética|bebida energetica|jugo|refresco|yerba|mate)\b/i;
+
+const COSMETIC_TERMS = /\b(crema|sérum|serum|hidratante|moisturizer|tónico|tonico|exfoliant|mascarilla facial|mascarilla.*cara|contorno de ojos|retinol|niacinamida|vitamina c|ácido hialurónico|acido hialuronico|protector solar|sunscreen|base de maquillaje|foundation|labial|lipstick|delineador|eyeliner|rimel|máscara de pestañas|mascara de pestañas|rubor|blush|sombra de ojos|eyeshadow|bb cream|cc cream|antiedad|anti.?edad|antiage|anti.?age|manchas.*cara|manchas.*rostro|acné|acne|poros|primer.*cara|primer.*maquillaje|setting spray|desmaquillante|tóner|toner|limpiador facial|micellar)\b/i;
+
 const PRODUCT_DESCRIPTION_PROMPT_FASHION = `Sos un técnico de producto de moda de alta gama. Analizá esta prenda y describila con precisión quirúrgica para que pueda ser reproducida EXACTAMENTE por un modelo de IA generativa. Imaginá que quien lee tu descripción no puede ver la foto — tu texto es el único recurso.
 
 Describí en este orden exacto:
@@ -197,7 +205,12 @@ export async function POST(req: NextRequest) {
   }
 
   // Detect health/wellness product (text-based only — no vision needed)
-  const isHealthProduct = HEALTH_TERMS.test(brief + ' ' + (brandKit.clientRequest || '') + ' ' + (brandKit.styleDescription || ''));
+  const briefFull = brief + ' ' + (brandKit.clientRequest || '') + ' ' + (brandKit.styleDescription || '');
+  const isHealthProduct = HEALTH_TERMS.test(briefFull);
+  const isPetProduct = PET_TERMS.test(briefFull);
+  const isBabyProduct = BABY_TERMS.test(briefFull);
+  const isFoodProduct = !isHealthProduct && FOOD_TERMS.test(briefFull);
+  const isCosmeticProduct = !isHealthProduct && COSMETIC_TERMS.test(briefFull);
 
   // Detect discount/offer in brief
   const DISCOUNT_TERMS = /(\d+\s*%\s*(off|desc(uento)?|de\s+descuento)|2x1|3x2|cuotas?\s+sin\s+inter[eé]s|envío\s+(gratis|gratuito|libre)|free\s+shipping|promo(ción)?|oferta|liquidaci[oó]n|precio\s+especial|hasta\s+\d+%|bundle|combo|\$\s*\d|\d+\s*pesos?\s+de\s+desc)/i;
@@ -467,12 +480,14 @@ Respondé SOLO con JSON:
                 `ÉNFASIS DEL MENSAJE: ${angle.emphasis}.`,
                 `Marca: ${brandKit.name}. Colores de marca (SOLO para fondos, textos y elementos gráficos — NUNCA aplicar al producto): ${brandKit.primary1}, ${brandKit.primary2}, ${brandKit.primary3}. Tipografía: ${brandKit.typography || 'bold sans-serif'}.`,
                 `Contexto de marca: ${brandKitContext}`,
+                'Fashion editorial photography — natural skin tones, soft studio or lifestyle lighting, 85mm lens equivalent, high-end fashion campaign quality, photorealistic.',
                 'Portrait 1024x1536. Todo el texto en español. Calidad agencia profesional.',
                 'ANTI-ALUCINACIÓN: NO inventés precios, descuentos, métricas, teléfonos, URLs ni estadísticas que no estén en el brief.',
                 'NO incluyas botones CTA en la imagen.',
                 `REGLA DE LOGO: NO generes ningún logo, ícono, símbolo ni elemento gráfico de marca. Si necesitás identificar la marca, escribí únicamente el nombre "${brandKit.name}" como texto plano — sin decoración, sin ícono, sin wordmark inventado.`,
-                hasProductPhoto ? 'VERIFICACIÓN FINAL DE COLOR DE PRENDA — CRÍTICO: el color de la prenda en la imagen generada debe coincidir exactamente con la foto de referencia adjunta. Mismo tono, misma saturación, misma temperatura. Para neutros cálidos (tostado, camel, arena, beige): NUNCA renderizar como blanco ni gris claro — mantener el subtono cálido de la referencia.' : '',
-                hasProductPhoto ? 'REGLA DE COLOR ABSOLUTA — repetida por importancia crítica: tomá el valor de color DIRECTAMENTE de los píxeles de la foto de referencia. NO interpretes, NO idealices, NO cambies la temperatura de color. Para colores oscuros (negro, azul marino, marrón): NUNCA los ilumines ni aclarés. Para neutros cálidos: NUNCA los renderices como blanco ni gris.' : '',
+                hasProductPhoto ? 'PRIORIDAD #1 — FIDELIDAD DE PRENDA: esta es una pieza de testeo publicitario. La prenda en la imagen generada DEBE ser idéntica a la foto de referencia — mismo color pixel-perfect, misma silueta, mismo tejido, mismo estampado en la misma posición exacta. NO interpretes, NO idealices, NO simplifiques. Cualquier diferencia hace inútil el testeo.' : '',
+                hasProductPhoto ? 'PRODUCT COLOR ACCURACY — CRITICAL: The reference images show the exact garment. Replicate its color with pixel-level accuracy — do NOT shift, lighten, darken, or desaturate. For warm neutrals (beige, sand, stone, khaki): preserve the warm undertone exactly, never render as white or gray. For solid-color garments, the color must match the reference photo precisely.' : '',
+                hasProductPhoto ? 'VERIFICACIÓN FINAL — REGLA ABSOLUTA: antes de renderizar, confirmá que el color de la prenda coincide exactamente con la referencia. Para colores oscuros (negro, marino, marrón): NUNCA aclarar. Para neutros cálidos: NUNCA renderizar como blanco ni gris.' : '',
               ].filter(Boolean).join(' ');
 
             } else {
@@ -486,11 +501,18 @@ Respondé SOLO con JSON:
                   ].filter(Boolean).join(' ')
                 : `PRODUCT: ${productDescription}.`;
 
-              // Person instruction for non-fashion products — mirrors the rule from generate-concepts
+              // Niche-aware person instruction for non-fashion products
+              const personBase = personDescription ? `PERSON: ${personDescription}.` : 'PERSON:';
               const personInstruction = peopleMode === 'real'
-                ? personDescription
-                  ? `PERSON: ${personDescription}. The person is naturally using or holding the product in context. Aspirational attitude. The product must appear in its exact original form — do NOT show direct consumption, application on skin, or direct use on the body.`
-                  : 'PERSON: Include a person naturally using or holding the product. Aspirational attitude, lifestyle context. The product must appear in its exact original form — do NOT show direct consumption, application on skin, or direct use on the body. Photorealistic, natural lighting.'
+                ? isPetProduct
+                  ? `${personBase} The person appears WITH their pet (dog/cat/animal). The animal MUST be present in the scene — using, wearing, or interacting with the product. The pet is as important as the person. Authentic, lifestyle context. The product appears in its original form.`
+                  : isBabyProduct
+                  ? `${personBase} Parent with their baby in a warm, natural context. Product held or used by the parent — do NOT show the baby directly consuming or applying the product. Safe, aspirational family scene.`
+                  : isFoodProduct
+                  ? `${personBase} Person in a food lifestyle context — cooking, serving, or enjoying the food. Focus on food presentation and the moment. Natural, appetizing, aspirational. The product appears in its original form.`
+                  : isCosmeticProduct
+                  ? `${personBase} Person in a beauty/skincare context — holding the product or showing a natural fresh result. Do NOT show direct product application on face or skin. Aspirational, clean beauty aesthetic.`
+                  : `${personBase} The person is naturally using or holding the product in context. Aspirational attitude. The product must appear in its exact original form — do NOT show direct consumption, application on skin, or direct use on the body. Photorealistic, natural lighting.`
                 : '';
 
               const compositionInstruction = isCategory
