@@ -859,9 +859,14 @@ export default function OneShootPage() {
 
         const id = supabaseId || fallbackId;
         if (supabaseId && supabaseId !== fallbackId) {
-          // Move the localStorage entry from fallback ID to the real Supabase ID
+          // Save under the real Supabase ID so resumeSession can find it by session.id.
+          // Only remove the fallback entry after verifying the new save actually landed —
+          // saveLsImages catches quota errors silently, so we check by reading it back.
           saveLsImages(supabaseId, finalImages, {}, generatedAt);
-          try { localStorage.removeItem(lsKey(fallbackId)); } catch { /* ok */ }
+          const verify = loadLsImages(supabaseId);
+          if (verify.p1.length > 0) {
+            try { localStorage.removeItem(lsKey(fallbackId)); } catch { /* ok */ }
+          }
           setSessionId(supabaseId);
         }
 
