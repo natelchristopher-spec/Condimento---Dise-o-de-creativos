@@ -753,6 +753,9 @@ export default function LandingBuilderPage() {
   const [publishedTheme, setPublishedTheme] = useState('');
 
   // Step 1 — Producto
+  const [productUrl, setProductUrl] = useState('');
+  const [scraping, setScraping] = useState(false);
+  const [scrapeError, setScrapeError] = useState('');
   const [brief, setBrief] = useState('');
   const [bullet1, setBullet1] = useState('');
   const [bullet2, setBullet2] = useState('');
@@ -784,6 +787,26 @@ export default function LandingBuilderPage() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     window.location.href = '/login';
+  };
+
+  const scrapeProduct = async () => {
+    if (!productUrl.trim()) return;
+    setScraping(true);
+    setScrapeError('');
+    try {
+      const res = await fetch('/api/scrape-product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: productUrl.trim() }),
+      });
+      const data: { clientRequest?: string; error?: string } = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'No se pudo importar el producto');
+      if (data.clientRequest) setBrief(data.clientRequest);
+    } catch (e) {
+      setScrapeError(e instanceof Error ? e.message : 'Error al importar');
+    } finally {
+      setScraping(false);
+    }
   };
 
   const generate = async () => {
@@ -916,6 +939,28 @@ export default function LandingBuilderPage() {
                   </div>
                 </div>
               )}
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">URL del producto <span className="text-xs font-normal text-gray-400">Opcional — importa el brief automáticamente</span></label>
+                <div className="flex gap-2">
+                  <input
+                    value={productUrl}
+                    onChange={e => { setProductUrl(e.target.value); setScrapeError(''); }}
+                    onKeyDown={e => e.key === 'Enter' && scrapeProduct()}
+                    placeholder="https://tienda.com/productos/nombre"
+                    className="flex-1 px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]"
+                  />
+                  <button
+                    onClick={scrapeProduct}
+                    disabled={!productUrl.trim() || scraping || !hasApiKey}
+                    className="px-4 py-2.5 text-sm font-semibold bg-gray-900 text-white rounded-xl disabled:opacity-40 hover:bg-gray-700 transition-colors whitespace-nowrap"
+                  >
+                    {scraping ? 'Importando...' : 'Importar'}
+                  </button>
+                </div>
+                {scrapeError && <p className="text-xs text-red-500 mt-1">{scrapeError}</p>}
+                {brief && productUrl && <p className="text-xs text-green-600 mt-1">✓ Brief importado — podés editarlo antes de continuar</p>}
+              </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Brief del producto *</label>
