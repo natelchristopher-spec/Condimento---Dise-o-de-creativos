@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
   const ctx = await getUserContext();
   if (!ctx) return NextResponse.json({ error: 'Configurá tu API key de OpenAI en el perfil.' }, { status: 401 });
 
-  const { url }: { url: string } = await req.json();
+  const { url, mode }: { url: string; mode?: string } = await req.json();
   if (!url?.startsWith('http')) return NextResponse.json({ error: 'URL inválida.' }, { status: 400 });
   if (!isSafeUrl(url)) {
     return NextResponse.json({ error: 'URL no permitida' }, { status: 400 });
@@ -81,6 +81,32 @@ export async function POST(req: NextRequest) {
     });
 
     const clientRequest = choices[0].message.content?.trim() || '';
+
+    if (mode === 'landing') {
+      const bulletsRes = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'Sos un copywriter de e-commerce LATAM. Dado el texto de una página de producto, generás exactamente 3 bullets de beneficio concisos. Tono natural, humano, no vendedor. Cada bullet máx 10 palabras. Respondé SOLO con JSON: {"bullets": ["bullet1", "bullet2", "bullet3"]}',
+          },
+          {
+            role: 'user',
+            content: `Página de producto:\n\n${pageText}`,
+          },
+        ],
+        max_tokens: 150,
+        temperature: 0.4,
+        response_format: { type: 'json_object' },
+      });
+      let bullets: string[] = [];
+      try {
+        const parsed = JSON.parse(bulletsRes.choices[0].message.content || '{}');
+        if (Array.isArray(parsed.bullets)) bullets = parsed.bullets.slice(0, 3);
+      } catch { /* use empty */ }
+      return NextResponse.json({ clientRequest, bullets });
+    }
+
     return NextResponse.json({ clientRequest });
   } catch (e) {
     return NextResponse.json({ error: getOpenAIErrorMessage(e) }, { status: 500 });
