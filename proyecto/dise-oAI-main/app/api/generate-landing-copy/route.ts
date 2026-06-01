@@ -10,9 +10,25 @@ export interface LandingCopy {
   subheadline: string;
   bullets: [string, string, string];
   description: string;
-  rational_title: string;
-  specs: Array<{ icon: string; title: string; text: string }>;
-  testimonial_rating: string;
+
+  specs_title: string;
+  specs: Array<{ key: string; value: string }>;
+  badges: Array<{ icon: string; label: string }>;
+
+  ingredients_title: string;
+  ingredients: Array<{ icon: string; name: string; dose: string; description: string }>;
+
+  timeline_title: string;
+  timeline: Array<{ when: string; title: string; text: string }>;
+
+  comparison_title: string;
+  comparison_brand_col: string;
+  comparison_alt_col: string;
+  comparison: Array<{ label: string; brand_value: string; brand_check: boolean; alt_value: string; alt_check: boolean }>;
+
+  rating_summary: string;
+  reviews: Array<{ name: string; title: string; text: string }>;
+
   faq: Array<{ q: string; a: string }>;
   cta_headline: string;
   cta_subtext: string;
@@ -29,61 +45,103 @@ export async function POST(req: NextRequest) {
     pdpBullets = [],
     whatsappNumber = '',
     shippingText = '',
-    testimonials = [],
+    userReviews = [],
   }: {
     brief: string;
     brandKit: BrandKit;
     pdpBullets: string[];
     whatsappNumber: string;
     shippingText: string;
-    testimonials: Array<{ name: string; quote: string }>;
+    userReviews: Array<{ name: string; quote: string }>;
   } = await req.json();
 
   const openai = new OpenAI({ apiKey: ctx.openaiApiKey });
 
   const bulletsContext = pdpBullets.length > 0
     ? `Los 3 bullets de beneficios ya definidos son:\n${pdpBullets.map((b, i) => `${i + 1}. ${b}`).join('\n')}\nÚsalos exactamente como están en el campo "bullets".`
-    : 'Generá 3 bullets de beneficios sutiles — no vendedores, no técnicos. Deben leerse como afirmaciones naturales que conectan el producto con la vida del comprador.';
+    : 'Generá 3 bullets de beneficios sutiles — no vendedores, no técnicos. Afirmaciones naturales que conectan el producto con la vida del comprador.';
 
-  const prompt = `Sos un copywriter experto en e-commerce LATAM. Generás copy para una landing page de producto de Shopify.
+  const reviewsContext = userReviews.filter(r => r.name).length > 0
+    ? `El cliente proporcionó estos testimonios reales. Úsalos en el campo "reviews" con un "title" que resuma el beneficio:\n${userReviews.filter(r => r.name).map(r => `- ${r.name}: "${r.quote}"`).join('\n')}`
+    : 'Generá 3 reseñas realistas en primera persona. Nombres latinoamericanos, resultado específico, tono natural — no hiperbólico.';
+
+  const prompt = `Sos un copywriter experto en e-commerce LATAM. Generás copy completo para una landing page de producto en Shopify.
 
 MARCA: ${brandKit.name}
 BRIEF DEL PRODUCTO: ${brief}
 ${bulletsContext}
+${reviewsContext}
 
-Generá el copy completo para la landing. TODO en español. Tono: directo, humano, sin exagerar. Que NO parezca dropshipping genérico.
+TODO en español. Tono: confiado, educativo, humano. Como una marca DTC premium (Four Sigmatic, Gymshark, Mejuri). NO parezca dropshipping genérico ni agresivo.
 
-REGLAS DE TONO:
-- Headlines cortos y seguros — no griten "OFERTA". Afirman.
-- Bullets sutiles — beneficio real, no feature de AliExpress
-- FAQ honesta — responde lo que realmente pregunta el comprador antes de comprar
-- Specs del racional: concretas, sin inventar datos que no están en el brief
-- CTA final: urgencia suave, no agresiva
+REGLAS:
+- Todas las secciones se adaptan al TIPO de producto. Para ropa: materiales, fit, cuidado. Para tech: componentes, specs técnicas. Para suplementos: ingredientes, dosis. Para hogar: materiales, dimensiones, uso.
+- "ingredients" = los componentes/ingredientes/materiales clave del producto — adaptá el nombre de la sección
+- "timeline" = la experiencia del cliente a lo largo del tiempo — adaptá los "when" al producto
+- "comparison" = esta marca vs la alternativa genérica — solo características donde gana esta marca
+- FAQ honesta — responde objeciones reales de compra
+- CTA: urgencia suave, no agresiva
 
-Respondé SOLO con JSON válido:
+Respondé SOLO con JSON válido, sin markdown:
 {
-  "headline": "máx 8 palabras, el hook principal de la página",
+  "headline": "máx 8 palabras, hook principal de la página",
   "subheadline": "1 oración que amplía el headline, máx 15 palabras",
-  "bullets": ["beneficio sutil 1", "beneficio sutil 2", "beneficio sutil 3"],
-  "description": "descripción del producto en 3-4 oraciones. Primera oración: qué es. Segunda: para quién. Tercera: diferencia clave. Cuarta (opcional): llamado a la acción suave.",
-  "rational_title": "título para la sección de specs/cómo funciona, máx 5 palabras",
+  "bullets": ["beneficio 1", "beneficio 2", "beneficio 3"],
+  "description": "3-4 oraciones: qué es, para quién, diferencia clave, CTA suave",
+  "specs_title": "título sección especificaciones, máx 5 palabras",
   "specs": [
-    {"icon": "✓", "title": "spec corta", "text": "explicación en 1 oración"},
-    {"icon": "✓", "title": "spec corta", "text": "explicación en 1 oración"},
-    {"icon": "✓", "title": "spec corta", "text": "explicación en 1 oración"},
-    {"icon": "✓", "title": "spec corta", "text": "explicación en 1 oración"}
+    {"key": "Etiqueta (Material / Peso / Tostado / etc)", "value": "Valor concreto"},
+    {"key": "...", "value": "..."},
+    {"key": "...", "value": "..."},
+    {"key": "...", "value": "..."},
+    {"key": "...", "value": "..."},
+    {"key": "...", "value": "..."}
   ],
-  "testimonial_rating": "texto de rating summary, ej: '★★★★★  +200 compradores satisfechos'",
+  "badges": [
+    {"icon": "emoji", "label": "característica de calidad corta"},
+    {"icon": "emoji", "label": "..."},
+    {"icon": "emoji", "label": "..."},
+    {"icon": "emoji", "label": "..."},
+    {"icon": "emoji", "label": "..."}
+  ],
+  "ingredients_title": "título sección componentes — adaptado al producto (Ingredientes / Materiales / Componentes / Qué incluye)",
+  "ingredients": [
+    {"icon": "emoji", "name": "Nombre componente/ingrediente", "dose": "subtítulo corto (500mg / Orgánico / 100% algodón / etc)", "description": "1-2 oraciones explicando rol y beneficio"},
+    {"icon": "emoji", "name": "...", "dose": "...", "description": "..."},
+    {"icon": "emoji", "name": "...", "dose": "...", "description": "..."}
+  ],
+  "timeline_title": "título sección experiencia/resultados, máx 6 palabras",
+  "timeline": [
+    {"when": "cuándo (Inmediatamente / Día 1 / Primera semana)", "title": "qué pasa", "text": "1-2 oraciones descripción"},
+    {"when": "...", "title": "...", "text": "..."},
+    {"when": "...", "title": "...", "text": "..."}
+  ],
+  "comparison_title": "título sección comparativa, máx 6 palabras",
+  "comparison_brand_col": "nombre corto columna marca",
+  "comparison_alt_col": "nombre columna alternativa (La competencia / Otras opciones / etc)",
+  "comparison": [
+    {"label": "característica", "brand_value": "texto positivo marca", "brand_check": true, "alt_value": "texto alternativa", "alt_check": false},
+    {"label": "...", "brand_value": "...", "brand_check": true, "alt_value": "...", "alt_check": false},
+    {"label": "...", "brand_value": "...", "brand_check": true, "alt_value": "...", "alt_check": false},
+    {"label": "...", "brand_value": "...", "brand_check": true, "alt_value": "...", "alt_check": false},
+    {"label": "...", "brand_value": "...", "brand_check": true, "alt_value": "...", "alt_check": false}
+  ],
+  "rating_summary": "ej: '★★★★★  +500 clientes satisfechos'",
+  "reviews": [
+    {"name": "Nombre, Origen", "title": "título reseña", "text": "reseña natural en primera persona"},
+    {"name": "...", "title": "...", "text": "..."},
+    {"name": "...", "title": "...", "text": "..."}
+  ],
   "faq": [
-    {"q": "pregunta 1", "a": "respuesta honesta y corta"},
-    {"q": "pregunta 2", "a": "respuesta honesta y corta"},
-    {"q": "pregunta 3", "a": "respuesta honesta y corta"},
-    {"q": "pregunta 4", "a": "respuesta honesta y corta"},
-    {"q": "pregunta 5", "a": "respuesta honesta y corta"}
+    {"q": "pregunta real de compra", "a": "respuesta honesta y corta"},
+    {"q": "...", "a": "..."},
+    {"q": "...", "a": "..."},
+    {"q": "...", "a": "..."},
+    {"q": "...", "a": "..."}
   ],
   "cta_headline": "headline del cierre, máx 7 palabras",
   "cta_subtext": "1 línea de garantía o urgencia suave",
-  "whatsapp_text": "mensaje de WhatsApp pre-cargado para consultar, máx 20 palabras"
+  "whatsapp_text": "mensaje WhatsApp pre-cargado, máx 20 palabras"
 }`;
 
   try {
@@ -91,12 +149,11 @@ Respondé SOLO con JSON válido:
       model: 'gpt-4o',
       messages: [{ role: 'user', content: prompt }],
       response_format: { type: 'json_object' },
-      max_tokens: 2500,
+      max_tokens: 4000,
     });
 
     const copy: LandingCopy = JSON.parse(response.choices[0].message.content || '{}');
 
-    // If user already provided bullets, override AI bullets with theirs
     if (pdpBullets.length === 3) {
       copy.bullets = [pdpBullets[0], pdpBullets[1], pdpBullets[2]];
     }

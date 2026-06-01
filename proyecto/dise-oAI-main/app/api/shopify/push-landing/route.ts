@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Configurá tu tienda Shopify en Perfil primero.' }, { status: 400 });
   }
 
-  const { liquidContent } = await req.json();
+  const { liquidContent, templateJson } = await req.json();
   if (!liquidContent) return NextResponse.json({ error: 'Template vacío.' }, { status: 400 });
 
   const shop = profile.shopify_domain.replace(/^https?:\/\//, '').replace(/\/$/, '');
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No se pudo conectar con Shopify. Revisá el dominio en Perfil.' }, { status: 400 });
   }
 
-  // Push the .liquid section file
+  // Push section liquid
   try {
     const res = await fetch(`https://${shop}/admin/api/2024-01/themes/${activeThemeId}/assets.json`, {
       method: 'PUT',
@@ -69,12 +69,34 @@ export async function POST(req: NextRequest) {
     if (!res.ok) {
       const err = await res.json().catch(() => ({})) as { errors?: unknown };
       return NextResponse.json(
-        { error: `Error al subir el archivo: ${JSON.stringify(err.errors ?? err)}` },
+        { error: `Error al subir el template: ${JSON.stringify(err.errors ?? err)}` },
         { status: 400 }
       );
     }
   } catch {
     return NextResponse.json({ error: 'Error de red al subir el template.' }, { status: 500 });
+  }
+
+  // Push template JSON (pre-populated page template)
+  if (templateJson) {
+    try {
+      const res = await fetch(`https://${shop}/admin/api/2024-01/themes/${activeThemeId}/assets.json`, {
+        method: 'PUT',
+        headers: { 'X-Shopify-Access-Token': token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          asset: { key: 'templates/page.condimento-landing.json', value: templateJson },
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({})) as { errors?: unknown };
+        return NextResponse.json(
+          { error: `Error al subir el template JSON: ${JSON.stringify(err.errors ?? err)}` },
+          { status: 400 }
+        );
+      }
+    } catch {
+      return NextResponse.json({ error: 'Error de red al subir el template JSON.' }, { status: 500 });
+    }
   }
 
   return NextResponse.json({ ok: true, themeName: activeThemeName });
