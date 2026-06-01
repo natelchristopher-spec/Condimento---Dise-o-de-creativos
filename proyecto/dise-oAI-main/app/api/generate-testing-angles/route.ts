@@ -584,6 +584,7 @@ Respondé SOLO con JSON:
 
         await Promise.allSettled(
           angles.map(async (angle, angleIndex) => {
+            if (angleIndex > 0) await new Promise(r => setTimeout(r, angleIndex * 600));
             const isCategory = angle.level === 'category';
 
             let fullPrompt: string;
@@ -693,7 +694,7 @@ Respondé SOLO con JSON:
             // — preserves product colors, label, and design exactly.
             // Person mode (peopleMode real) or fashion: use Responses API so the model can compose a person + product.
             if (!isFashionProduct && hasProductPhoto && peopleMode === 'none') {
-              base64 = await editProductForConcept(openai, productDataUrls, fullPrompt);
+              base64 = await editProductForConcept(openai, productDataUrls.slice(0, 3), fullPrompt);
               // Fallback to Responses API if images.edit fails
               if (!base64) {
                 try {
@@ -701,7 +702,7 @@ Respondé SOLO con JSON:
                   const response = await (openai.responses.create as any)({
                     model: 'gpt-image-2',
                     input: [{ role: 'user', content: [
-                      ...productDataUrls.map(url => ({ type: 'input_image', image_url: url, detail: 'high' })),
+                      ...productDataUrls.slice(0, 3).map(url => ({ type: 'input_image', image_url: url, detail: 'high' })),
                       { type: 'input_text', text: fullPrompt },
                     ]}],
                     tools: [{ type: 'image_generation', model: 'gpt-image-2', quality: 'high', size: '1024x1536' }],
@@ -767,8 +768,6 @@ Respondé SOLO con JSON:
                 }
 
                 if (conceptBase64) {
-                  // Step B: stagger gpt-4o calls to avoid simultaneous rate-limit pressure
-                  if (angleIndex > 0) await new Promise(r => setTimeout(r, angleIndex * 500));
                   const applied = await applyGarmentInline(openai, conceptBase64, productDataUrls, productDescription, peopleMode, personDescription);
                   base64 = applied || conceptBase64;
                 }
@@ -817,7 +816,7 @@ Respondé SOLO con JSON:
             if (!base64) {
               // Last resort fallback: images.edit with high quality if product photo available, else generate
               if (hasProductPhoto) {
-                base64 = await editProductForConcept(openai, productDataUrls, fullPrompt);
+                base64 = await editProductForConcept(openai, productDataUrls.slice(0, 3), fullPrompt);
               }
               if (!base64) {
                 try {
