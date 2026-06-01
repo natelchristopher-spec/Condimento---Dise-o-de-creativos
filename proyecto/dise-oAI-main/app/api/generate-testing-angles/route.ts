@@ -623,6 +623,7 @@ Respondé SOLO con JSON:
                 'Fashion editorial photography — natural skin tones, soft studio or lifestyle lighting, 85mm lens equivalent, high-end fashion campaign quality, photorealistic.',
                 'Portrait 1024x1536. Todo el texto en español. Calidad agencia profesional.',
                 'ANTI-ALUCINACIÓN: NO inventés precios, descuentos, métricas, teléfonos, URLs ni estadísticas que no estén en el brief.',
+                'PROHIBICIÓN ABSOLUTA DE PRECIOS: NO escribas ningún número de precio, precio tachado, porcentaje de descuento, etiqueta "ANTES/AHORA", ni ningún valor monetario en la imagen. Si el ángulo habla de precio o valor, expresalo SOLO con palabras en el headline — nunca con números. Esta regla no tiene excepciones.',
                 'NO incluyas botones CTA en la imagen.',
                 `REGLA DE LOGO: NO generes ningún logo, ícono, símbolo ni elemento gráfico de marca. Si necesitás identificar la marca, escribí únicamente el nombre "${brandKit.name}" como texto plano — sin decoración, sin ícono, sin wordmark inventado.`,
                 hasProductPhoto ? 'PRIORIDAD #1 — FIDELIDAD DE PRENDA: esta es una pieza de testeo publicitario. La prenda en la imagen generada DEBE ser idéntica a la foto de referencia — mismo color pixel-perfect, misma silueta, mismo tejido, mismo estampado en la misma posición exacta. NO interpretes, NO idealices, NO simplifiques. Cualquier diferencia hace inútil el testeo.' : '',
@@ -679,6 +680,7 @@ Respondé SOLO con JSON:
                 photographyStyle,
                 'Portrait 1024x1536. ALL text in Spanish. Professional agency quality.',
                 'ANTI-HALLUCINATION: Do NOT invent prices, discounts, metrics, phone numbers, URLs, or statistics not in the brief.',
+                'ABSOLUTE PRICE PROHIBITION: Do NOT write any price number, crossed-out price, discount percentage, "BEFORE/NOW" label, or any monetary value in the image. If the angle is about price or value, express it ONLY with words in the headline — never with numbers. No exceptions.',
                 'Do NOT include button-style CTAs in the image.',
                 `BRAND LOGO RULE: Do NOT generate any logo, icon, symbol, or graphic brand element. If brand identification is needed, write only the brand name "${brandKit.name}" as plain text — no decoration, no icon, no invented wordmark.`,
                 hasProductPhoto ? '⚠️ FINAL COLOR CHECK: Before rendering, verify the product color matches the reference photo. If it does not match, correct it. The product color must not be shifted, lightened, darkened, or desaturated.' : '',
@@ -734,6 +736,7 @@ Respondé SOLO con JSON:
                   'Fashion editorial photography — natural skin tones, soft studio or lifestyle lighting, 85mm lens equivalent, photorealistic.',
                   'Portrait 1024x1536. Todo el texto en español. Calidad agencia profesional.',
                   'ANTI-ALUCINACIÓN: NO inventés precios, descuentos, métricas ni estadísticas que no estén en el brief.',
+                  'PROHIBICIÓN ABSOLUTA DE PRECIOS: NO escribas ningún número de precio, precio tachado, porcentaje de descuento, etiqueta "ANTES/AHORA", ni ningún valor monetario en la imagen. Si el ángulo habla de precio o valor, expresalo SOLO con palabras en el headline — nunca con números. Esta regla no tiene excepciones.',
                   'NO incluyas botones CTA en la imagen.',
                   `REGLA DE LOGO: NO generes ningún logo ni símbolo de marca. Si necesitás identificar la marca, escribí únicamente el nombre "${brandKit.name}" como texto plano.`,
                 ].filter(Boolean).join(' ');
