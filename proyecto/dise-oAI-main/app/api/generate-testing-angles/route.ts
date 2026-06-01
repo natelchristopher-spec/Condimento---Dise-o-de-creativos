@@ -533,7 +533,7 @@ FORMATO Y CONCEPTO VISUAL — para cada ángulo:
 
 REGLA CRÍTICA: el concepto visual debe expresar la TENSIÓN ESPECÍFICA de ese ángulo — no un visual genérico del nicho. Dos ángulos distintos DEBEN producir conceptos visualmente distintos. Si el ángulo habla de frustración por falta de resultados, el visual debe evocar esa frustración. Si habla de precio como barrera, debe evocar el alivio de superarla. Si habla de ocasión de uso, debe mostrar esa ocasión concreta. Un concepto que podría servir para cualquier ángulo del mismo nicho es un concepto fallido.
 
-Elegí el formato más adecuado de esta lista: ${isFashionProduct
+Elegí el formato más adecuado de esta lista de referencia, O proponé un formato propio si ninguno captura bien la tensión específica del ángulo: ${isFashionProduct
   ? 'Fashion Editorial / Street Style / Lifestyle Aspiracional / Studio Directo'
   : (isHealthProduct || isCosmeticProduct)
   ? 'Lifestyle Activo / Producto Hero / Problema-Solución / Oferta-Precio / Demostración'
