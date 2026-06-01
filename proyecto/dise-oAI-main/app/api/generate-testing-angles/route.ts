@@ -358,7 +358,10 @@ export async function POST(req: NextRequest) {
             role: 'user',
             content: [
               { type: 'text', text: descPrompt },
-              { type: 'image_url', image_url: { url: productDataUrl, detail: 'high' } },
+              ...productDataUrls.slice(0, 3).map(url => ({
+                type: 'image_url' as const,
+                image_url: { url, detail: 'high' as const },
+              })),
             ],
           }],
           max_tokens: 700,
