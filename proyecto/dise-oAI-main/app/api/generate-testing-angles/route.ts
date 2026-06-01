@@ -573,7 +573,7 @@ Respondé SOLO con JSON:
         );
 
         await Promise.allSettled(
-          angles.map(async (angle) => {
+          angles.map(async (angle, angleIndex) => {
             const isCategory = angle.level === 'category';
 
             let fullPrompt: string;
@@ -754,7 +754,8 @@ Respondé SOLO con JSON:
                 }
 
                 if (conceptBase64) {
-                  // Step B: apply exact garment via gpt-4o orchestration
+                  // Step B: stagger gpt-4o calls to avoid simultaneous rate-limit pressure
+                  if (angleIndex > 0) await new Promise(r => setTimeout(r, angleIndex * 500));
                   const applied = await applyGarmentInline(openai, conceptBase64, productDataUrls, productDescription, peopleMode, personDescription);
                   base64 = applied || conceptBase64;
                 }
