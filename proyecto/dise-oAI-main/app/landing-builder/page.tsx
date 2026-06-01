@@ -739,9 +739,19 @@ function generateTemplateJson(
   }, null, 2);
 }
 
+// Only allow safe CSS color values (hex, rgb, named) — reject anything with ; { } " ' < >
+function safeCssColor(value: string | undefined, fallback: string): string {
+  if (!value) return fallback;
+  // Allow: #rrggbb, #rgb, rgb(...), rgba(...), hsl(...), named colors (letters only)
+  if (/^(#[0-9a-fA-F]{3,8}|rgb\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\)|rgba\([^)]{0,40}\)|hsl\([^)]{0,40}\)|[a-zA-Z]{2,30})$/.test(value.trim())) {
+    return value.trim();
+  }
+  return fallback;
+}
+
 function generatePreviewHtml(copy: LandingCopy, brandKit: BrandKit, whatsapp: string, shipping: string): string {
-  const brand = brandKit.primary1 || '#1a1a1a';
-  const accent = brandKit.primary2 || '#e05c00';
+  const brand = safeCssColor(brandKit.primary1, '#1a1a1a');
+  const accent = safeCssColor(brandKit.primary2, '#e05c00');
   const esc = (s: string) => s.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
   const trustItems = shipping.split('•').filter(Boolean).map(t =>
@@ -834,11 +844,11 @@ function generatePreviewHtml(copy: LandingCopy, brandKit: BrandKit, whatsapp: st
   </div>
 </div>
 
-<!-- SPECS -->
-${specsHtml ? `<div style="background:#f7f7f5;"><div style="padding:72px 5%;max-width:1200px;margin:0 auto;">
+<!-- SPECS + BADGES -->
+${(specsHtml || badgesHtml) ? `<div style="background:#f7f7f5;"><div style="padding:72px 5%;max-width:1200px;margin:0 auto;">
   <span style="font-size:11px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#6b6b6b;display:block;margin-bottom:12px;">Detalles</span>
   <h2 style="font-size:32px;font-weight:700;margin-bottom:40px;">${esc(copy.specs_title)}</h2>
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1.5px;background:#e8e8e4;border:1.5px solid #e8e8e4;border-radius:14px;overflow:hidden;">${specsHtml}</div>
+  ${specsHtml ? `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1.5px;background:#e8e8e4;border:1.5px solid #e8e8e4;border-radius:14px;overflow:hidden;">${specsHtml}</div>` : ''}
   ${badgesHtml ? `<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:40px;">${badgesHtml}</div>` : ''}
 </div></div>` : ''}
 
@@ -1112,7 +1122,7 @@ export default function LandingBuilderPage() {
                   <input
                     value={productUrl}
                     onChange={e => { setProductUrl(e.target.value); setScrapeError(''); }}
-                    onKeyDown={e => e.key === 'Enter' && scrapeProduct()}
+                    onKeyDown={e => e.key === 'Enter' && !scraping && scrapeProduct()}
                     placeholder="https://tienda.com/productos/nombre"
                     className="flex-1 px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e42820]/20 focus:border-[#e42820]"
                   />
@@ -1343,6 +1353,7 @@ export default function LandingBuilderPage() {
                 {previewTab === 'preview' && (
                   <iframe
                     srcDoc={generatePreviewHtml(copy, brandKit, whatsapp, shipping)}
+                    sandbox="allow-scripts"
                     className="w-full border-0"
                     style={{ height: '80vh' }}
                     title="Vista previa landing"

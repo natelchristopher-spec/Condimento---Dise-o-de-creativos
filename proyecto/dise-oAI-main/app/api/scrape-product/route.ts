@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
         'Accept': 'text/html,application/xhtml+xml',
         'Accept-Language': 'es-AR,es;q=0.9',
       },
+      redirect: 'error',
       signal: AbortSignal.timeout(15000),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -64,7 +65,7 @@ export async function POST(req: NextRequest) {
   const openai = new OpenAI({ apiKey: ctx.openaiApiKey });
 
   try {
-    const { choices } = await openai.chat.completions.create({
+    const briefCall = openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         {
@@ -80,15 +81,18 @@ export async function POST(req: NextRequest) {
       temperature: 0.4,
     });
 
-    const clientRequest = choices[0].message.content?.trim() || '';
+    if (mode !== 'landing') {
+      const { choices } = await briefCall;
+      return NextResponse.json({ clientRequest: choices[0].message.content?.trim() || '' });
+    }
 
-    if (mode === 'landing') {
-      const landingRes = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: `Sos un copywriter de e-commerce LATAM. Dado el texto de una página de producto, extraés y generás datos para pre-completar un formulario de landing page.
+    // Landing mode: run both GPT calls in parallel
+    const landingCall = openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: `Sos un copywriter de e-commerce LATAM. Dado el texto de una página de producto, extraés y generás datos para pre-completar un formulario de landing page.
 
 Respondé SOLO con JSON válido:
 {
@@ -104,29 +108,29 @@ REGLAS:
 - bullets: 3 beneficios concisos, naturales, no vendedores
 - shippingText: si la página menciona envío gratis, plazo, garantía — armá una línea con emojis (ej: "🚚 Envío gratis • 🔄 30 días de devolución"). Si no hay info, devolvé ""
 - reviews: extraé hasta 3 testimonios REALES de la página. Si no hay reviews reales, devolvé array vacío []`,
-          },
-          {
-            role: 'user',
-            content: `Página de producto:\n\n${pageText}`,
-          },
-        ],
-        max_tokens: 400,
-        temperature: 0.3,
-        response_format: { type: 'json_object' },
-      });
-      let bullets: string[] = [];
-      let shippingText = '';
-      let reviews: { name: string; quote: string }[] = [];
-      try {
-        const parsed = JSON.parse(landingRes.choices[0].message.content || '{}');
-        if (Array.isArray(parsed.bullets)) bullets = parsed.bullets.slice(0, 3);
-        if (typeof parsed.shippingText === 'string') shippingText = parsed.shippingText;
-        if (Array.isArray(parsed.reviews)) reviews = parsed.reviews.slice(0, 3);
-      } catch { /* use defaults */ }
-      return NextResponse.json({ clientRequest, bullets, shippingText, reviews });
-    }
+        },
+        {
+          role: 'user',
+          content: `Página de producto:\n\n${pageText}`,
+        },
+      ],
+      max_tokens: 400,
+      temperature: 0.3,
+      response_format: { type: 'json_object' },
+    });
 
-    return NextResponse.json({ clientRequest });
+    const [briefRes, landingRes] = await Promise.all([briefCall, landingCall]);
+    const clientRequest = briefRes.choices[0].message.content?.trim() || '';
+    let bullets: string[] = [];
+    let shippingText = '';
+    let reviews: { name: string; quote: string }[] = [];
+    try {
+      const parsed = JSON.parse(landingRes.choices[0].message.content || '{}');
+      if (Array.isArray(parsed.bullets)) bullets = parsed.bullets.slice(0, 3);
+      if (typeof parsed.shippingText === 'string') shippingText = parsed.shippingText;
+      if (Array.isArray(parsed.reviews)) reviews = parsed.reviews.filter((r: { name?: string }) => r.name).slice(0, 3);
+    } catch { /* use defaults */ }
+    return NextResponse.json({ clientRequest, bullets, shippingText, reviews });
   } catch (e) {
     return NextResponse.json({ error: getOpenAIErrorMessage(e) }, { status: 500 });
   }
