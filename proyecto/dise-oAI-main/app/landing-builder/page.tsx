@@ -1331,7 +1331,7 @@ export default function LandingBuilderPage() {
                         <p className="font-semibold">Sección instalada en el tema <strong>{publishedTheme}</strong></p>
                         {!publishWarning && (
                           <p className="text-emerald-600 mt-0.5">
-                            Creá una nueva página en Shopify y asignale el template <strong>page.condimento-landing</strong>, o agregá la sección directamente desde el Theme Editor.
+                            Andá al producto en Shopify → <strong>Más acciones → Editar template</strong> y asignale el template <strong>product.condimento-landing</strong>. Las fotos, precio y carrito van a aparecer solos.
                           </p>
                         )}
                         {publishWarning && (

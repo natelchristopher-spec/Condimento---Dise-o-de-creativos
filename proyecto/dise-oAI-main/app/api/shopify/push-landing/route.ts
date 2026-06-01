@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
         method: 'PUT',
         headers: { 'X-Shopify-Access-Token': token, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          asset: { key: 'templates/page.condimento-landing.json', value: templateJson },
+          asset: { key: 'templates/product.condimento-landing.json', value: templateJson },
         }),
       });
       if (!res.ok) {
