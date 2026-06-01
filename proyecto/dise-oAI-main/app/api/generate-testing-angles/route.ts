@@ -373,6 +373,30 @@ export async function POST(req: NextRequest) {
   const DISCOUNT_TERMS = /(\d+\s*%\s*(off|desc(uento)?|de\s+descuento)|2x1|3x2|cuotas?\s+sin\s+inter[eé]s|envíos?\s+(gratis|gratuito|libre)|free\s+shipping|promo(ción)?|oferta|liquidaci[oó]n|precio\s+especial|hasta\s+\d+%|bundle|combo|\$\s*\d|\d+\s*pesos?\s+de\s+desc)/i;
   const hasDiscount = DISCOUNT_TERMS.test(brief + ' ' + (brandKit.clientRequest || ''));
 
+  // Extract exact price values from brief so GPT can't invent plausible-sounding alternatives
+  const briefPriceSrc = brief + ' ' + (brandKit.clientRequest || '');
+  const extractedPrices: string[] = [];
+  const moneyHits = briefPriceSrc.match(/\$\s*[\d.,]+/g) || [];
+  extractedPrices.push(...moneyHits.map(m => m.replace(/\s+/g, '')));
+  const pctHits = briefPriceSrc.match(/\d+\s*%/g) || [];
+  extractedPrices.push(...pctHits);
+  if (/cuotas?\s+sin\s+inter[eé]s/i.test(briefPriceSrc)) extractedPrices.push('cuotas sin interés');
+  if (/env[íi]os?\s+(gratis|gratuito|libre)/i.test(briefPriceSrc)) extractedPrices.push('envío gratis');
+  const uniquePrices = [...new Set(extractedPrices)];
+
+  // Price rule injected into every image prompt — anchors GPT to exact brief values
+  const priceRule = hasDiscount && uniquePrices.length > 0
+    ? `PRECIOS — VALORES EXACTOS DEL BRIEF: ${uniquePrices.join(', ')}. SOLO podés mostrar ESTOS números en la imagen, sin modificarlos. PROHIBIDO escribir cualquier valor monetario, porcentaje o precio que no aparezca en esta lista — inventar un número diferente es un error crítico.`
+    : hasDiscount
+    ? 'PRECIOS Y OFERTAS: el brief menciona una oferta real. Si la mostrás, usá los valores exactos del brief — PROHIBIDO inventar o modificar cualquier número.'
+    : 'PROHIBICIÓN ABSOLUTA DE PRECIOS: NO escribas ningún número de precio, precio tachado, porcentaje de descuento, etiqueta "ANTES/AHORA", ni ningún valor monetario en la imagen. Si el ángulo habla de precio o valor, expresalo SOLO con palabras en el headline — nunca con números.';
+
+  const priceRuleEN = hasDiscount && uniquePrices.length > 0
+    ? `PRICES — EXACT VALUES FROM BRIEF: ${uniquePrices.join(', ')}. You MAY only show THESE exact numbers in the image — do not alter them. PROHIBITED to write any monetary value, percentage, or price not on this list — inventing a different number is a critical error.`
+    : hasDiscount
+    ? 'PRICES AND OFFERS: the brief mentions a real offer. If shown, use the exact values from the brief — NEVER invent or alter any number.'
+    : 'ABSOLUTE PRICE PROHIBITION: Do NOT write any price number, crossed-out price, discount percentage, "BEFORE/NOW" label, or any monetary value in the image. If the angle is about price or value, express it ONLY with words in the headline — never with numbers.';
+
   // Step 1: describe the product
   let productDescription = brief;
   if (productDataUrl && productDataUrl.length > 100) {
@@ -712,9 +736,7 @@ Respondé SOLO con JSON:
                 'Fashion editorial photography — natural skin tones, soft studio or lifestyle lighting, 85mm lens equivalent, high-end fashion campaign quality, photorealistic.',
                 'Portrait 1024x1536. Todo el texto en español. Calidad agencia profesional.',
                 'ANTI-ALUCINACIÓN: NO inventés precios, descuentos, métricas, teléfonos, URLs ni estadísticas que no estén en el brief.',
-                hasDiscount
-                  ? 'PRECIOS Y OFERTAS — REGLA: El brief incluye información promocional real. Podés mostrar en la imagen los valores exactos que aparecen en el brief (precio, porcentaje de descuento, cuotas sin interés, envío gratis). PROHIBIDO inventar o modificar cualquier valor. Reproducí EXACTAMENTE como aparece en el brief.'
-                  : 'PROHIBICIÓN ABSOLUTA DE PRECIOS: NO escribas ningún número de precio, precio tachado, porcentaje de descuento, etiqueta "ANTES/AHORA", ni ningún valor monetario en la imagen. Si el ángulo habla de precio o valor, expresalo SOLO con palabras en el headline — nunca con números.',
+                priceRule,
                 'NO incluyas botones CTA en la imagen.',
                 `REGLA DE LOGO: NO generes ningún logo, ícono, símbolo ni elemento gráfico de marca. Si necesitás identificar la marca, escribí únicamente el nombre "${brandKit.name}" como texto plano — sin decoración, sin ícono, sin wordmark inventado.`,
                 hasProductPhoto ? 'PRIORIDAD #1 — FIDELIDAD DE PRENDA: esta es una pieza de testeo publicitario. La prenda en la imagen generada DEBE ser idéntica a la foto de referencia — mismo color pixel-perfect, misma silueta, mismo tejido, mismo estampado en la misma posición exacta. NO interpretes, NO idealices, NO simplifiques. Cualquier diferencia hace inútil el testeo.' : '',
@@ -773,9 +795,7 @@ Respondé SOLO con JSON:
                 photographyStyle,
                 'Portrait 1024x1536. ALL text in Spanish. Professional agency quality.',
                 'ANTI-HALLUCINATION: Do NOT invent prices, discounts, metrics, phone numbers, URLs, or statistics not in the brief.',
-                hasDiscount
-                  ? 'PRICES AND OFFERS — RULE: The brief includes real promotional data. You MAY show exact values from the brief (price, discount %, installments, free shipping) in the image. NEVER invent or alter any value. Reproduce EXACTLY as written in the brief — do not paraphrase or recombine.'
-                  : 'ABSOLUTE PRICE PROHIBITION: Do NOT write any price number, crossed-out price, discount percentage, "BEFORE/NOW" label, or any monetary value in the image. If the angle is about price or value, express it ONLY with words in the headline — never with numbers.',
+                priceRuleEN,
                 'Do NOT include button-style CTAs in the image.',
                 `BRAND LOGO RULE: Do NOT generate any logo, icon, symbol, or graphic brand element. If brand identification is needed, write only the brand name "${brandKit.name}" as plain text — no decoration, no icon, no invented wordmark.`,
                 hasProductPhoto ? '⚠️ FINAL COLOR CHECK: Before rendering, verify the product color matches the reference photo. If it does not match, correct it. The product color must not be shifted, lightened, darkened, or desaturated.' : '',
@@ -831,9 +851,7 @@ Respondé SOLO con JSON:
                   'Fashion editorial photography — natural skin tones, soft studio or lifestyle lighting, 85mm lens equivalent, photorealistic.',
                   'Portrait 1024x1536. Todo el texto en español. Calidad agencia profesional.',
                   'ANTI-ALUCINACIÓN: NO inventés precios, descuentos, métricas ni estadísticas que no estén en el brief.',
-                  hasDiscount
-                    ? 'PRECIOS Y OFERTAS — REGLA: El brief incluye información promocional real. Podés mostrar en la imagen los valores exactos que aparecen en el brief (precio, porcentaje de descuento, cuotas sin interés, envío gratis). PROHIBIDO inventar o modificar cualquier valor. Reproducí EXACTAMENTE como aparece en el brief — sin parafrasear, sin combinar de otra manera.'
-                    : 'PROHIBICIÓN ABSOLUTA DE PRECIOS: NO escribas ningún número de precio, precio tachado, porcentaje de descuento, etiqueta "ANTES/AHORA", ni ningún valor monetario en la imagen. Si el ángulo habla de precio o valor, expresalo SOLO con palabras en el headline — nunca con números.',
+                  priceRule,
                   'NO incluyas botones CTA en la imagen.',
                   `REGLA DE LOGO: NO generes ningún logo ni símbolo de marca. Si necesitás identificar la marca, escribí únicamente el nombre "${brandKit.name}" como texto plano.`,
                 ].filter(Boolean).join(' ');
