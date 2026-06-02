@@ -165,9 +165,17 @@ export default function AccesoPage() {
 
           {/* Social proof strip */}
           <div style={{ maxWidth: 760, margin: '0 auto 28px', textAlign: 'center' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 50, padding: '6px 16px', fontSize: '.8rem' }}>
-              <span style={{ color: '#fbbf24' }}>★★★★★</span>
-              <span style={{ color: 'rgba(255,255,255,.6)' }}>+150 tiendas confían en Condimento</span>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12, background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 50, padding: '8px 20px 8px 8px' }}>
+              {/* Avatar circles */}
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                {[['C','#ff7b00'],['M','#9f0ac9'],['A','#7c3aed'],['L','#c026d3'],['R','#e11d48']].map(([letter, bg], i) => (
+                  <div key={i} style={{ width: 32, height: 32, borderRadius: '50%', background: bg as string, border: '2px solid #13101e', marginLeft: i > 0 ? -8 : 0, zIndex: 5 - i, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, fontSize: '.65rem', color: '#fff' }}>{letter}</div>
+                ))}
+              </div>
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ display: 'flex', gap: 2, color: '#fbbf24', fontSize: '.85rem', lineHeight: 1 }}>★★★★★</div>
+                <p style={{ color: 'rgba(255,255,255,.55)', fontSize: '.72rem', margin: '2px 0 0', lineHeight: 1 }}>+150 tiendas confían en Condimento</p>
+              </div>
             </div>
           </div>
 
@@ -212,31 +220,74 @@ export default function AccesoPage() {
 
             {/* RIGHT — sticky CTA card */}
             <div className="cta-sticky" style={{ position: 'sticky', top: 20 }}>
-              <div style={{ background: 'linear-gradient(160deg,#1e1030,#130d22)', border: '2px solid rgba(159,10,201,.4)', borderRadius: 20, padding: '28px 24px', boxShadow: '0 20px 60px rgba(0,0,0,.5)' }}>
-                <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, fontSize: '.7rem', letterSpacing: '.12em', textTransform: 'uppercase', color: '#c026d3', marginBottom: 6, textAlign: 'center' }}>
-                  Acceso inmediato
-                </p>
-                <div style={{ textAlign: 'center', marginBottom: 16 }}>
-                  <span style={{ textDecoration: 'line-through', color: 'rgba(255,255,255,.25)', fontSize: '.95rem' }}>${NEXT_PRICE}</span>
-                  <div className="grad" style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '3.2rem', lineHeight: 1 }}>${CURRENT_PRICE}</div>
-                  <p style={{ color: 'rgba(255,255,255,.35)', fontSize: '.72rem', marginTop: 2 }}>USD / mes · Cancelás cuando quieras</p>
+              <div style={{ background: 'linear-gradient(160deg,#1e1030,#130d22)', border: '2px solid rgba(159,10,201,.4)', borderRadius: 20, overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,.5)' }}>
+
+                {/* ── Product stack mockup ── */}
+                <div style={{ background: 'linear-gradient(135deg,#2d1b69,#1e1030)', padding: '22px 20px 10px', position: 'relative', minHeight: 148 }}>
+                  {/* Back laptop */}
+                  <div style={{ position: 'absolute', bottom: 8, left: '4%', width: 155, transform: 'rotate(-6deg)', background: '#14102a', borderRadius: '7px 7px 0 0', padding: '6px 6px 0', boxShadow: '0 6px 24px rgba(0,0,0,.5)', zIndex: 1 }}>
+                    <div style={{ background: 'linear-gradient(135deg,rgba(159,10,201,.12),rgba(124,58,237,.08))', borderRadius: 3, aspectRatio: '16/10', border: '1px solid rgba(159,10,201,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <p style={{ color: 'rgba(159,10,201,.35)', fontSize: '.5rem', fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, margin: 0 }}>BRAND KIT</p>
+                    </div>
+                    <div style={{ background: '#1e1a38', height: 4, borderRadius: '0 0 4px 4px' }} />
+                    <div style={{ background: '#14102a', height: 2, borderRadius: '0 0 6px 6px', width: '120%', marginLeft: '-10%' }} />
+                  </div>
+                  {/* Front laptop */}
+                  <div style={{ position: 'absolute', bottom: 8, right: '4%', width: 148, transform: 'rotate(4deg)', background: '#14102a', borderRadius: '7px 7px 0 0', padding: '6px 6px 0', boxShadow: '0 8px 28px rgba(0,0,0,.6)', zIndex: 2 }}>
+                    <div style={{ background: 'linear-gradient(135deg,rgba(255,123,0,.12),rgba(159,10,201,.1))', borderRadius: 3, aspectRatio: '16/10', border: '1px solid rgba(255,123,0,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <p style={{ color: 'rgba(255,123,0,.4)', fontSize: '.5rem', fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, margin: 0 }}>PEC ✦</p>
+                    </div>
+                    <div style={{ background: '#1e1a38', height: 4, borderRadius: '0 0 4px 4px' }} />
+                    <div style={{ background: '#14102a', height: 2, borderRadius: '0 0 6px 6px', width: '120%', marginLeft: '-10%' }} />
+                  </div>
+                  {/* Center phone */}
+                  <div style={{ position: 'relative', zIndex: 3, margin: '0 auto', width: 54, background: '#14102a', borderRadius: 10, padding: '5px 4px', border: '2px solid #2d2562', boxShadow: '0 8px 32px rgba(0,0,0,.7)' }}>
+                    <div style={{ background: 'linear-gradient(160deg,rgba(192,38,211,.2),rgba(124,58,237,.15))', borderRadius: 6, aspectRatio: '9/16', border: '1px solid rgba(192,38,211,.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: '.9rem' }}>🌶️</span>
+                    </div>
+                    <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#1e1a38', margin: '4px auto 0' }} />
+                  </div>
                 </div>
 
-                <div style={{ marginBottom: 18 }}>
-                  <p style={{ color: 'rgba(255,255,255,.35)', fontSize: '.68rem', marginBottom: 8, textAlign: 'center' }}>⏳ El precio sube en:</p>
-                  <Countdown />
+                {/* ── Price & CTA ── */}
+                <div style={{ padding: '18px 22px 22px' }}>
+                  <div style={{ textAlign: 'center', marginBottom: 4 }}>
+                    <span style={{ textDecoration: 'line-through', color: 'rgba(255,255,255,.22)', fontSize: '.9rem' }}>($47)</span>
+                    {' '}
+                    <span style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '1.7rem', color: '#ff7b00' }}>${CURRENT_PRICE} USD Hoy</span>
+                  </div>
+                  <p style={{ textAlign: 'center', color: '#4ade80', fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, fontSize: '.72rem', marginBottom: 14 }}>
+                    Asegurá tu acceso antes de que suba el {PRICE_RISE_DATE}
+                  </p>
+
+                  <div style={{ marginBottom: 14 }}>
+                    <p style={{ color: 'rgba(255,255,255,.3)', fontSize: '.66rem', marginBottom: 7, textAlign: 'center' }}>⏳ El precio sube en:</p>
+                    <Countdown />
+                  </div>
+
+                  <CtaCard />
+
+                  {/* Payment logos row */}
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+                    {['VISA','MC','AMEX','PAYPAL'].map(p => (
+                      <div key={p} style={{ background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 4, padding: '3px 8px', fontSize: '.58rem', fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, color: 'rgba(255,255,255,.4)', letterSpacing: '.04em' }}>{p}</div>
+                    ))}
+                  </div>
+
+                  {/* Disponibilidad */}
+                  <p style={{ textAlign: 'center', fontSize: '.72rem', marginTop: 8, color: 'rgba(255,255,255,.3)' }}>
+                    Disponibilidad: <span style={{ color: '#4ade80', fontFamily: 'var(--font-m),sans-serif', fontWeight: 700 }}>Inmediata</span>
+                  </p>
+
+                  <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,.07)' }}>
+                    {[...CORE.map(i => i.label), '3 Bonuses exclusivos', 'Garantía 30 días'].map((item, i) => (
+                      <p key={i} style={{ color: 'rgba(255,255,255,.5)', fontSize: '.73rem', margin: '0 0 5px 0' }}>
+                        <span style={{ color: '#c026d3' }}>✦</span> {item}
+                      </p>
+                    ))}
+                  </div>
                 </div>
 
-                <CtaCard />
-                <TrustRow />
-
-                <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,.07)' }}>
-                  {[...CORE.map(i => i.label), '3 Bonuses exclusivos', 'Garantía 30 días'].map((item, i) => (
-                    <p key={i} style={{ color: 'rgba(255,255,255,.55)', fontSize: '.75rem', margin: '0 0 5px 0' }}>
-                      <span style={{ color: '#c026d3' }}>✦</span> {item}
-                    </p>
-                  ))}
-                </div>
               </div>
             </div>
 
