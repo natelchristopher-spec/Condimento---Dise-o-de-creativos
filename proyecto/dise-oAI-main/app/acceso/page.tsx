@@ -178,17 +178,18 @@ export default function AccesoPage() {
               <p style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 700, fontSize: '.7rem', letterSpacing: '.15em', textTransform: 'uppercase', color: '#c026d3', marginBottom: 14 }}>
                 Para e-commerce y dropshipping en LATAM
               </p>
-              <h1 style={{ fontSize: 'clamp(1.9rem,4vw,3rem)', fontWeight: 900, lineHeight: 1.08, marginBottom: 18 }}>
-                El dropshipping te da productos.{' '}
-                <span className="grad">Condimento te da una marca que vende.</span>
+              <h1 style={{ fontSize: 'clamp(1.8rem,4vw,2.9rem)', fontWeight: 900, lineHeight: 1.1, marginBottom: 18 }}>
+                La diferencia entre las marcas que escalan y las que no{' '}
+                <span className="grad">no es el producto. Es el sistema.</span>
               </h1>
-              <p style={{ fontSize: '1.05rem', color: 'rgba(255,255,255,.6)', lineHeight: 1.75, marginBottom: 10 }}>
-                Construí tu marca de e-commerce de manera automatizada —
-                sin diseñador, sin agencia y{' '}
-                <strong style={{ color: '#fff' }}>sin saber absolutamente nada</strong> de marketing.
+              <p style={{ fontSize: '1.05rem', color: 'rgba(255,255,255,.65)', lineHeight: 1.8, marginBottom: 10 }}>
+                BrandPilot es el primer sistema en LATAM que pone{' '}
+                <strong style={{ color: '#fff' }}>7 años de experiencia auditando 100+ marcas</strong>{' '}
+                dentro de una IA que toma las decisiones de marketing por vos —
+                qué testear, qué escalar, qué comunicar y cómo.
               </p>
-              <p style={{ fontSize: '.95rem', color: 'rgba(255,255,255,.35)', fontStyle: 'italic', marginBottom: 28 }}>
-                Describís tu producto. La IA hace el resto. En serio.
+              <p style={{ fontSize: '.9rem', color: 'rgba(255,255,255,.3)', fontStyle: 'italic', marginBottom: 28 }}>
+                Sin diseñador. Sin agencia. Sin saber nada de marketing. La IA ya sabe.
               </p>
 
               {/* Video */}
@@ -269,9 +270,14 @@ export default function AccesoPage() {
         <section className="section-light" style={{ padding: '56px 24px' }}>
           <div style={{ maxWidth: 720, margin: '0 auto' }}>
             <h2 style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 900, fontSize: 'clamp(1.6rem,4vw,2.4rem)', textAlign: 'center', color: '#111', marginBottom: 8 }}>
-              ¿QUÉ HAY DENTRO DE <span style={{ color: '#9f0ac9' }}>CONDIMENTO</span>?
+              ¿QUÉ HAY DENTRO DE <span style={{ color: '#9f0ac9' }}>BRANDPILOT</span>?
             </h2>
-            <p style={{ textAlign: 'center', color: 'rgba(0,0,0,.5)', marginBottom: 40 }}>El sistema completo de 3 capas para automatizar tus ventas</p>
+            <p style={{ textAlign: 'center', color: 'rgba(0,0,0,.5)', marginBottom: 8, maxWidth: 560, margin: '0 auto 8px' }}>
+              No es un curso. No es un software. No es una comunidad.
+            </p>
+            <p style={{ textAlign: 'center', fontFamily: 'Montserrat,sans-serif', fontWeight: 800, color: '#7c3aed', marginBottom: 40, fontSize: '1rem' }}>
+              Es la combinación de los tres — con una IA que ejecuta las decisiones por vos.
+            </p>
 
             <div style={{ display: 'grid', gap: 16 }}>
               {[
@@ -312,17 +318,26 @@ export default function AccesoPage() {
               Quién está detrás de esto
             </p>
             <h2 style={{ fontSize: 'clamp(1.4rem,4vw,1.9rem)', fontWeight: 900, marginBottom: 24 }}>
-              Soy Cris Natel. <span className="grad">7 años gestionando e-commerces en LATAM.</span>
+              Soy Cris Natel. <span className="grad">Estos son los resultados de auditar 100+ marcas en LATAM.</span>
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {[
-                'Agencias de marketing, campañas para más de 100 marcas — desde tiendas que invertían $10 diarios hasta marcas que movían $200.000 dólares mensuales en pauta. No soy un gurú de TikTok. Tenés mi LinkedIn para verificarlo.',
-                'En todos esos años auditando marcas, siempre encontraba lo mismo: el que hacía dropshipping buscaba el producto ganador sin parar y nunca construía nada real. El que tenía su marca improvisaba, dependía de una agencia para cada pieza y cambiaba de estrategia cada semana.',
-              ].map((t, i) => <p key={i} style={{ color: 'rgba(255,255,255,.6)', fontSize: '.95rem', lineHeight: 1.8 }}>{t}</p>)}
-              <div className="card-purple" style={{ padding: '18px 20px' }}>
-                <p style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 800, marginBottom: 8 }}>Los dos tenían el mismo problema:</p>
-                <p style={{ color: 'rgba(255,255,255,.7)', lineHeight: 1.7 }}>No tenían un sistema. Después de ver ese patrón cientos de veces, construí Condimento: la IA entrenada con esa experiencia para que vos puedas ejecutar en minutos lo que a mí me llevó 7 años aprender.</p>
+              <p style={{ color: 'rgba(255,255,255,.6)', fontSize: '.95rem', lineHeight: 1.8 }}>
+                Llevo 7 años en agencias de marketing gestionando campañas para más de 100 marcas de e-commerce — desde tiendas que invertían $10 diarios hasta marcas que movían $200.000 dólares mensuales en pauta. No soy un gurú de TikTok. Tenés mi LinkedIn para verificarlo.
+              </p>
+              <p style={{ color: 'rgba(255,255,255,.6)', fontSize: '.95rem', lineHeight: 1.8 }}>
+                Después de auditar todas esas marcas llegué a una conclusión que cambió todo:
+              </p>
+              <div className="card-purple" style={{ padding: '20px 22px' }}>
+                <p style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 900, fontSize: '1.05rem', marginBottom: 10 }}>
+                  "El 90% de los e-commerces falla por lo mismo — y no es el producto."
+                </p>
+                <p style={{ color: 'rgba(255,255,255,.65)', lineHeight: 1.75, fontSize: '.92rem' }}>
+                  Falla porque no tienen un sistema para saber qué mensaje usa, qué anuncio testear, qué escalar y cómo comunicar su marca. Improvizan cada semana. Cambian el producto cuando el problema está en todo lo que rodea al producto.
+                </p>
               </div>
+              <p style={{ color: 'rgba(255,255,255,.6)', fontSize: '.95rem', lineHeight: 1.8 }}>
+                Esa conclusión me llevó a construir BrandPilot: tomé cada decisión, cada framework, cada patrón que vi funcionar en esas 100+ marcas — y los entrené en una IA para que vos puedas ejecutar en minutos lo que a mí me llevó 7 años aprender.
+              </p>
             </div>
           </div>
         </section>
@@ -332,10 +347,13 @@ export default function AccesoPage() {
         {/* ── THE 3-STEP SYSTEM ── */}
         <section style={{ background: '#0a0810', padding: '64px 24px' }}>
           <div style={{ maxWidth: 680, margin: '0 auto' }}>
-            <p style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 700, fontSize: '.7rem', letterSpacing: '.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,.3)', marginBottom: 8, textAlign: 'center' }}>Cómo funciona Condimento AI</p>
-            <h2 style={{ fontSize: 'clamp(1.4rem,4vw,2rem)', fontWeight: 900, textAlign: 'center', marginBottom: 48 }}>
-              El sistema que la IA ejecuta en <span className="grad">3 pasos</span>
+            <p style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 700, fontSize: '.7rem', letterSpacing: '.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,.3)', marginBottom: 8, textAlign: 'center' }}>Dentro de Condimento AI</p>
+            <h2 style={{ fontSize: 'clamp(1.4rem,4vw,2rem)', fontWeight: 900, textAlign: 'center', marginBottom: 12 }}>
+              Así es como el sistema <span className="grad">toma las decisiones por vos</span>
             </h2>
+            <p style={{ textAlign: 'center', color: 'rgba(255,255,255,.4)', fontSize: '.88rem', lineHeight: 1.7, maxWidth: 500, margin: '0 auto 44px' }}>
+              No te dice qué hacer. Lo hace. Desde testear qué mensaje convierte hasta armar el funnel completo y conectarlo con tu tienda y tus redes.
+            </p>
             {[
               { n: '1', title: 'Testing de Ángulos — sabé qué convierte antes de gastar', desc: 'Describís el producto y Condimento genera múltiples ángulos de mensaje con el hook para cada uno. Elegís el ganador sin gastar un peso en pauta. Recién después, escalás.', check: 'Fin de copiar anuncios y esperar que funcionen.' },
               { n: '2', title: 'Sistema PEC — escala el ángulo ganador en los 3 momentos', desc: <>Para cada ángulo ganador, Condimento genera automáticamente 3 piezas: una para <strong style={{ color: '#c026d3' }}>Prospección</strong>, una para <strong style={{ color: '#7c3aed' }}>Evaluación</strong> y una para <strong style={{ color: '#ff7b00' }}>Conversión</strong>. El funnel completo, automatizado.</>, check: 'El mismo mensaje adaptado a cada etapa. No quemás el presupuesto.' },
