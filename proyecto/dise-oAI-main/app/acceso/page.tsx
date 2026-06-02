@@ -50,7 +50,7 @@ function Countdown() {
     <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
       {[{ v: pad(t.d), l: 'días' }, { v: pad(t.h), l: 'hs' }, { v: pad(t.m), l: 'min' }, { v: pad(t.s), l: 'seg' }].map(({ v, l }) => (
         <div key={l} style={{ textAlign: 'center', background: 'rgba(0,0,0,.4)', border: '1px solid rgba(255,255,255,.15)', borderRadius: 8, padding: '8px 12px', minWidth: 52 }}>
-          <div style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 900, fontSize: '1.5rem', lineHeight: 1 }}>{v}</div>
+          <div style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '1.5rem', lineHeight: 1 }}>{v}</div>
           <div style={{ fontSize: '.65rem', marginTop: 3, opacity: .5 }}>{l}</div>
         </div>
       ))}
@@ -67,7 +67,7 @@ function VideoBlock() {
       ) : (
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, background: 'linear-gradient(135deg,#1a0a2e,#0d0d1a)' }}>
           <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg,#ff7b00,#ff9500)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem', boxShadow: '0 0 40px rgba(255,123,0,.5)' }}>▶</div>
-          <p style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 700, fontSize: '.82rem', letterSpacing: '.08em', opacity: .7, margin: 0 }}>{DEMO_VIDEO_URL ? 'MIRÁ CÓMO FUNCIONA EN 1 MINUTO' : 'DEMO — PRÓXIMAMENTE'}</p>
+          <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, fontSize: '.82rem', letterSpacing: '.08em', opacity: .7, margin: 0 }}>{DEMO_VIDEO_URL ? 'MIRÁ CÓMO FUNCIONA EN 1 MINUTO' : 'DEMO — PRÓXIMAMENTE'}</p>
         </div>
       )}
     </div>
@@ -76,7 +76,7 @@ function VideoBlock() {
 
 function CtaCard({ label = `QUIERO ACCESO INMEDIATO POR $${CURRENT_PRICE}/MES →` }: { label?: string }) {
   return (
-    <a href={CHECKOUT_URL} style={{ display: 'block', background: 'linear-gradient(135deg,#ff7b00,#ff9500)', color: '#fff', fontFamily: 'Montserrat,sans-serif', fontWeight: 900, fontSize: '1rem', letterSpacing: '.04em', textAlign: 'center', padding: '18px 24px', borderRadius: 50, textDecoration: 'none', boxShadow: '0 6px 30px rgba(255,123,0,.5)', transition: 'transform .15s', lineHeight: 1.3, position: 'relative', overflow: 'hidden' }}>
+    <a href={CHECKOUT_URL} style={{ display: 'block', background: 'linear-gradient(135deg,#ff7b00,#ff9500)', color: '#fff', fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '1rem', letterSpacing: '.04em', textAlign: 'center', padding: '18px 24px', borderRadius: 50, textDecoration: 'none', boxShadow: '0 6px 30px rgba(255,123,0,.5)', transition: 'transform .15s', lineHeight: 1.3, position: 'relative', overflow: 'hidden' }}>
       <span style={{ position: 'absolute', top: 0, left: '-100%', width: '60%', height: '100%', background: 'linear-gradient(90deg,transparent,rgba(255,255,255,.25),transparent)', animation: 'shimmer 2.5s infinite' }} />
       {label}
     </a>
@@ -106,14 +106,14 @@ export default function AccesoPage() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Inter:wght@400;500;600&display=swap');
+        
         @keyframes shimmer { 0%{left:-100%} 100%{left:200%} }
         @keyframes gmove   { 0%{background-position:0%} 100%{background-position:200%} }
         @keyframes pulse   { 0%,100%{transform:scale(1)} 50%{transform:scale(1.03)} }
 
         * { box-sizing: border-box; }
-        .lp { background: #0f0f14; font-family: 'Inter', sans-serif; color: #fff; }
-        .lp h1, .lp h2, .lp h3, .lp h4 { font-family: 'Montserrat', sans-serif; margin: 0; }
+        .lp { background: #0f0f14; font-family: 'var(--font-i)', sans-serif; color: #fff; }
+        .lp h1, .lp h2, .lp h3, .lp h4 { font-family: 'var(--font-m)', sans-serif; margin: 0; }
         .lp p { margin: 0; }
 
         .grad     { background: linear-gradient(135deg,#d946ef,#9f0ac9,#7c3aed); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
@@ -157,7 +157,7 @@ export default function AccesoPage() {
 
         {/* ── HEADER ── */}
         <header style={{ background: '#0a0810', borderBottom: '1px solid rgba(255,255,255,.06)', padding: '14px 24px', textAlign: 'center' }}>
-          <span style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 900, fontSize: '1.3rem', letterSpacing: '.08em' }}>🌶️ CONDIMENTO</span>
+          <span style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '1.3rem', letterSpacing: '.08em' }}>🌶️ CONDIMENTO</span>
         </header>
 
         {/* ── HERO ── */}
@@ -175,7 +175,7 @@ export default function AccesoPage() {
 
             {/* LEFT */}
             <div>
-              <p style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 700, fontSize: '.7rem', letterSpacing: '.15em', textTransform: 'uppercase', color: '#c026d3', marginBottom: 14 }}>
+              <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, fontSize: '.7rem', letterSpacing: '.15em', textTransform: 'uppercase', color: '#c026d3', marginBottom: 14 }}>
                 Para e-commerce y dropshipping en LATAM
               </p>
               <h1 style={{ fontSize: 'clamp(1.8rem,4vw,2.9rem)', fontWeight: 900, lineHeight: 1.1, marginBottom: 18 }}>
@@ -213,12 +213,12 @@ export default function AccesoPage() {
             {/* RIGHT — sticky CTA card */}
             <div className="cta-sticky" style={{ position: 'sticky', top: 20 }}>
               <div style={{ background: 'linear-gradient(160deg,#1e1030,#130d22)', border: '2px solid rgba(159,10,201,.4)', borderRadius: 20, padding: '28px 24px', boxShadow: '0 20px 60px rgba(0,0,0,.5)' }}>
-                <p style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 800, fontSize: '.7rem', letterSpacing: '.12em', textTransform: 'uppercase', color: '#c026d3', marginBottom: 6, textAlign: 'center' }}>
+                <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, fontSize: '.7rem', letterSpacing: '.12em', textTransform: 'uppercase', color: '#c026d3', marginBottom: 6, textAlign: 'center' }}>
                   Acceso inmediato
                 </p>
                 <div style={{ textAlign: 'center', marginBottom: 16 }}>
                   <span style={{ textDecoration: 'line-through', color: 'rgba(255,255,255,.25)', fontSize: '.95rem' }}>${NEXT_PRICE}</span>
-                  <div className="grad" style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 900, fontSize: '3.2rem', lineHeight: 1 }}>${CURRENT_PRICE}</div>
+                  <div className="grad" style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '3.2rem', lineHeight: 1 }}>${CURRENT_PRICE}</div>
                   <p style={{ color: 'rgba(255,255,255,.35)', fontSize: '.72rem', marginTop: 2 }}>USD / mes · Cancelás cuando quieras</p>
                 </div>
 
@@ -248,7 +248,7 @@ export default function AccesoPage() {
         {/* ── SOCIAL PROOF NUMBERS ── */}
         <section className="section-light" style={{ padding: '36px 24px' }}>
           <div style={{ maxWidth: 700, margin: '0 auto', textAlign: 'center' }}>
-            <p style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 800, fontSize: '.72rem', letterSpacing: '.15em', textTransform: 'uppercase', color: '#7c3aed', marginBottom: 24 }}>
+            <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, fontSize: '.72rem', letterSpacing: '.15em', textTransform: 'uppercase', color: '#7c3aed', marginBottom: 24 }}>
               Los referentes más grandes de la industria en LATAM se capacitan con nosotros para vender con su marca
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
@@ -258,7 +258,7 @@ export default function AccesoPage() {
                 { n: '+150', s: 'tiendas ya dentro del sistema' },
               ].map(({ n, s }) => (
                 <div key={s} style={{ borderRight: '1px solid rgba(0,0,0,.1)' }}>
-                  <div style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 900, fontSize: '2.1rem', color: '#7c3aed' }}>{n}</div>
+                  <div style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '2.1rem', color: '#7c3aed' }}>{n}</div>
                   <div style={{ fontSize: '.78rem', color: 'rgba(0,0,0,.5)', marginTop: 4, lineHeight: 1.4 }}>{s}</div>
                 </div>
               ))}
@@ -269,13 +269,13 @@ export default function AccesoPage() {
         {/* ── QUÉ HAY DENTRO ── */}
         <section className="section-light" style={{ padding: '56px 24px' }}>
           <div style={{ maxWidth: 720, margin: '0 auto' }}>
-            <h2 style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 900, fontSize: 'clamp(1.6rem,4vw,2.4rem)', textAlign: 'center', color: '#111', marginBottom: 8 }}>
+            <h2 style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: 'clamp(1.6rem,4vw,2.4rem)', textAlign: 'center', color: '#111', marginBottom: 8 }}>
               ¿QUÉ HAY DENTRO DE <span style={{ color: '#9f0ac9' }}>BRANDPILOT</span>?
             </h2>
             <p style={{ textAlign: 'center', color: 'rgba(0,0,0,.5)', marginBottom: 8, maxWidth: 560, margin: '0 auto 8px' }}>
               No es un curso. No es un software. No es una comunidad.
             </p>
-            <p style={{ textAlign: 'center', fontFamily: 'Montserrat,sans-serif', fontWeight: 800, color: '#7c3aed', marginBottom: 40, fontSize: '1rem' }}>
+            <p style={{ textAlign: 'center', fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, color: '#7c3aed', marginBottom: 40, fontSize: '1rem' }}>
               Es la combinación de los tres — con una IA que ejecuta las decisiones por vos.
             </p>
 
@@ -288,7 +288,7 @@ export default function AccesoPage() {
                 <div key={item.title} style={{ display: 'flex', gap: 16, background: '#faf7ff', border: '1px solid rgba(124,58,237,.15)', borderRadius: 14, padding: '20px 22px' }}>
                   <span style={{ fontSize: '1.5rem', flexShrink: 0, marginTop: 2 }}>{item.icon}</span>
                   <div>
-                    <p style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 800, fontSize: '1rem', color: '#111', marginBottom: 10 }}>{item.title}</p>
+                    <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, fontSize: '1rem', color: '#111', marginBottom: 10 }}>{item.title}</p>
                     {item.items.map((li, j) => (
                       <p key={j} style={{ color: 'rgba(0,0,0,.65)', fontSize: '.85rem', margin: '0 0 5px 0', display: 'flex', gap: 8 }}>
                         <span style={{ color: '#9f0ac9', flexShrink: 0 }}>✦</span>{li}
@@ -314,7 +314,7 @@ export default function AccesoPage() {
         {/* ── CRIS'S STORY ── */}
         <section className="section-mid" style={{ padding: '64px 24px' }}>
           <div style={{ maxWidth: 680, margin: '0 auto' }}>
-            <p style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 700, fontSize: '.7rem', letterSpacing: '.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,.3)', marginBottom: 16 }}>
+            <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, fontSize: '.7rem', letterSpacing: '.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,.3)', marginBottom: 16 }}>
               Quién está detrás de esto
             </p>
             <h2 style={{ fontSize: 'clamp(1.4rem,4vw,1.9rem)', fontWeight: 900, marginBottom: 24 }}>
@@ -328,7 +328,7 @@ export default function AccesoPage() {
                 Después de auditar todas esas marcas llegué a una conclusión que cambió todo:
               </p>
               <div className="card-purple" style={{ padding: '20px 22px' }}>
-                <p style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 900, fontSize: '1.05rem', marginBottom: 10 }}>
+                <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '1.05rem', marginBottom: 10 }}>
                   "El 90% de los e-commerces falla por lo mismo — y no es el producto."
                 </p>
                 <p style={{ color: 'rgba(255,255,255,.65)', lineHeight: 1.75, fontSize: '.92rem' }}>
@@ -347,7 +347,7 @@ export default function AccesoPage() {
         {/* ── THE 3-STEP SYSTEM ── */}
         <section style={{ background: '#0a0810', padding: '64px 24px' }}>
           <div style={{ maxWidth: 680, margin: '0 auto' }}>
-            <p style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 700, fontSize: '.7rem', letterSpacing: '.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,.3)', marginBottom: 8, textAlign: 'center' }}>Dentro de Condimento AI</p>
+            <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, fontSize: '.7rem', letterSpacing: '.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,.3)', marginBottom: 8, textAlign: 'center' }}>Dentro de Condimento AI</p>
             <h2 style={{ fontSize: 'clamp(1.4rem,4vw,2rem)', fontWeight: 900, textAlign: 'center', marginBottom: 12 }}>
               Así es como el sistema <span className="grad">toma las decisiones por vos</span>
             </h2>
@@ -362,7 +362,7 @@ export default function AccesoPage() {
               <div key={step.n} style={{ display: 'flex', gap: 18, marginBottom: 40 }}>
                 <div className="step-dot">{step.n}</div>
                 <div>
-                  <p style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 800, fontSize: '1.05rem', marginBottom: 8 }}>{step.title}</p>
+                  <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, fontSize: '1.05rem', marginBottom: 8 }}>{step.title}</p>
                   <p style={{ color: 'rgba(255,255,255,.6)', fontSize: '.88rem', lineHeight: 1.7, marginBottom: 10 }}>{step.desc}</p>
                   <div className="card-purple" style={{ padding: '10px 14px', display: 'inline-block' }}>
                     <p style={{ color: 'rgba(255,255,255,.75)', fontSize: '.8rem', margin: 0 }}>✓ {step.check}</p>
@@ -386,7 +386,7 @@ export default function AccesoPage() {
         {/* ── OFFER STACK ── */}
         <section className="section-light" style={{ padding: '64px 24px' }}>
           <div style={{ maxWidth: 700, margin: '0 auto' }}>
-            <h2 style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 900, fontSize: 'clamp(1.4rem,4vw,2.1rem)', textAlign: 'center', color: '#111', marginBottom: 8 }}>
+            <h2 style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: 'clamp(1.4rem,4vw,2.1rem)', textAlign: 'center', color: '#111', marginBottom: 8 }}>
               ESTO ES LO QUE <span style={{ color: '#9f0ac9' }}>ENCONTRARÁS</span> DENTRO DE CONDIMENTO
             </h2>
             <p style={{ textAlign: 'center', color: 'rgba(0,0,0,.4)', marginBottom: 40, fontSize: '.9rem' }}>
@@ -398,34 +398,34 @@ export default function AccesoPage() {
                   <div style={{ display: 'flex', gap: 10 }}>
                     <span style={{ color: '#9f0ac9', flexShrink: 0, marginTop: 2 }}>✦</span>
                     <div>
-                      <p style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 700, fontSize: '.9rem', color: '#111', marginBottom: 3 }}>{item.label}</p>
+                      <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, fontSize: '.9rem', color: '#111', marginBottom: 3 }}>{item.label}</p>
                       <p style={{ color: 'rgba(0,0,0,.5)', fontSize: '.78rem', lineHeight: 1.5 }}>{item.desc}</p>
                     </div>
                   </div>
-                  <span style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 800, color: '#9f0ac9', whiteSpace: 'nowrap', flexShrink: 0 }}>${item.value}</span>
+                  <span style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, color: '#9f0ac9', whiteSpace: 'nowrap', flexShrink: 0 }}>${item.value}</span>
                 </div>
               ))}
             </div>
 
             {/* Bonuses */}
-            <h3 style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 900, textAlign: 'center', color: '#111', marginBottom: 20 }}>
+            <h3 style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, textAlign: 'center', color: '#111', marginBottom: 20 }}>
               🎁 Desbloquea Acceso Inmediato a 3 <span style={{ color: '#ff7b00' }}>Bonuses Adicionales</span> Gratis
             </h3>
             <div style={{ display: 'grid', gap: 16 }}>
               {BONUSES.map((b) => (
                 <div key={b.label} className="bonus-card">
                   <div className="bonus-header">
-                    <p style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 800, fontSize: '.78rem', color: '#fff', letterSpacing: '.06em', margin: 0 }}>{b.n} — {b.label}</p>
+                    <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, fontSize: '.78rem', color: '#fff', letterSpacing: '.06em', margin: 0 }}>{b.n} — {b.label}</p>
                   </div>
                   <div style={{ padding: '16px 20px', display: 'flex', gap: 16, alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ flex: 1 }}>
                       <p style={{ color: 'rgba(0,0,0,.65)', fontSize: '.85rem', lineHeight: 1.65, marginBottom: 10 }}>{b.desc}</p>
-                      <p style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 800, fontSize: '.85rem', color: '#7c3aed' }}>
+                      <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, fontSize: '.85rem', color: '#7c3aed' }}>
                         Recibís Esto Cuando Comprás Tu Acceso Por ${CURRENT_PRICE}
                       </p>
                     </div>
                     <div style={{ width: 80, flexShrink: 0, textAlign: 'center' }}>
-                      <div style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 900, fontSize: '1.2rem', color: '#ff7b00', lineHeight: 1 }}>+${b.value}</div>
+                      <div style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '1.2rem', color: '#ff7b00', lineHeight: 1 }}>+${b.value}</div>
                       <div style={{ fontSize: '.65rem', color: 'rgba(0,0,0,.4)', marginTop: 2 }}>valor</div>
                     </div>
                   </div>
@@ -437,15 +437,15 @@ export default function AccesoPage() {
             <div style={{ background: '#111', borderRadius: 14, padding: '24px', marginTop: 32, color: '#fff' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: 12, borderBottom: '1px solid rgba(255,255,255,.08)', marginBottom: 14 }}>
                 <span style={{ color: 'rgba(255,255,255,.4)', fontSize: '.85rem' }}>Valor total</span>
-                <span style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 800, textDecoration: 'line-through', color: 'rgba(255,255,255,.2)', fontSize: '1.1rem' }}>${totalValue.toLocaleString()}</span>
+                <span style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, textDecoration: 'line-through', color: 'rgba(255,255,255,.2)', fontSize: '1.1rem' }}>${totalValue.toLocaleString()}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                 <div>
-                  <p style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 800, fontSize: '1rem', margin: '0 0 4px 0' }}>Tu inversión hoy</p>
-                  <p style={{ color: 'rgba(255,123,0,.8)', fontSize: '.75rem', fontFamily: 'Montserrat,sans-serif', fontWeight: 700, margin: 0 }}>⚠️ Sube a ${NEXT_PRICE} {PRICE_RISE_DATE}</p>
+                  <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, fontSize: '1rem', margin: '0 0 4px 0' }}>Tu inversión hoy</p>
+                  <p style={{ color: 'rgba(255,123,0,.8)', fontSize: '.75rem', fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, margin: 0 }}>⚠️ Sube a ${NEXT_PRICE} {PRICE_RISE_DATE}</p>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div className="grad" style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 900, fontSize: '2.8rem', lineHeight: 1 }}>${CURRENT_PRICE}</div>
+                  <div className="grad" style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '2.8rem', lineHeight: 1 }}>${CURRENT_PRICE}</div>
                   <div style={{ color: 'rgba(255,255,255,.3)', fontSize: '.7rem' }}>USD / mes</div>
                 </div>
               </div>
@@ -455,11 +455,97 @@ export default function AccesoPage() {
           </div>
         </section>
 
+        {/* ── CASO DE ESTUDIO ── */}
+        <section style={{ background: '#0f0f14', padding: '64px 24px' }}>
+          <div style={{ maxWidth: 680, margin: '0 auto' }}>
+            <p style={{ textAlign: 'center', color: 'rgba(255,255,255,.35)', fontSize: '.72rem', fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 12 }}>
+              Caso de Estudio
+            </p>
+            <h2 style={{ fontSize: 'clamp(1.4rem,4vw,2rem)', fontWeight: 900, textAlign: 'center', marginBottom: 8 }}>
+              Instalando BrandPilot en{' '}
+              <span className="grad">3 marcas de e-commerce reales</span>
+            </h2>
+            <p style={{ color: 'rgba(255,255,255,.45)', textAlign: 'center', fontSize: '.88rem', lineHeight: 1.7, maxWidth: 500, margin: '0 auto 36px' }}>
+              En un grupo de prueba, mostramos a 3 dueños de marcas de nichos diferentes cómo aplicar el sistema BrandPilot.
+            </p>
+
+            {/* Results bar */}
+            <div style={{ background: 'linear-gradient(90deg,#14532d,#166534)', borderRadius: 12, padding: '16px 24px', textAlign: 'center', marginBottom: 28 }}>
+              <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '1.05rem', color: '#4ade80', margin: 0 }}>
+                Estos Fueron Los Resultados:
+              </p>
+            </div>
+
+            {/* Testimonial image placeholders */}
+            <div style={{ display: 'grid', gap: 16, marginBottom: 28 }}>
+              {[
+                { label: 'Testimonio / Captura de resultado 1', hint: 'Ej: captura de chat, métrica de ROAS, screenshot de ventas' },
+                { label: 'Testimonio / Captura de resultado 2', hint: 'Ej: mensaje de cliente, reseña, captura de Meta Ads' },
+                { label: 'Testimonio / Captura de resultado 3', hint: 'Ej: facturación semanal, captura de Shopify, DM de Instagram' },
+              ].map((item, i) => (
+                <div key={i} style={{ background: '#1a1626', border: '2px dashed rgba(159,10,201,.3)', borderRadius: 12, padding: '24px', textAlign: 'center', minHeight: 120, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, fontSize: '.8rem', color: 'rgba(255,255,255,.4)', margin: 0 }}>📸 {item.label}</p>
+                  <p style={{ color: 'rgba(255,255,255,.2)', fontSize: '.72rem', margin: 0, fontStyle: 'italic' }}>{item.hint}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Result callout */}
+            <div style={{ background: 'linear-gradient(90deg,#14532d,#166534)', borderRadius: 12, padding: '18px 24px', textAlign: 'center', marginBottom: 32 }}>
+              <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '1rem', color: '#fff', margin: 0 }}>
+                Al aplicar el sistema paso a paso,{' '}
+                <span style={{ color: '#4ade80' }}>multiplicaron sus ventas x2, x3 y x5</span>
+              </p>
+              <p style={{ color: 'rgba(255,255,255,.6)', fontSize: '.82rem', marginTop: 6 }}>
+                El método funcionó en marcas de diferentes nichos y presupuestos.
+              </p>
+            </div>
+
+            <div style={{ textAlign: 'center' }}>
+              <CtaCard label={`QUIERO RESULTADOS COMO ESTOS POR $${CURRENT_PRICE}/MES →`} />
+              <TrustRow />
+            </div>
+          </div>
+        </section>
+
+        {/* ── CASOS DE ÉXITO (foto + texto) ── */}
+        <section className="section-light" style={{ padding: '64px 24px' }}>
+          <div style={{ maxWidth: 700, margin: '0 auto' }}>
+            <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, fontSize: '.72rem', letterSpacing: '.15em', textTransform: 'uppercase', color: '#7c3aed', marginBottom: 8, textAlign: 'center' }}>
+              Casos de éxito
+            </p>
+            <h2 style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: 'clamp(1.4rem,4vw,2rem)', textAlign: 'center', color: '#111', marginBottom: 40 }}>
+              Marcas que ya tienen el sistema funcionando
+            </h2>
+            <div style={{ display: 'grid', gap: 20 }}>
+              {[
+                { tag: 'ROAS 2 → 39', tagColor: '#7c3aed', result: 'En un mes con el sistema completo', detail: 'Marca de ropa — LATAM' },
+                { tag: '$200.000 USD', tagColor: '#16a34a', result: 'Facturado en una semana', detail: 'E-commerce de productos físicos' },
+                { tag: 'x5 en ventas', tagColor: '#ff7b00', result: 'En 30 días aplicando el desafío', detail: 'Dropshipping de nicho' },
+              ].map((caso, i) => (
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, background: '#faf7ff', border: '1px solid rgba(124,58,237,.15)', borderRadius: 14, overflow: 'hidden' }}>
+                  {/* Image placeholder */}
+                  <div style={{ background: 'linear-gradient(135deg,#1a0a2e,#2d1b69)', minHeight: 180, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 20 }}>
+                    <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '.65rem', letterSpacing: '.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,.3)', margin: 0 }}>📸 Imagen del caso</p>
+                    <p style={{ color: 'rgba(255,255,255,.15)', fontSize: '.65rem', margin: 0, textAlign: 'center', fontStyle: 'italic' }}>Captura de resultado,<br />screenshot o foto</p>
+                  </div>
+                  {/* Content */}
+                  <div style={{ padding: '20px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 8 }}>
+                    <span style={{ display: 'inline-block', background: caso.tagColor, color: '#fff', fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '.78rem', padding: '4px 12px', borderRadius: 50, alignSelf: 'flex-start' }}>{caso.tag}</span>
+                    <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, fontSize: '.95rem', color: '#111' }}>{caso.result}</p>
+                    <p style={{ color: 'rgba(0,0,0,.4)', fontSize: '.78rem' }}>{caso.detail}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* ── GUARANTEE ── */}
         <section style={{ background: 'linear-gradient(90deg,#1e0a30,#130d22)', padding: '56px 24px' }}>
           <div style={{ maxWidth: 600, margin: '0 auto', display: 'flex', gap: 28, alignItems: 'flex-start' }}>
             <div className="guarantee-ring">
-              <div style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 900, fontSize: '1.3rem', color: '#ff7b00', lineHeight: 1 }}>30</div>
+              <div style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '1.3rem', color: '#ff7b00', lineHeight: 1 }}>30</div>
               <div style={{ fontSize: '.65rem', color: 'rgba(255,255,255,.5)', marginTop: 2 }}>DÍAS</div>
               <div style={{ fontSize: '.65rem', color: '#ff7b00', fontWeight: 700, marginTop: 2 }}>GARANTÍA</div>
             </div>
@@ -478,12 +564,12 @@ export default function AccesoPage() {
         <section className="section-light" style={{ padding: '60px 24px' }}>
           <div style={{ maxWidth: 640, margin: '0 auto' }}>
             <div style={{ background: '#7c3aed', borderRadius: '12px 12px 0 0', padding: '10px 20px', textAlign: 'center' }}>
-              <p style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 800, fontSize: '.75rem', letterSpacing: '.12em', textTransform: 'uppercase', color: '#fff', margin: 0 }}>
+              <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, fontSize: '.75rem', letterSpacing: '.12em', textTransform: 'uppercase', color: '#fff', margin: 0 }}>
                 Para los que van directo al final
               </p>
             </div>
             <div style={{ background: '#faf7ff', border: '1px solid rgba(124,58,237,.15)', borderRadius: '0 0 12px 12px', padding: '28px 24px' }}>
-              <p style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 800, fontSize: '1.05rem', color: '#111', marginBottom: 4 }}>
+              <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, fontSize: '1.05rem', color: '#111', marginBottom: 4 }}>
                 Esto es lo que obtenés hoy por ${CURRENT_PRICE}/mes
               </p>
               <p style={{ color: 'rgba(0,0,0,.4)', fontSize: '.8rem', marginBottom: 20 }}>
@@ -499,11 +585,11 @@ export default function AccesoPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 14, borderTop: '1px solid rgba(0,0,0,.08)', marginBottom: 20 }}>
                 <div>
                   <p style={{ color: 'rgba(0,0,0,.4)', fontSize: '.78rem', margin: '0 0 2px 0', textDecoration: 'line-through' }}>Valor total: ${totalValue.toLocaleString()}</p>
-                  <p style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 800, fontSize: '.95rem', color: '#111', margin: 0 }}>Tu precio hoy:</p>
-                  <p style={{ color: '#ff7b00', fontFamily: 'Montserrat,sans-serif', fontWeight: 700, fontSize: '.75rem', margin: 0 }}>⚠️ El precio sube a ${NEXT_PRICE} {PRICE_RISE_DATE}</p>
+                  <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, fontSize: '.95rem', color: '#111', margin: 0 }}>Tu precio hoy:</p>
+                  <p style={{ color: '#ff7b00', fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, fontSize: '.75rem', margin: 0 }}>⚠️ El precio sube a ${NEXT_PRICE} {PRICE_RISE_DATE}</p>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 900, fontSize: '2.8rem', color: '#9f0ac9', lineHeight: 1 }}>${CURRENT_PRICE}</div>
+                  <div style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '2.8rem', color: '#9f0ac9', lineHeight: 1 }}>${CURRENT_PRICE}</div>
                   <div style={{ color: 'rgba(0,0,0,.4)', fontSize: '.7rem' }}>/mes</div>
                 </div>
               </div>
@@ -518,7 +604,7 @@ export default function AccesoPage() {
         {/* ── FAQ ── */}
         <section className="section-light" style={{ padding: '0 24px 64px' }}>
           <div style={{ maxWidth: 640, margin: '0 auto' }}>
-            <h2 style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 900, fontSize: 'clamp(1.3rem,4vw,1.9rem)', textAlign: 'center', color: '#111', marginBottom: 32 }}>
+            <h2 style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: 'clamp(1.3rem,4vw,1.9rem)', textAlign: 'center', color: '#111', marginBottom: 32 }}>
               Preguntas Frecuentes
             </h2>
             {FAQS.map((faq, i) => (
@@ -535,7 +621,7 @@ export default function AccesoPage() {
 
         {/* ── BOTTOM CTA STRIP ── */}
         <section style={{ background: 'linear-gradient(135deg,#1e0a30,#0f0f14)', borderTop: '1px solid rgba(159,10,201,.2)', padding: '52px 24px', textAlign: 'center' }}>
-          <p style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 700, fontSize: '.7rem', letterSpacing: '.15em', textTransform: 'uppercase', color: '#c026d3', marginBottom: 12 }}>
+          <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, fontSize: '.7rem', letterSpacing: '.15em', textTransform: 'uppercase', color: '#c026d3', marginBottom: 12 }}>
             OBTÉN ACCESO INMEDIATO YA
           </p>
           <h2 style={{ fontSize: 'clamp(1.4rem,4vw,2rem)', fontWeight: 900, marginBottom: 8 }}>
@@ -557,8 +643,8 @@ export default function AccesoPage() {
               { top: '100%', mid: 'ACCESO', bot: 'INMEDIATO' },
             ].map(({ top, mid, bot }) => (
               <div key={mid} className="trust-badge">
-                <div style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 900, fontSize: '1.2rem', color: '#c026d3' }}>{top}</div>
-                <div style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 800, fontSize: '.6rem', color: 'rgba(255,255,255,.5)', lineHeight: 1.4 }}>{mid}<br />{bot}</div>
+                <div style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '1.2rem', color: '#c026d3' }}>{top}</div>
+                <div style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, fontSize: '.6rem', color: 'rgba(255,255,255,.5)', lineHeight: 1.4 }}>{mid}<br />{bot}</div>
               </div>
             ))}
           </div>
@@ -566,7 +652,7 @@ export default function AccesoPage() {
 
         {/* ── FOOTER ── */}
         <footer style={{ background: '#080610', borderTop: '1px solid rgba(255,255,255,.04)', padding: '24px 24px', textAlign: 'center' }}>
-          <p style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 900, fontSize: '1.1rem', marginBottom: 8, letterSpacing: '.06em' }}>🌶️ CONDIMENTO</p>
+          <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '1.1rem', marginBottom: 8, letterSpacing: '.06em' }}>🌶️ CONDIMENTO</p>
           <p style={{ color: 'rgba(255,255,255,.2)', fontSize: '.7rem', maxWidth: 500, margin: '0 auto', lineHeight: 1.65 }}>
             Los resultados mencionados son ejemplos reales pero no garantía de ingresos. Los resultados individuales varían. Condimento es una herramienta de automatización — el éxito depende de tu ejecución.
           </p>
