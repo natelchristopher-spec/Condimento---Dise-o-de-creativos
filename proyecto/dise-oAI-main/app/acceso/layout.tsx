@@ -1,4 +1,4 @@
-import { Montserrat, Inter } from 'next/font/google';
+import { Montserrat, Poppins } from 'next/font/google';
 
 const montserrat = Montserrat({
   subsets: ['latin'],
@@ -7,16 +7,16 @@ const montserrat = Montserrat({
   display: 'swap',
 });
 
-const inter = Inter({
+const poppins = Poppins({
   subsets: ['latin'],
-  weight: ['400', '500', '600'],
+  weight: ['400', '500', '600', '700', '800'],
   variable: '--font-i',
   display: 'swap',
 });
 
 export default function AccesoLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className={`${montserrat.variable} ${inter.variable}`}>
+    <div className={`${montserrat.variable} ${poppins.variable}`}>
       {children}
     </div>
   );

@@ -61,11 +61,11 @@ function Countdown() {
 function VideoBlock() {
   const [playing, setPlaying] = useState(false);
   return (
-    <div style={{ borderRadius: 14, overflow: 'hidden', aspectRatio: '16/9', background: '#0a0a14', border: '2px solid rgba(159,10,201,.35)', position: 'relative', cursor: playing ? 'default' : 'pointer' }} onClick={() => !playing && setPlaying(true)}>
+    <div style={{ borderRadius: 14, overflow: 'hidden', aspectRatio: '16/9', background: '#0a0a14', border: '2px solid rgba(228,40,32,.35)', position: 'relative', cursor: playing ? 'default' : 'pointer' }} onClick={() => !playing && setPlaying(true)}>
       {playing && DEMO_VIDEO_URL ? (
         <iframe src={`${DEMO_VIDEO_URL}?autoplay=1`} style={{ width: '100%', height: '100%', border: 'none' }} allow="autoplay; fullscreen" allowFullScreen />
       ) : (
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, background: 'linear-gradient(135deg,#1a0a2e,#0d0d1a)' }}>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, background: 'linear-gradient(135deg,#111,#0d0d1a)' }}>
           <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg,#ff7b00,#ff9500)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem', boxShadow: '0 0 40px rgba(255,123,0,.5)' }}>▶</div>
           <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, fontSize: '.82rem', letterSpacing: '.08em', opacity: .7, margin: 0 }}>{DEMO_VIDEO_URL ? 'MIRÁ CÓMO FUNCIONA EN 1 MINUTO' : 'DEMO — PRÓXIMAMENTE'}</p>
         </div>
@@ -86,7 +86,7 @@ function CtaCard({ label = `QUIERO ACCESO INMEDIATO POR $${CURRENT_PRICE}/MES �
 function Chevrons() {
   return (
     <div style={{ textAlign: 'center', padding: '24px 0', opacity: .2 }}>
-      {['▼', '▼', '▼'].map((c, i) => <span key={i} style={{ fontSize: '1rem', margin: '0 4px', color: '#9f0ac9' }}>{c}</span>)}
+      {['▼', '▼', '▼'].map((c, i) => <span key={i} style={{ fontSize: '1rem', margin: '0 4px', color: '#e42820' }}>{c}</span>)}
     </div>
   );
 }
@@ -112,39 +112,39 @@ export default function AccesoPage() {
         @keyframes pulse   { 0%,100%{transform:scale(1)} 50%{transform:scale(1.03)} }
 
         * { box-sizing: border-box; }
-        .lp { background: #0f0f14; font-family: 'var(--font-i)', sans-serif; color: #fff; }
+        .lp { background: #0c0c0c; font-family: 'var(--font-i)', sans-serif; color: #fff; }
         .lp h1, .lp h2, .lp h3, .lp h4 { font-family: 'var(--font-m)', sans-serif; margin: 0; }
         .lp p { margin: 0; }
 
-        .grad     { background: linear-gradient(135deg,#d946ef,#9f0ac9,#7c3aed); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
-        .grad-bg  { background: linear-gradient(135deg,#1e0a30,#0f0f14); }
-        .section-light { background: #f5f0ff; color: #111; }
-        .section-dark  { background: #0a0810; }
-        .section-mid   { background: #13101e; }
+        .grad     { background: linear-gradient(135deg,#e42820,#c0392b); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+        .grad-bg  { background: linear-gradient(135deg,#1a0000,#0d0d0d); }
+        .section-light { background: #f5f5f5; color: #111; }
+        .section-dark  { background: #0a0a0a; }
+        .section-mid   { background: #111; }
 
-        .top-bar { background: linear-gradient(90deg,#6b1a1a,#991a1a,#6b1a1a); background-size:200%; animation:gmove 4s linear infinite; text-align:center; padding:11px 16px; font-family:'Montserrat',sans-serif; font-weight:800; font-size:.76rem; letter-spacing:.1em; text-transform:uppercase; }
+        .top-bar { background: linear-gradient(90deg,#8b1a1a,#e42820,#8b1a1a); background-size:200%; animation:gmove 4s linear infinite; text-align:center; padding:11px 16px; font-family:'Montserrat',sans-serif; font-weight:800; font-size:.76rem; letter-spacing:.1em; text-transform:uppercase; }
 
         .cta-pill { display:block; background:linear-gradient(135deg,#ff7b00,#ff9500); color:#fff; font-family:'Montserrat',sans-serif; font-weight:900; font-size:.95rem; letter-spacing:.04em; text-align:center; padding:17px 24px; border-radius:50px; text-decoration:none; box-shadow:0 6px 30px rgba(255,123,0,.45); position:relative; overflow:hidden; transition:transform .15s,box-shadow .15s; animation:pulse 3s ease-in-out infinite; line-height:1.3; }
         .cta-pill:hover { transform:translateY(-2px); box-shadow:0 10px 40px rgba(255,123,0,.6); }
         .cta-pill::before { content:''; position:absolute; top:0; left:-100%; width:60%; height:100%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.25),transparent); animation:shimmer 2.5s infinite; }
 
-        .card-dark  { background:#1a1626; border:1px solid rgba(255,255,255,.07); border-radius:14px; }
-        .card-purple{ background:linear-gradient(135deg,rgba(159,10,201,.12),rgba(124,58,237,.06)); border:1px solid rgba(159,10,201,.3); border-radius:14px; }
+        .card-dark  { background:#181818; border:1px solid rgba(255,255,255,.07); border-radius:14px; }
+        .card-red   { background:linear-gradient(135deg,rgba(228,40,32,.1),rgba(192,57,43,.05)); border:1px solid rgba(228,40,32,.25); border-radius:14px; }
 
-        .bonus-card { background:#fff; border-radius:14px; overflow:hidden; color:#111; box-shadow:0 4px 24px rgba(0,0,0,.2); }
-        .bonus-header { background:linear-gradient(90deg,#7c3aed,#9f0ac9); padding:10px 20px; }
+        .bonus-card { background:#fff; border-radius:14px; overflow:hidden; color:#111; box-shadow:0 4px 24px rgba(0,0,0,.12); }
+        .bonus-header { background:#e42820; padding:12px 20px; }
 
         .guarantee-ring { width:110px; height:110px; border-radius:50%; border:4px solid #ff7b00; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; flex-shrink:0; background:rgba(255,123,0,.08); }
 
-        .trust-badge { text-align:center; background:#1a1626; border:1px solid rgba(255,255,255,.08); border-radius:50%; width:110px; height:110px; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+        .trust-badge { text-align:center; background:#181818; border:1px solid rgba(255,255,255,.08); border-radius:50%; width:110px; height:110px; display:flex; flex-direction:column; align-items:center; justify-content:center; }
 
         .faq-item { border-bottom:1px solid rgba(0,0,0,.1); }
         .faq-btn  { width:100%; text-align:left; background:none; border:none; cursor:pointer; padding:16px 0; display:flex; align-items:center; justify-content:space-between; gap:12px; font-family:'Montserrat',sans-serif; font-weight:700; font-size:.9rem; color:#111; }
         .faq-ans  { color:rgba(0,0,0,.65); font-size:.88rem; line-height:1.7; padding-bottom:16px; }
 
-        .step-dot { width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg,#9f0ac9,#7c3aed); display:flex; align-items:center; justify-content:center; font-family:'Montserrat',sans-serif; font-weight:800; font-size:.95rem; flex-shrink:0; }
+        .step-dot { width:40px; height:40px; border-radius:50%; background:#e42820; display:flex; align-items:center; justify-content:center; font-family:'Montserrat',sans-serif; font-weight:800; font-size:.95rem; flex-shrink:0; }
 
-        @media(max-width:720px){ .hero-grid{ grid-template-columns:1fr !important; } .cta-sticky{ position:static !important; } .bonus-card{ grid-template-columns:1fr !important; } .bonus-card > div:last-child{ min-height:140px !important; } }
+        @media(max-width:720px){ .hero-grid{ grid-template-columns:1fr !important; } .cta-sticky{ position:static !important; } .bonus-body{ grid-template-columns:1fr !important; } }
         @media(max-width:500px){ .trust-badges{ gap:8px !important; } .trust-badge{ width:88px; height:88px; } }
       `}</style>
 
@@ -156,20 +156,20 @@ export default function AccesoPage() {
         </div>
 
         {/* ── HEADER ── */}
-        <header style={{ background: '#0a0810', borderBottom: '1px solid rgba(255,255,255,.06)', padding: '14px 24px', textAlign: 'center' }}>
+        <header style={{ background: '#0a0a0a', borderBottom: '1px solid rgba(255,255,255,.06)', padding: '14px 24px', textAlign: 'center' }}>
           <span style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '1.3rem', letterSpacing: '.08em' }}>🌶️ CONDIMENTO</span>
         </header>
 
         {/* ── HERO ── */}
-        <section style={{ background: 'linear-gradient(180deg,#13101e 0%,#0f0f14 100%)', padding: '52px 24px 0' }}>
+        <section style={{ background: 'linear-gradient(180deg,#111 0%,#0c0c0c 100%)', padding: '52px 24px 0' }}>
 
           {/* Social proof strip */}
           <div style={{ maxWidth: 760, margin: '0 auto 28px', textAlign: 'center' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12, background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 50, padding: '8px 20px 8px 8px' }}>
               {/* Avatar circles */}
               <div style={{ display: 'flex', alignItems: 'center' }}>
-                {[['C','#ff7b00'],['M','#9f0ac9'],['A','#7c3aed'],['L','#c026d3'],['R','#e11d48']].map(([letter, bg], i) => (
-                  <div key={i} style={{ width: 32, height: 32, borderRadius: '50%', background: bg as string, border: '2px solid #13101e', marginLeft: i > 0 ? -8 : 0, zIndex: 5 - i, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, fontSize: '.65rem', color: '#fff' }}>{letter}</div>
+                {[['C','#ff7b00'],['M','#e42820'],['A','#e42820'],['L','#e42820'],['R','#e11d48']].map(([letter, bg], i) => (
+                  <div key={i} style={{ width: 32, height: 32, borderRadius: '50%', background: bg as string, border: '2px solid #111', marginLeft: i > 0 ? -8 : 0, zIndex: 5 - i, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, fontSize: '.65rem', color: '#fff' }}>{letter}</div>
                 ))}
               </div>
               <div style={{ textAlign: 'left' }}>
@@ -183,7 +183,7 @@ export default function AccesoPage() {
 
             {/* LEFT */}
             <div>
-              <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, fontSize: '.7rem', letterSpacing: '.15em', textTransform: 'uppercase', color: '#c026d3', marginBottom: 14 }}>
+              <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, fontSize: '.7rem', letterSpacing: '.15em', textTransform: 'uppercase', color: '#e42820', marginBottom: 14 }}>
                 Para e-commerce y dropshipping en LATAM
               </p>
               <h1 style={{ fontSize: 'clamp(1.8rem,4vw,2.9rem)', fontWeight: 900, lineHeight: 1.1, marginBottom: 18 }}>
@@ -212,7 +212,7 @@ export default function AccesoPage() {
                 ].map((r, i) => (
                   <div key={i} style={{ background: 'rgba(255,255,255,.04)', borderRadius: 10, padding: '10px 12px', fontSize: '.78rem', lineHeight: 1.5 }}>
                     <p style={{ color: 'rgba(255,100,100,.6)', margin: '0 0 4px 0' }}>✗ {r.bad}</p>
-                    <p style={{ color: '#c026d3', fontWeight: 600, margin: 0 }}>✓ {r.good}</p>
+                    <p style={{ color: '#e42820', fontWeight: 600, margin: 0 }}>✓ {r.good}</p>
                   </div>
                 ))}
               </div>
@@ -220,32 +220,32 @@ export default function AccesoPage() {
 
             {/* RIGHT — sticky CTA card */}
             <div className="cta-sticky" style={{ position: 'sticky', top: 20 }}>
-              <div style={{ background: 'linear-gradient(160deg,#1e1030,#130d22)', border: '2px solid rgba(159,10,201,.4)', borderRadius: 20, overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,.5)' }}>
+              <div style={{ background: 'linear-gradient(160deg,#111,#0d0d0d)', border: '2px solid rgba(228,40,32,.4)', borderRadius: 20, overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,.5)' }}>
 
                 {/* ── Product stack mockup ── */}
-                <div style={{ background: 'linear-gradient(135deg,#2d1b69,#1e1030)', padding: '22px 20px 10px', position: 'relative', minHeight: 148 }}>
+                <div style={{ background: 'linear-gradient(135deg,#1a1a1a,#111)', padding: '22px 20px 10px', position: 'relative', minHeight: 148 }}>
                   {/* Back laptop */}
-                  <div style={{ position: 'absolute', bottom: 8, left: '4%', width: 155, transform: 'rotate(-6deg)', background: '#14102a', borderRadius: '7px 7px 0 0', padding: '6px 6px 0', boxShadow: '0 6px 24px rgba(0,0,0,.5)', zIndex: 1 }}>
-                    <div style={{ background: 'linear-gradient(135deg,rgba(159,10,201,.12),rgba(124,58,237,.08))', borderRadius: 3, aspectRatio: '16/10', border: '1px solid rgba(159,10,201,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <p style={{ color: 'rgba(159,10,201,.35)', fontSize: '.5rem', fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, margin: 0 }}>BRAND KIT</p>
+                  <div style={{ position: 'absolute', bottom: 8, left: '4%', width: 155, transform: 'rotate(-6deg)', background: '#141414', borderRadius: '7px 7px 0 0', padding: '6px 6px 0', boxShadow: '0 6px 24px rgba(0,0,0,.5)', zIndex: 1 }}>
+                    <div style={{ background: 'linear-gradient(135deg,rgba(228,40,32,.12),rgba(228,40,32,.08))', borderRadius: 3, aspectRatio: '16/10', border: '1px solid rgba(228,40,32,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <p style={{ color: 'rgba(228,40,32,.35)', fontSize: '.5rem', fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, margin: 0 }}>BRAND KIT</p>
                     </div>
-                    <div style={{ background: '#1e1a38', height: 4, borderRadius: '0 0 4px 4px' }} />
-                    <div style={{ background: '#14102a', height: 2, borderRadius: '0 0 6px 6px', width: '120%', marginLeft: '-10%' }} />
+                    <div style={{ background: '#181818', height: 4, borderRadius: '0 0 4px 4px' }} />
+                    <div style={{ background: '#141414', height: 2, borderRadius: '0 0 6px 6px', width: '120%', marginLeft: '-10%' }} />
                   </div>
                   {/* Front laptop */}
-                  <div style={{ position: 'absolute', bottom: 8, right: '4%', width: 148, transform: 'rotate(4deg)', background: '#14102a', borderRadius: '7px 7px 0 0', padding: '6px 6px 0', boxShadow: '0 8px 28px rgba(0,0,0,.6)', zIndex: 2 }}>
-                    <div style={{ background: 'linear-gradient(135deg,rgba(255,123,0,.12),rgba(159,10,201,.1))', borderRadius: 3, aspectRatio: '16/10', border: '1px solid rgba(255,123,0,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ position: 'absolute', bottom: 8, right: '4%', width: 148, transform: 'rotate(4deg)', background: '#141414', borderRadius: '7px 7px 0 0', padding: '6px 6px 0', boxShadow: '0 8px 28px rgba(0,0,0,.6)', zIndex: 2 }}>
+                    <div style={{ background: 'linear-gradient(135deg,rgba(255,123,0,.12),rgba(228,40,32,.1))', borderRadius: 3, aspectRatio: '16/10', border: '1px solid rgba(255,123,0,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <p style={{ color: 'rgba(255,123,0,.4)', fontSize: '.5rem', fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, margin: 0 }}>PEC ✦</p>
                     </div>
-                    <div style={{ background: '#1e1a38', height: 4, borderRadius: '0 0 4px 4px' }} />
-                    <div style={{ background: '#14102a', height: 2, borderRadius: '0 0 6px 6px', width: '120%', marginLeft: '-10%' }} />
+                    <div style={{ background: '#181818', height: 4, borderRadius: '0 0 4px 4px' }} />
+                    <div style={{ background: '#141414', height: 2, borderRadius: '0 0 6px 6px', width: '120%', marginLeft: '-10%' }} />
                   </div>
                   {/* Center phone */}
-                  <div style={{ position: 'relative', zIndex: 3, margin: '0 auto', width: 54, background: '#14102a', borderRadius: 10, padding: '5px 4px', border: '2px solid #2d2562', boxShadow: '0 8px 32px rgba(0,0,0,.7)' }}>
-                    <div style={{ background: 'linear-gradient(160deg,rgba(192,38,211,.2),rgba(124,58,237,.15))', borderRadius: 6, aspectRatio: '9/16', border: '1px solid rgba(192,38,211,.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ position: 'relative', zIndex: 3, margin: '0 auto', width: 54, background: '#141414', borderRadius: 10, padding: '5px 4px', border: '2px solid #222', boxShadow: '0 8px 32px rgba(0,0,0,.7)' }}>
+                    <div style={{ background: 'linear-gradient(160deg,rgba(228,40,32,.2),rgba(228,40,32,.15))', borderRadius: 6, aspectRatio: '9/16', border: '1px solid rgba(228,40,32,.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <span style={{ fontSize: '.9rem' }}>🌶️</span>
                     </div>
-                    <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#1e1a38', margin: '4px auto 0' }} />
+                    <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#181818', margin: '4px auto 0' }} />
                   </div>
                 </div>
 
@@ -282,7 +282,7 @@ export default function AccesoPage() {
                   <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,.07)' }}>
                     {[...CORE.map(i => i.label), '3 Bonuses exclusivos', 'Garantía 30 días'].map((item, i) => (
                       <p key={i} style={{ color: 'rgba(255,255,255,.5)', fontSize: '.73rem', margin: '0 0 5px 0' }}>
-                        <span style={{ color: '#c026d3' }}>✦</span> {item}
+                        <span style={{ color: '#e42820' }}>✦</span> {item}
                       </p>
                     ))}
                   </div>
@@ -299,7 +299,7 @@ export default function AccesoPage() {
         {/* ── SOCIAL PROOF NUMBERS ── */}
         <section className="section-light" style={{ padding: '36px 24px' }}>
           <div style={{ maxWidth: 700, margin: '0 auto', textAlign: 'center' }}>
-            <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, fontSize: '.72rem', letterSpacing: '.15em', textTransform: 'uppercase', color: '#7c3aed', marginBottom: 24 }}>
+            <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, fontSize: '.72rem', letterSpacing: '.15em', textTransform: 'uppercase', color: '#e42820', marginBottom: 24 }}>
               Los referentes más grandes de la industria en LATAM se capacitan con nosotros para vender con su marca
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
@@ -309,7 +309,7 @@ export default function AccesoPage() {
                 { n: '+150', s: 'tiendas ya dentro del sistema' },
               ].map(({ n, s }) => (
                 <div key={s} style={{ borderRight: '1px solid rgba(0,0,0,.1)' }}>
-                  <div style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '2.1rem', color: '#7c3aed' }}>{n}</div>
+                  <div style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '2.1rem', color: '#e42820' }}>{n}</div>
                   <div style={{ fontSize: '.78rem', color: 'rgba(0,0,0,.5)', marginTop: 4, lineHeight: 1.4 }}>{s}</div>
                 </div>
               ))}
@@ -321,12 +321,12 @@ export default function AccesoPage() {
         <section className="section-light" style={{ padding: '56px 24px' }}>
           <div style={{ maxWidth: 720, margin: '0 auto' }}>
             <h2 style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: 'clamp(1.6rem,4vw,2.4rem)', textAlign: 'center', color: '#111', marginBottom: 8 }}>
-              ¿QUÉ HAY DENTRO DE <span style={{ color: '#9f0ac9' }}>BRANDPILOT</span>?
+              ¿QUÉ HAY DENTRO DE <span style={{ color: '#e42820' }}>BRANDPILOT</span>?
             </h2>
             <p style={{ textAlign: 'center', color: 'rgba(0,0,0,.5)', marginBottom: 8, maxWidth: 560, margin: '0 auto 8px' }}>
               No es un curso. No es un software. No es una comunidad.
             </p>
-            <p style={{ textAlign: 'center', fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, color: '#7c3aed', marginBottom: 40, fontSize: '1rem' }}>
+            <p style={{ textAlign: 'center', fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, color: '#e42820', marginBottom: 40, fontSize: '1rem' }}>
               Es la combinación de los tres — con una IA que ejecuta las decisiones por vos.
             </p>
 
@@ -336,13 +336,13 @@ export default function AccesoPage() {
                 { icon: '👥', title: 'Capa 2 — Comunidad Spicy Ads Ecommerce', items: ['Q&A semanales con Cris en vivo', 'Casos reales de marcas que escalaron con el sistema', 'Feedback constante de tu marca y tus campañas'] },
                 { icon: '🤖', title: 'Capa 3 — Condimento AI', items: ['Testing de ángulos antes de gastar un peso en pauta', 'Sistema PEC: 3 piezas por ángulo ganador (P/E/C)', 'Anuncios · Carruseles IG · Fichas de producto — todo conectado'] },
               ].map((item) => (
-                <div key={item.title} style={{ display: 'flex', gap: 16, background: '#faf7ff', border: '1px solid rgba(124,58,237,.15)', borderRadius: 14, padding: '20px 22px' }}>
+                <div key={item.title} style={{ display: 'flex', gap: 16, background: '#f8f8f8', border: '1px solid rgba(228,40,32,.15)', borderRadius: 14, padding: '20px 22px' }}>
                   <span style={{ fontSize: '1.5rem', flexShrink: 0, marginTop: 2 }}>{item.icon}</span>
                   <div>
                     <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, fontSize: '1rem', color: '#111', marginBottom: 10 }}>{item.title}</p>
                     {item.items.map((li, j) => (
                       <p key={j} style={{ color: 'rgba(0,0,0,.65)', fontSize: '.85rem', margin: '0 0 5px 0', display: 'flex', gap: 8 }}>
-                        <span style={{ color: '#9f0ac9', flexShrink: 0 }}>✦</span>{li}
+                        <span style={{ color: '#e42820', flexShrink: 0 }}>✦</span>{li}
                       </p>
                     ))}
                   </div>
@@ -353,11 +353,11 @@ export default function AccesoPage() {
         </section>
 
         {/* ── CTA STRIP ── */}
-        <section style={{ background: 'linear-gradient(90deg,#1e0a30,#130d22)', padding: '32px 24px', textAlign: 'center' }}>
+        <section style={{ background: 'linear-gradient(90deg,#1a1a1a,#0d0d0d)', padding: '32px 24px', textAlign: 'center' }}>
           <div style={{ maxWidth: 560, margin: '0 auto' }}>
             <CtaCard label={`SI QUIERO ACCESO INMEDIATO A CONDIMENTO POR $${CURRENT_PRICE}/MES →`} />
             <p style={{ color: 'rgba(255,255,255,.3)', fontSize: '.72rem', marginTop: 8 }}>
-              Condimento funciona para cualquier tipo de e-commerce y dropshipping · Disponibilidad <span style={{ color: '#c026d3', fontWeight: 600 }}>inmediata</span>
+              Condimento funciona para cualquier tipo de e-commerce y dropshipping · Disponibilidad <span style={{ color: '#e42820', fontWeight: 600 }}>inmediata</span>
             </p>
           </div>
         </section>
@@ -378,7 +378,7 @@ export default function AccesoPage() {
               <p style={{ color: 'rgba(255,255,255,.6)', fontSize: '.95rem', lineHeight: 1.8 }}>
                 Después de auditar todas esas marcas llegué a una conclusión que cambió todo:
               </p>
-              <div className="card-purple" style={{ padding: '20px 22px' }}>
+              <div className="card-red" style={{ padding: '20px 22px' }}>
                 <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '1.05rem', marginBottom: 10 }}>
                   "El 90% de los e-commerces falla por lo mismo — y no es el producto."
                 </p>
@@ -396,7 +396,7 @@ export default function AccesoPage() {
         <Chevrons />
 
         {/* ── THE 3-STEP SYSTEM ── */}
-        <section style={{ background: '#0a0810', padding: '64px 24px' }}>
+        <section style={{ background: '#0a0a0a', padding: '64px 24px' }}>
           <div style={{ maxWidth: 680, margin: '0 auto' }}>
             <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, fontSize: '.7rem', letterSpacing: '.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,.3)', marginBottom: 8, textAlign: 'center' }}>Dentro de Condimento AI</p>
             <h2 style={{ fontSize: 'clamp(1.4rem,4vw,2rem)', fontWeight: 900, textAlign: 'center', marginBottom: 12 }}>
@@ -407,7 +407,7 @@ export default function AccesoPage() {
             </p>
             {[
               { n: '1', title: 'Testing de Ángulos — sabé qué convierte antes de gastar', desc: 'Describís el producto y Condimento genera múltiples ángulos de mensaje con el hook para cada uno. Elegís el ganador sin gastar un peso en pauta. Recién después, escalás.', check: 'Fin de copiar anuncios y esperar que funcionen.' },
-              { n: '2', title: 'Sistema PEC — escala el ángulo ganador en los 3 momentos', desc: <>Para cada ángulo ganador, Condimento genera automáticamente 3 piezas: una para <strong style={{ color: '#c026d3' }}>Prospección</strong>, una para <strong style={{ color: '#7c3aed' }}>Evaluación</strong> y una para <strong style={{ color: '#ff7b00' }}>Conversión</strong>. El funnel completo, automatizado.</>, check: 'El mismo mensaje adaptado a cada etapa. No quemás el presupuesto.' },
+              { n: '2', title: 'Sistema PEC — escala el ángulo ganador en los 3 momentos', desc: <>Para cada ángulo ganador, Condimento genera automáticamente 3 piezas: una para <strong style={{ color: '#e42820' }}>Prospección</strong>, una para <strong style={{ color: '#e42820' }}>Evaluación</strong> y una para <strong style={{ color: '#ff7b00' }}>Conversión</strong>. El funnel completo, automatizado.</>, check: 'El mismo mensaje adaptado a cada etapa. No quemás el presupuesto.' },
               { n: '3', title: 'Todo conectado — anuncios, redes y tienda en la misma historia', desc: 'El Brand Kit se aplica en todos los módulos. El mensaje del testing informa los anuncios, los carruseles de Instagram (TOFU/MOFU/BOFU) y las 6 imágenes de tu ficha de producto.', check: 'Una marca. Una historia. Todo conectado.' },
             ].map((step) => (
               <div key={step.n} style={{ display: 'flex', gap: 18, marginBottom: 40 }}>
@@ -415,7 +415,7 @@ export default function AccesoPage() {
                 <div>
                   <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, fontSize: '1.05rem', marginBottom: 8 }}>{step.title}</p>
                   <p style={{ color: 'rgba(255,255,255,.6)', fontSize: '.88rem', lineHeight: 1.7, marginBottom: 10 }}>{step.desc}</p>
-                  <div className="card-purple" style={{ padding: '10px 14px', display: 'inline-block' }}>
+                  <div className="card-red" style={{ padding: '10px 14px', display: 'inline-block' }}>
                     <p style={{ color: 'rgba(255,255,255,.75)', fontSize: '.8rem', margin: 0 }}>✓ {step.check}</p>
                   </div>
                 </div>
@@ -425,11 +425,11 @@ export default function AccesoPage() {
         </section>
 
         {/* ── CTA STRIP 2 ── */}
-        <section style={{ background: 'linear-gradient(90deg,#1e0a30,#130d22)', padding: '32px 24px', textAlign: 'center' }}>
+        <section style={{ background: 'linear-gradient(90deg,#1a1a1a,#0d0d0d)', padding: '32px 24px', textAlign: 'center' }}>
           <div style={{ maxWidth: 560, margin: '0 auto' }}>
             <CtaCard label={`SI QUIERO ACCESO INMEDIATO A CONDIMENTO POR $${CURRENT_PRICE}/MES →`} />
             <p style={{ color: 'rgba(255,255,255,.25)', fontSize: '.7rem', marginTop: 6 }}>
-              Condimento funciona para cualquier tipo de e-commerce · Disponibilidad <span style={{ color: '#c026d3' }}>inmediata</span>
+              Condimento funciona para cualquier tipo de e-commerce · Disponibilidad <span style={{ color: '#e42820' }}>inmediata</span>
             </p>
           </div>
         </section>
@@ -438,68 +438,107 @@ export default function AccesoPage() {
         <section className="section-light" style={{ padding: '64px 24px' }}>
           <div style={{ maxWidth: 700, margin: '0 auto' }}>
             <h2 style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: 'clamp(1.4rem,4vw,2.1rem)', textAlign: 'center', color: '#111', marginBottom: 8 }}>
-              ESTO ES LO QUE <span style={{ color: '#9f0ac9' }}>ENCONTRARÁS</span> DENTRO DE CONDIMENTO
+              ESTO ES LO QUE <span style={{ color: '#e42820' }}>ENCONTRARÁS</span> DENTRO DE CONDIMENTO
             </h2>
             <p style={{ textAlign: 'center', color: 'rgba(0,0,0,.4)', marginBottom: 40, fontSize: '.9rem' }}>
               Todo lo que recibís hoy por ${CURRENT_PRICE}/mes
             </p>
             <div style={{ display: 'grid', gap: 16, marginBottom: 40 }}>
               {CORE.map((item) => (
-                <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, background: '#faf7ff', border: '1px solid rgba(124,58,237,.15)', borderRadius: 12, padding: '16px 20px' }}>
+                <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, background: '#f8f8f8', border: '1px solid rgba(228,40,32,.15)', borderRadius: 12, padding: '16px 20px' }}>
                   <div style={{ display: 'flex', gap: 10 }}>
-                    <span style={{ color: '#9f0ac9', flexShrink: 0, marginTop: 2 }}>✦</span>
+                    <span style={{ color: '#e42820', flexShrink: 0, marginTop: 2 }}>✦</span>
                     <div>
                       <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, fontSize: '.9rem', color: '#111', marginBottom: 3 }}>{item.label}</p>
                       <p style={{ color: 'rgba(0,0,0,.5)', fontSize: '.78rem', lineHeight: 1.5 }}>{item.desc}</p>
                     </div>
                   </div>
-                  <span style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, color: '#9f0ac9', whiteSpace: 'nowrap', flexShrink: 0 }}>${item.value}</span>
+                  <span style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, color: '#e42820', whiteSpace: 'nowrap', flexShrink: 0 }}>${item.value}</span>
                 </div>
               ))}
             </div>
 
-            {/* Bonuses */}
-            <h3 style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, textAlign: 'center', color: '#111', marginBottom: 20 }}>
-              🎁 Desbloquea Acceso Inmediato a 3 <span style={{ color: '#ff7b00' }}>Bonuses Adicionales</span> Gratis
+            {/* ── Bonuses header ── */}
+            <h3 style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: 'clamp(1.4rem,4vw,2rem)', textAlign: 'center', color: '#111', marginBottom: 6, lineHeight: 1.2 }}>
+              Desbloquea Acceso Inmediato a 3{' '}
+              <span style={{ background: '#ff7b00', color: '#fff', padding: '0 6px', borderRadius: 4 }}>Bonuses Adicionales</span>{' '}
+              Gratis!
             </h3>
-            <div style={{ display: 'grid', gap: 20 }}>
-              {BONUSES.map((b) => (
-                <div key={b.label} className="bonus-card" style={{ display: 'grid', gridTemplateColumns: '1fr 220px' }}>
-                  {/* Left: content */}
-                  <div>
-                    <div className="bonus-header" style={{ borderRadius: 0 }}>
-                      <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, fontSize: '.78rem', color: '#fff', letterSpacing: '.06em', margin: 0 }}>{b.n} — {b.label}</p>
+
+            {/* ── Product stack image ── */}
+            <div style={{ position: 'relative', background: 'linear-gradient(135deg,#1a1a1a,#0c0c0c)', borderRadius: 16, overflow: 'hidden', marginBottom: 24, minHeight: 320, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '28px 20px 0' }}>
+              {/* Device stack placeholder */}
+              <div style={{ position: 'relative', width: '100%', maxWidth: 560, margin: '0 auto' }}>
+                {/* Background papers (right) */}
+                <div style={{ position: 'absolute', right: -10, top: 10, width: 100, zIndex: 1 }}>
+                  {[0,1,2].map(i => (
+                    <div key={i} style={{ background: '#fff', border: '1px solid #ddd', borderRadius: 4, padding: '6px 8px', marginBottom: 4, transform: `rotate(${i*3-3}deg)`, boxShadow: '0 2px 8px rgba(0,0,0,.15)' }}>
+                      {[1,2,3].map(j => <div key={j} style={{ height: 3, background: '#ddd', borderRadius: 2, marginBottom: 3 }} />)}
                     </div>
-                    <div style={{ padding: '18px 20px 18px' }}>
-                      <p style={{ color: 'rgba(0,0,0,.65)', fontSize: '.85rem', lineHeight: 1.7, marginBottom: 14 }}>{b.desc}</p>
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#f0e8ff', border: '1px solid rgba(124,58,237,.25)', borderRadius: 8, padding: '8px 14px' }}>
-                        <span style={{ color: '#9f0ac9', fontSize: '1rem' }}>✓</span>
-                        <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, fontSize: '.8rem', color: '#7c3aed', margin: 0 }}>
-                          Incluido en tu acceso por ${CURRENT_PRICE}
-                        </p>
-                      </div>
-                    </div>
+                  ))}
+                </div>
+                {/* 100% guarantee badge (left) */}
+                <div style={{ position: 'absolute', left: -8, top: 20, zIndex: 10, width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg,#b8860b,#ffd700,#b8860b)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 16px rgba(0,0,0,.4)', border: '3px solid #ffd700' }}>
+                  <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '.55rem', color: '#111', margin: 0, textAlign: 'center', letterSpacing: '.03em', lineHeight: 1.2 }}>SATISFACTION<br/>★★★★★<br/>100%<br/>GUARANTEE</p>
+                </div>
+                {/* Main monitor frame */}
+                <div style={{ background: '#222', borderRadius: '10px 10px 0 0', padding: '10px 10px 0', boxShadow: '0 12px 40px rgba(0,0,0,.5)', position: 'relative', zIndex: 2 }}>
+                  <div style={{ background: 'linear-gradient(135deg,rgba(228,40,32,.15),rgba(0,0,0,.8))', borderRadius: 6, aspectRatio: '16/9', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, border: '1px solid rgba(228,40,32,.2)' }}>
+                    <span style={{ fontSize: '2.5rem', opacity: .3 }}>📸</span>
+                    <p style={{ color: 'rgba(255,255,255,.25)', fontSize: '.65rem', fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, margin: 0, letterSpacing: '.1em' }}>IMAGEN DEL PRODUCTO — REEMPLAZAR</p>
                   </div>
-                  {/* Right: image placeholder + value badge */}
-                  <div style={{ background: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, minHeight: 180 }}>
-                    {/* Device mockup frame */}
-                    <div style={{ width: '100%', maxWidth: 160 }}>
-                      {/* Laptop top */}
-                      <div style={{ background: '#1e1b2e', borderRadius: '8px 8px 0 0', padding: '8px 8px 0', boxShadow: '0 8px 32px rgba(0,0,0,.25)' }}>
-                        {/* Screen area */}
-                        <div style={{ background: 'rgba(159,10,201,.1)', borderRadius: 4, aspectRatio: '16/10', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, border: '1px solid rgba(159,10,201,.25)', overflow: 'hidden' }}>
-                          <span style={{ fontSize: '1.2rem', opacity: .4 }}>📸</span>
-                          <p style={{ color: 'rgba(159,10,201,.5)', fontSize: '.55rem', fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, letterSpacing: '.06em', textAlign: 'center', margin: 0 }}>TU IMAGEN</p>
-                        </div>
-                      </div>
-                      {/* Laptop base */}
-                      <div style={{ background: '#2d2540', height: 5, borderRadius: '0 0 4px 4px' }} />
-                      <div style={{ background: '#1e1b2e', height: 3, borderRadius: '0 0 8px 8px', width: '130%', marginLeft: '-15%' }} />
+                </div>
+                <div style={{ background: '#333', height: 8, borderRadius: '0 0 6px 6px' }} />
+                <div style={{ background: '#222', height: 5, borderRadius: '0 0 8px 8px', width: '70%', margin: '0 auto' }} />
+                {/* Overlay laptop (front-right) */}
+                <div style={{ position: 'absolute', right: 8, bottom: 14, width: '45%', zIndex: 3, background: '#1a1a1a', borderRadius: '8px 8px 0 0', padding: '6px 6px 0', boxShadow: '0 8px 28px rgba(0,0,0,.6)' }}>
+                  <div style={{ background: 'linear-gradient(135deg,rgba(228,40,32,.12),rgba(0,0,0,.7))', borderRadius: 4, aspectRatio: '16/10', border: '1px solid rgba(228,40,32,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontSize: '.8rem', opacity: .3 }}>📸</span>
+                  </div>
+                  <div style={{ background: '#222', height: 4, borderRadius: '0 0 4px 4px' }} />
+                </div>
+              </div>
+              {/* Dark banner */}
+              <div style={{ background: 'linear-gradient(90deg,#1a1a1a,#2a0a0a,#1a1a1a)', width: 'calc(100% + 40px)', marginLeft: -20, marginTop: 16, padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+                <div style={{ width: 28, height: 28, background: 'linear-gradient(135deg,#ffd700,#b8860b)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.9rem', flexShrink: 0 }}>✓</div>
+                <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '.8rem', color: '#fff', margin: 0, textAlign: 'center', letterSpacing: '.06em', lineHeight: 1.4 }}>
+                  APLICADO POR{' '}
+                  <span style={{ color: '#ffd700' }}>+150 TIENDAS DE ECOMMERCE</span>{' '}
+                  EN LATAM
+                </p>
+              </div>
+            </div>
+
+            {/* ── Individual bonus cards ── */}
+            <div style={{ display: 'grid', gap: 16 }}>
+              {BONUSES.map((b) => (
+                <div key={b.label} className="bonus-card">
+                  {/* Header */}
+                  <div className="bonus-header">
+                    <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, fontSize: '.85rem', color: '#fff', margin: 0 }}>
+                      <span style={{ color: '#ffd700' }}>{b.n}:</span>{' '}{b.label}
+                    </p>
+                  </div>
+                  {/* Body: text left, device mockup right */}
+                  <div className="bonus-body" style={{ display: 'grid', gridTemplateColumns: '1fr 260px', alignItems: 'center' }}>
+                    <div style={{ padding: '20px 24px' }}>
+                      <p style={{ color: 'rgba(0,0,0,.6)', fontSize: '.88rem', lineHeight: 1.75, marginBottom: 16 }}>{b.desc}</p>
+                      <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, fontSize: '.88rem', color: '#111', margin: 0, lineHeight: 1.4 }}>
+                        Recibís Esto Cuando Comprás Tu Acceso A Condimento Por ${CURRENT_PRICE}!
+                      </p>
                     </div>
-                    {/* Value badge */}
-                    <div style={{ position: 'absolute', top: 12, right: 12, width: 52, height: 52, background: '#ff7b00', borderRadius: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 16px rgba(255,123,0,.4)', border: '2px solid #fff' }}>
-                      <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '.7rem', color: '#fff', margin: 0, lineHeight: 1 }}>+${b.value}</p>
-                      <p style={{ fontSize: '.5rem', color: 'rgba(255,255,255,.8)', margin: 0 }}>USD</p>
+                    {/* Device mockup — replace src with real screenshot */}
+                    <div style={{ background: '#f0f0f0', padding: '20px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200 }}>
+                      <div style={{ width: '100%', maxWidth: 220 }}>
+                        <div style={{ background: '#1a1a1a', borderRadius: '10px 10px 0 0', padding: '8px 8px 0', boxShadow: '0 8px 24px rgba(0,0,0,.3)' }}>
+                          <div style={{ background: 'linear-gradient(135deg,rgba(228,40,32,.08),rgba(0,0,0,.6))', borderRadius: 5, aspectRatio: '16/10', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, border: '1px solid rgba(228,40,32,.15)' }}>
+                            <span style={{ fontSize: '1.4rem', opacity: .3 }}>📸</span>
+                            <p style={{ color: 'rgba(255,255,255,.2)', fontSize: '.5rem', fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, letterSpacing: '.08em', margin: 0 }}>TU SCREENSHOT AQUÍ</p>
+                          </div>
+                        </div>
+                        <div style={{ background: '#333', height: 5, borderRadius: '0 0 5px 5px' }} />
+                        <div style={{ background: '#1a1a1a', height: 4, borderRadius: '0 0 8px 8px', width: '125%', marginLeft: '-12.5%' }} />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -529,7 +568,7 @@ export default function AccesoPage() {
         </section>
 
         {/* ── CASO DE ESTUDIO ── */}
-        <section style={{ background: '#0f0f14', padding: '64px 24px' }}>
+        <section style={{ background: '#0c0c0c', padding: '64px 24px' }}>
           <div style={{ maxWidth: 680, margin: '0 auto' }}>
             <p style={{ textAlign: 'center', color: 'rgba(255,255,255,.35)', fontSize: '.72rem', fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 12 }}>
               Caso de Estudio
@@ -556,7 +595,7 @@ export default function AccesoPage() {
                 { label: 'Testimonio / Captura de resultado 2', hint: 'Ej: mensaje de cliente, reseña, captura de Meta Ads' },
                 { label: 'Testimonio / Captura de resultado 3', hint: 'Ej: facturación semanal, captura de Shopify, DM de Instagram' },
               ].map((item, i) => (
-                <div key={i} style={{ background: '#1a1626', border: '2px dashed rgba(159,10,201,.3)', borderRadius: 12, padding: '24px', textAlign: 'center', minHeight: 120, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                <div key={i} style={{ background: '#181818', border: '2px dashed rgba(228,40,32,.3)', borderRadius: 12, padding: '24px', textAlign: 'center', minHeight: 120, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                   <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, fontSize: '.8rem', color: 'rgba(255,255,255,.4)', margin: 0 }}>📸 {item.label}</p>
                   <p style={{ color: 'rgba(255,255,255,.2)', fontSize: '.72rem', margin: 0, fontStyle: 'italic' }}>{item.hint}</p>
                 </div>
@@ -584,7 +623,7 @@ export default function AccesoPage() {
         {/* ── CASOS DE ÉXITO (foto + texto) ── */}
         <section className="section-light" style={{ padding: '64px 24px' }}>
           <div style={{ maxWidth: 700, margin: '0 auto' }}>
-            <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, fontSize: '.72rem', letterSpacing: '.15em', textTransform: 'uppercase', color: '#7c3aed', marginBottom: 8, textAlign: 'center' }}>
+            <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, fontSize: '.72rem', letterSpacing: '.15em', textTransform: 'uppercase', color: '#e42820', marginBottom: 8, textAlign: 'center' }}>
               Casos de éxito
             </p>
             <h2 style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: 'clamp(1.4rem,4vw,2rem)', textAlign: 'center', color: '#111', marginBottom: 40 }}>
@@ -592,13 +631,13 @@ export default function AccesoPage() {
             </h2>
             <div style={{ display: 'grid', gap: 20 }}>
               {[
-                { tag: 'ROAS 2 → 39', tagColor: '#7c3aed', result: 'En un mes con el sistema completo', detail: 'Marca de ropa — LATAM' },
+                { tag: 'ROAS 2 → 39', tagColor: '#e42820', result: 'En un mes con el sistema completo', detail: 'Marca de ropa — LATAM' },
                 { tag: '$200.000 USD', tagColor: '#16a34a', result: 'Facturado en una semana', detail: 'E-commerce de productos físicos' },
                 { tag: 'x5 en ventas', tagColor: '#ff7b00', result: 'En 30 días aplicando el desafío', detail: 'Dropshipping de nicho' },
               ].map((caso, i) => (
-                <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, background: '#faf7ff', border: '1px solid rgba(124,58,237,.15)', borderRadius: 14, overflow: 'hidden' }}>
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, background: '#f8f8f8', border: '1px solid rgba(228,40,32,.15)', borderRadius: 14, overflow: 'hidden' }}>
                   {/* Image placeholder */}
-                  <div style={{ background: 'linear-gradient(135deg,#1a0a2e,#2d1b69)', minHeight: 180, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 20 }}>
+                  <div style={{ background: 'linear-gradient(135deg,#111,#1a1a1a)', minHeight: 180, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 20 }}>
                     <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '.65rem', letterSpacing: '.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,.3)', margin: 0 }}>📸 Imagen del caso</p>
                     <p style={{ color: 'rgba(255,255,255,.15)', fontSize: '.65rem', margin: 0, textAlign: 'center', fontStyle: 'italic' }}>Captura de resultado,<br />screenshot o foto</p>
                   </div>
@@ -615,7 +654,7 @@ export default function AccesoPage() {
         </section>
 
         {/* ── GUARANTEE ── */}
-        <section style={{ background: 'linear-gradient(90deg,#1e0a30,#130d22)', padding: '56px 24px' }}>
+        <section style={{ background: 'linear-gradient(90deg,#1a1a1a,#0d0d0d)', padding: '56px 24px' }}>
           <div style={{ maxWidth: 600, margin: '0 auto', display: 'flex', gap: 28, alignItems: 'flex-start' }}>
             <div className="guarantee-ring">
               <div style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '1.3rem', color: '#ff7b00', lineHeight: 1 }}>30</div>
@@ -636,12 +675,12 @@ export default function AccesoPage() {
         {/* ── PARA LOS QUE VAN AL FINAL ── */}
         <section className="section-light" style={{ padding: '60px 24px' }}>
           <div style={{ maxWidth: 640, margin: '0 auto' }}>
-            <div style={{ background: '#7c3aed', borderRadius: '12px 12px 0 0', padding: '10px 20px', textAlign: 'center' }}>
+            <div style={{ background: '#e42820', borderRadius: '12px 12px 0 0', padding: '10px 20px', textAlign: 'center' }}>
               <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, fontSize: '.75rem', letterSpacing: '.12em', textTransform: 'uppercase', color: '#fff', margin: 0 }}>
                 Para los que van directo al final
               </p>
             </div>
-            <div style={{ background: '#faf7ff', border: '1px solid rgba(124,58,237,.15)', borderRadius: '0 0 12px 12px', padding: '28px 24px' }}>
+            <div style={{ background: '#f8f8f8', border: '1px solid rgba(228,40,32,.15)', borderRadius: '0 0 12px 12px', padding: '28px 24px' }}>
               <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, fontSize: '1.05rem', color: '#111', marginBottom: 4 }}>
                 Esto es lo que obtenés hoy por ${CURRENT_PRICE}/mes
               </p>
@@ -651,7 +690,7 @@ export default function AccesoPage() {
               <div style={{ display: 'grid', gap: 7, marginBottom: 22 }}>
                 {[...CORE.map(i => `${i.label} → $${i.value}`), ...BONUSES.map(b => `🎁 ${b.label} → $${b.value}`), '✅ Garantía incondicional 30 días', '✅ Actualizaciones incluidas siempre'].map((item, i) => (
                   <p key={i} style={{ color: 'rgba(0,0,0,.65)', fontSize: '.82rem', margin: 0, display: 'flex', gap: 8 }}>
-                    <span style={{ color: '#9f0ac9', flexShrink: 0 }}>✓</span>{item}
+                    <span style={{ color: '#e42820', flexShrink: 0 }}>✓</span>{item}
                   </p>
                 ))}
               </div>
@@ -662,7 +701,7 @@ export default function AccesoPage() {
                   <p style={{ color: '#ff7b00', fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, fontSize: '.75rem', margin: 0 }}>⚠️ El precio sube a ${NEXT_PRICE} {PRICE_RISE_DATE}</p>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '2.8rem', color: '#9f0ac9', lineHeight: 1 }}>${CURRENT_PRICE}</div>
+                  <div style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '2.8rem', color: '#e42820', lineHeight: 1 }}>${CURRENT_PRICE}</div>
                   <div style={{ color: 'rgba(0,0,0,.4)', fontSize: '.7rem' }}>/mes</div>
                 </div>
               </div>
@@ -683,8 +722,8 @@ export default function AccesoPage() {
             {FAQS.map((faq, i) => (
               <div key={i} className="faq-item">
                 <button className="faq-btn" onClick={() => setOpenFaq(openFaq === i ? null : i)}>
-                  <span style={{ color: openFaq === i ? '#9f0ac9' : '#111' }}>{faq.q}</span>
-                  <span style={{ color: '#9f0ac9', fontSize: '1.2rem', flexShrink: 0 }}>{openFaq === i ? '−' : '+'}</span>
+                  <span style={{ color: openFaq === i ? '#e42820' : '#111' }}>{faq.q}</span>
+                  <span style={{ color: '#e42820', fontSize: '1.2rem', flexShrink: 0 }}>{openFaq === i ? '−' : '+'}</span>
                 </button>
                 {openFaq === i && <p className="faq-ans">{faq.a}</p>}
               </div>
@@ -693,8 +732,8 @@ export default function AccesoPage() {
         </section>
 
         {/* ── BOTTOM CTA STRIP ── */}
-        <section style={{ background: 'linear-gradient(135deg,#1e0a30,#0f0f14)', borderTop: '1px solid rgba(159,10,201,.2)', padding: '52px 24px', textAlign: 'center' }}>
-          <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, fontSize: '.7rem', letterSpacing: '.15em', textTransform: 'uppercase', color: '#c026d3', marginBottom: 12 }}>
+        <section style={{ background: 'linear-gradient(135deg,#1a1a1a,#0c0c0c)', borderTop: '1px solid rgba(228,40,32,.2)', padding: '52px 24px', textAlign: 'center' }}>
+          <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, fontSize: '.7rem', letterSpacing: '.15em', textTransform: 'uppercase', color: '#e42820', marginBottom: 12 }}>
             OBTÉN ACCESO INMEDIATO YA
           </p>
           <h2 style={{ fontSize: 'clamp(1.4rem,4vw,2rem)', fontWeight: 900, marginBottom: 8 }}>
@@ -716,7 +755,7 @@ export default function AccesoPage() {
               { top: '100%', mid: 'ACCESO', bot: 'INMEDIATO' },
             ].map(({ top, mid, bot }) => (
               <div key={mid} className="trust-badge">
-                <div style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '1.2rem', color: '#c026d3' }}>{top}</div>
+                <div style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '1.2rem', color: '#e42820' }}>{top}</div>
                 <div style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, fontSize: '.6rem', color: 'rgba(255,255,255,.5)', lineHeight: 1.4 }}>{mid}<br />{bot}</div>
               </div>
             ))}
