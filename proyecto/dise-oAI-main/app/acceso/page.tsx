@@ -144,7 +144,7 @@ export default function AccesoPage() {
 
         .step-dot { width:40px; height:40px; border-radius:50%; background:#e42820; display:flex; align-items:center; justify-content:center; font-family:'Montserrat',sans-serif; font-weight:800; font-size:.95rem; flex-shrink:0; }
 
-        @media(max-width:720px){ .hero-grid{ grid-template-columns:1fr !important; } .cta-sticky{ position:static !important; } .bonus-body{ grid-template-columns:1fr !important; } }
+        @media(max-width:720px){ .hero-grid{ grid-template-columns:1fr !important; } .cta-sticky{ position:static !important; } .bonus-body{ grid-template-columns:1fr !important; } .founder-grid{ grid-template-columns:1fr !important; } }
         @media(max-width:500px){ .trust-badges{ gap:8px !important; } .trust-badge{ width:88px; height:88px; } }
       `}</style>
 
@@ -364,31 +364,61 @@ export default function AccesoPage() {
 
         {/* ── CRIS'S STORY ── */}
         <section className="section-mid" style={{ padding: '64px 24px' }}>
-          <div style={{ maxWidth: 680, margin: '0 auto' }}>
-            <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, fontSize: '.7rem', letterSpacing: '.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,.3)', marginBottom: 16 }}>
+          <div style={{ maxWidth: 800, margin: '0 auto' }}>
+            <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, fontSize: '.7rem', letterSpacing: '.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,.3)', marginBottom: 24, textAlign: 'center' }}>
               Quién está detrás de esto
             </p>
-            <h2 style={{ fontSize: 'clamp(1.4rem,4vw,1.9rem)', fontWeight: 900, marginBottom: 24 }}>
-              Soy Cris Natel. <span className="grad">Estos son los resultados de auditar 100+ marcas en LATAM.</span>
-            </h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <p style={{ color: 'rgba(255,255,255,.6)', fontSize: '.95rem', lineHeight: 1.8 }}>
-                Llevo 7 años en agencias de marketing gestionando campañas para más de 100 marcas de e-commerce — desde tiendas que invertían $10 diarios hasta marcas que movían $200.000 dólares mensuales en pauta. No soy un gurú de TikTok. Tenés mi LinkedIn para verificarlo.
-              </p>
-              <p style={{ color: 'rgba(255,255,255,.6)', fontSize: '.95rem', lineHeight: 1.8 }}>
-                Después de auditar todas esas marcas llegué a una conclusión que cambió todo:
-              </p>
-              <div className="card-red" style={{ padding: '20px 22px' }}>
-                <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '1.05rem', marginBottom: 10 }}>
-                  "El 90% de los e-commerces falla por lo mismo — y no es el producto."
-                </p>
-                <p style={{ color: 'rgba(255,255,255,.65)', lineHeight: 1.75, fontSize: '.92rem' }}>
-                  Falla porque no tienen un sistema para saber qué mensaje usa, qué anuncio testear, qué escalar y cómo comunicar su marca. Improvizan cada semana. Cambian el producto cuando el problema está en todo lo que rodea al producto.
-                </p>
+
+            {/* 2-column: photo + text */}
+            <div className="founder-grid" style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 40, alignItems: 'start' }}>
+
+              {/* Photo column */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+                {/* Photo placeholder — replace with: <img src="/cris.jpg" alt="Cris Natel" style={{width:'100%',borderRadius:16,objectFit:'cover'}} /> */}
+                <div style={{ width: '100%', aspectRatio: '4/5', background: 'linear-gradient(160deg,#222,#111)', borderRadius: 16, border: '2px solid rgba(228,40,32,.25)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, overflow: 'hidden' }}>
+                  <span style={{ fontSize: '3rem', opacity: .2 }}>👤</span>
+                  <p style={{ color: 'rgba(255,255,255,.2)', fontSize: '.65rem', fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, letterSpacing: '.08em', textAlign: 'center', margin: 0, lineHeight: 1.5 }}>
+                    FOTO<br/>LINKEDIN<br/>AQUÍ
+                  </p>
+                </div>
+                {/* Name card */}
+                <div style={{ textAlign: 'center' }}>
+                  <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '1rem', color: '#fff', margin: '0 0 4px 0' }}>Cris Natel</p>
+                  <p style={{ color: 'rgba(255,255,255,.35)', fontSize: '.72rem', margin: '0 0 8px 0' }}>Fundador · Condimento</p>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(10,102,194,.2)', border: '1px solid rgba(10,102,194,.4)', borderRadius: 50, padding: '5px 12px' }}>
+                    <span style={{ color: '#0a66c2', fontSize: '.8rem' }}>in</span>
+                    <span style={{ color: 'rgba(255,255,255,.5)', fontSize: '.65rem', fontFamily: 'var(--font-m),sans-serif', fontWeight: 700 }}>LinkedIn</span>
+                  </div>
+                </div>
               </div>
-              <p style={{ color: 'rgba(255,255,255,.6)', fontSize: '.95rem', lineHeight: 1.8 }}>
-                Esa conclusión me llevó a construir BrandPilot: tomé cada decisión, cada framework, cada patrón que vi funcionar en esas 100+ marcas — y los entrené en una IA para que vos puedas ejecutar en minutos lo que a mí me llevó 7 años aprender.
-              </p>
+
+              {/* Text column */}
+              <div>
+                <h2 style={{ fontSize: 'clamp(1.3rem,3vw,1.8rem)', fontWeight: 900, marginBottom: 20, lineHeight: 1.25 }}>
+                  Soy Cris Natel.{' '}
+                  <span className="grad">Estos son los resultados de auditar 100+ marcas en LATAM.</span>
+                </h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <p style={{ color: 'rgba(255,255,255,.6)', fontSize: '.93rem', lineHeight: 1.85 }}>
+                    Llevo 7 años en agencias de marketing gestionando campañas para más de 100 marcas de e-commerce — desde tiendas que invertían $10 diarios hasta marcas que movían $200.000 dólares mensuales en pauta. No soy un gurú de TikTok. Tenés mi LinkedIn para verificarlo.
+                  </p>
+                  <p style={{ color: 'rgba(255,255,255,.6)', fontSize: '.93rem', lineHeight: 1.85 }}>
+                    Después de auditar todas esas marcas llegué a una conclusión que cambió todo:
+                  </p>
+                  <div className="card-red" style={{ padding: '18px 20px' }}>
+                    <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '1rem', marginBottom: 8 }}>
+                      "El 90% de los e-commerces falla por lo mismo — y no es el producto."
+                    </p>
+                    <p style={{ color: 'rgba(255,255,255,.6)', lineHeight: 1.75, fontSize: '.9rem', margin: 0 }}>
+                      Falla porque no tienen un sistema para saber qué mensaje usar, qué anuncio testear, qué escalar y cómo comunicar su marca. Improvizan cada semana.
+                    </p>
+                  </div>
+                  <p style={{ color: 'rgba(255,255,255,.6)', fontSize: '.93rem', lineHeight: 1.85 }}>
+                    Esa conclusión me llevó a construir BrandPilot: tomé cada decisión, cada framework, cada patrón que vi funcionar en esas 100+ marcas — y los entrené en una IA para que vos puedas ejecutar en minutos lo que a mí me llevó 7 años aprender.
+                  </p>
+                </div>
+              </div>
+
             </div>
           </div>
         </section>
