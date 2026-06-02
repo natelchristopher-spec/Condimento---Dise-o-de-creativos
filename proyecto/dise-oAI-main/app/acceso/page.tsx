@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 
 // ─── CONFIG ────────────────────────────────────────────────────────────────
-const CHECKOUT_URL = '#checkout'; // TODO: Hotmart / Gumroad URL
+const CHECKOUT_URL = 'https://www.skool.com/spicy-ad-formula-3847/about';
 const DEMO_VIDEO_URL = ''; // TODO: 'https://www.youtube.com/embed/XXX' or 'https://www.loom.com/embed/XXX'
 const PRICE_RISE_DATE = 'el 8 de junio';
 const CURRENT_PRICE = 17;
