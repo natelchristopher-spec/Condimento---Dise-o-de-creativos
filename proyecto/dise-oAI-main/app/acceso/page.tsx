@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 
 const CHECKOUT_URL = '#checkout'; // TODO: replace with actual Hotmart/Gumroad URL
+const DEMO_VIDEO_URL = ''; // TODO: paste YouTube or Loom URL here (e.g. 'https://www.youtube.com/embed/XXXX' or 'https://www.loom.com/embed/XXXX')
 const PRICE_RISE_DATE = 'el 8 de junio';
 const CURRENT_PRICE = 17;
 const NEXT_PRICE = 47;
@@ -95,6 +96,41 @@ function Countdown() {
   );
 }
 
+function VideoDemo() {
+  const [playing, setPlaying] = useState(false);
+  if (!DEMO_VIDEO_URL) {
+    return (
+      <div style={{ background:'#1a1a1a', border:'1px solid rgba(159,10,201,.25)', borderRadius:16, aspectRatio:'16/9', maxWidth:660, margin:'0 auto', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:10 }}>
+        <div style={{ width:64, height:64, borderRadius:'50%', background:'rgba(159,10,201,.2)', border:'2px solid rgba(159,10,201,.5)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1.6rem' }}>▶</div>
+        <p style={{ color:'rgba(255,255,255,.3)', fontSize:'.8rem', margin:0 }}>Demo en video — próximamente</p>
+      </div>
+    );
+  }
+  if (!playing) {
+    return (
+      <div
+        onClick={() => setPlaying(true)}
+        style={{ position:'relative', maxWidth:660, margin:'0 auto', borderRadius:16, overflow:'hidden', cursor:'pointer', aspectRatio:'16/9', background:'#000' }}
+      >
+        <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:12, background:'rgba(0,0,0,.5)', zIndex:2 }}>
+          <div style={{ width:72, height:72, borderRadius:'50%', background:'rgba(255,123,0,.9)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1.8rem', boxShadow:'0 0 40px rgba(255,123,0,.5)', transition:'transform .15s' }}>▶</div>
+          <p style={{ color:'#fff', fontFamily:'Montserrat,sans-serif', fontWeight:700, fontSize:'.85rem', margin:0, letterSpacing:'.05em' }}>VER DEMO EN 1 MINUTO</p>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div style={{ maxWidth:660, margin:'0 auto', borderRadius:16, overflow:'hidden', aspectRatio:'16/9' }}>
+      <iframe
+        src={`${DEMO_VIDEO_URL}?autoplay=1`}
+        style={{ width:'100%', height:'100%', border:'none' }}
+        allow="autoplay; fullscreen"
+        allowFullScreen
+      />
+    </div>
+  );
+}
+
 export default function AccesoPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
@@ -180,8 +216,12 @@ export default function AccesoPage() {
             El dropshipping te da productos.{' '}
             <span className="grad">Condimento te da una marca que vende.</span>
           </h1>
-          <p style={{ fontSize:'1.05rem', color:'rgba(255,255,255,.6)', lineHeight:1.8, maxWidth:560, margin:'0 auto 36px' }}>
-            Cómo construir tu marca de e-commerce de manera automatizada — o convertir tu dropshipping en algo que realmente deje dinero — sin diseñador, sin agencia y sin experiencia previa.
+          <p style={{ fontSize:'1.05rem', color:'rgba(255,255,255,.6)', lineHeight:1.8, maxWidth:560, margin:'0 auto 12px' }}>
+            Cómo construir tu marca de e-commerce de manera automatizada — sin diseñador, sin agencia y{' '}
+            <strong style={{ color:'#fff' }}>sin saber absolutamente nada</strong> de marketing.
+          </p>
+          <p style={{ fontSize:'1rem', color:'rgba(255,255,255,.4)', marginBottom:36, maxWidth:480, margin:'0 auto 36px', fontStyle:'italic' }}>
+            Describís tu producto. La IA hace el resto. En serio.
           </p>
 
           {/* countdown */}
@@ -198,6 +238,48 @@ export default function AccesoPage() {
           <p style={{ marginTop:12, color:'rgba(255,255,255,.3)', fontSize:'.75rem' }}>
             🔒 Pago seguro · Acceso inmediato · Garantía 30 días
           </p>
+        </section>
+
+        {/* ── VIDEO DEMO ── */}
+        <section style={{ maxWidth:720, margin:'0 auto', padding:'0 24px 56px' }}>
+          <p style={{ textAlign:'center', color:'rgba(255,255,255,.3)', fontSize:'.78rem', marginBottom:16, textTransform:'uppercase', letterSpacing:'.1em', fontFamily:'Montserrat,sans-serif', fontWeight:700 }}>
+            Mirá cómo funciona en 1 minuto
+          </p>
+          <VideoDemo />
+        </section>
+
+        {/* ── BEFORE / AFTER ── */}
+        <section style={{ maxWidth:680, margin:'0 auto', padding:'0 24px 64px' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+            <div style={{ background:'rgba(255,50,50,.06)', border:'1px solid rgba(255,50,50,.2)', borderRadius:14, padding:'20px' }}>
+              <p style={{ fontFamily:'Montserrat,sans-serif', fontWeight:800, fontSize:'.75rem', textTransform:'uppercase', letterSpacing:'.1em', color:'rgba(255,100,100,.7)', marginBottom:14 }}>Antes</p>
+              {[
+                '3 semanas esperando artes',
+                '$800/mes de diseñador',
+                '5 herramientas que no se conectan',
+                'Copiás anuncios y rezás',
+                'No sabés qué mensaje funciona',
+              ].map((t,i)=>(
+                <p key={i} style={{ color:'rgba(255,255,255,.4)', fontSize:'.82rem', margin:'0 0 8px 0', display:'flex', gap:8, alignItems:'flex-start' }}>
+                  <span style={{ color:'rgba(255,100,100,.5)', flexShrink:0 }}>✗</span>{t}
+                </p>
+              ))}
+            </div>
+            <div style={{ background:'rgba(159,10,201,.08)', border:'1px solid rgba(159,10,201,.3)', borderRadius:14, padding:'20px' }}>
+              <p style={{ fontFamily:'Montserrat,sans-serif', fontWeight:800, fontSize:'.75rem', textTransform:'uppercase', letterSpacing:'.1em', color:'#c026d3', marginBottom:14 }}>Con Condimento</p>
+              {[
+                'Listo en 3 minutos',
+                '$17/mes todo incluido',
+                '1 sistema, todo conectado',
+                'Testear ángulos antes de pautar',
+                'La IA decide por vos',
+              ].map((t,i)=>(
+                <p key={i} style={{ color:'rgba(255,255,255,.75)', fontSize:'.82rem', margin:'0 0 8px 0', display:'flex', gap:8, alignItems:'flex-start' }}>
+                  <span style={{ color:'#c026d3', flexShrink:0 }}>✓</span>{t}
+                </p>
+              ))}
+            </div>
+          </div>
         </section>
 
         {/* ── SOCIAL PROOF NUMBERS ── */}
