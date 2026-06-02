@@ -144,7 +144,7 @@ export default function AccesoPage() {
 
         .step-dot { width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg,#9f0ac9,#7c3aed); display:flex; align-items:center; justify-content:center; font-family:'Montserrat',sans-serif; font-weight:800; font-size:.95rem; flex-shrink:0; }
 
-        @media(max-width:720px){ .hero-grid{ grid-template-columns:1fr !important; } .cta-sticky{ position:static !important; } }
+        @media(max-width:720px){ .hero-grid{ grid-template-columns:1fr !important; } .cta-sticky{ position:static !important; } .bonus-card{ grid-template-columns:1fr !important; } .bonus-card > div:last-child{ min-height:140px !important; } }
         @media(max-width:500px){ .trust-badges{ gap:8px !important; } .trust-badge{ width:88px; height:88px; } }
       `}</style>
 
@@ -411,22 +411,44 @@ export default function AccesoPage() {
             <h3 style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, textAlign: 'center', color: '#111', marginBottom: 20 }}>
               🎁 Desbloquea Acceso Inmediato a 3 <span style={{ color: '#ff7b00' }}>Bonuses Adicionales</span> Gratis
             </h3>
-            <div style={{ display: 'grid', gap: 16 }}>
+            <div style={{ display: 'grid', gap: 20 }}>
               {BONUSES.map((b) => (
-                <div key={b.label} className="bonus-card">
-                  <div className="bonus-header">
-                    <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, fontSize: '.78rem', color: '#fff', letterSpacing: '.06em', margin: 0 }}>{b.n} — {b.label}</p>
-                  </div>
-                  <div style={{ padding: '16px 20px', display: 'flex', gap: 16, alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ color: 'rgba(0,0,0,.65)', fontSize: '.85rem', lineHeight: 1.65, marginBottom: 10 }}>{b.desc}</p>
-                      <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, fontSize: '.85rem', color: '#7c3aed' }}>
-                        Recibís Esto Cuando Comprás Tu Acceso Por ${CURRENT_PRICE}
-                      </p>
+                <div key={b.label} className="bonus-card" style={{ display: 'grid', gridTemplateColumns: '1fr 220px' }}>
+                  {/* Left: content */}
+                  <div>
+                    <div className="bonus-header" style={{ borderRadius: 0 }}>
+                      <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, fontSize: '.78rem', color: '#fff', letterSpacing: '.06em', margin: 0 }}>{b.n} — {b.label}</p>
                     </div>
-                    <div style={{ width: 80, flexShrink: 0, textAlign: 'center' }}>
-                      <div style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '1.2rem', color: '#ff7b00', lineHeight: 1 }}>+${b.value}</div>
-                      <div style={{ fontSize: '.65rem', color: 'rgba(0,0,0,.4)', marginTop: 2 }}>valor</div>
+                    <div style={{ padding: '18px 20px 18px' }}>
+                      <p style={{ color: 'rgba(0,0,0,.65)', fontSize: '.85rem', lineHeight: 1.7, marginBottom: 14 }}>{b.desc}</p>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#f0e8ff', border: '1px solid rgba(124,58,237,.25)', borderRadius: 8, padding: '8px 14px' }}>
+                        <span style={{ color: '#9f0ac9', fontSize: '1rem' }}>✓</span>
+                        <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 800, fontSize: '.8rem', color: '#7c3aed', margin: 0 }}>
+                          Incluido en tu acceso por ${CURRENT_PRICE}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Right: image placeholder + value badge */}
+                  <div style={{ background: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, minHeight: 180 }}>
+                    {/* Device mockup frame */}
+                    <div style={{ width: '100%', maxWidth: 160 }}>
+                      {/* Laptop top */}
+                      <div style={{ background: '#1e1b2e', borderRadius: '8px 8px 0 0', padding: '8px 8px 0', boxShadow: '0 8px 32px rgba(0,0,0,.25)' }}>
+                        {/* Screen area */}
+                        <div style={{ background: 'rgba(159,10,201,.1)', borderRadius: 4, aspectRatio: '16/10', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, border: '1px solid rgba(159,10,201,.25)', overflow: 'hidden' }}>
+                          <span style={{ fontSize: '1.2rem', opacity: .4 }}>📸</span>
+                          <p style={{ color: 'rgba(159,10,201,.5)', fontSize: '.55rem', fontFamily: 'var(--font-m),sans-serif', fontWeight: 700, letterSpacing: '.06em', textAlign: 'center', margin: 0 }}>TU IMAGEN</p>
+                        </div>
+                      </div>
+                      {/* Laptop base */}
+                      <div style={{ background: '#2d2540', height: 5, borderRadius: '0 0 4px 4px' }} />
+                      <div style={{ background: '#1e1b2e', height: 3, borderRadius: '0 0 8px 8px', width: '130%', marginLeft: '-15%' }} />
+                    </div>
+                    {/* Value badge */}
+                    <div style={{ position: 'absolute', top: 12, right: 12, width: 52, height: 52, background: '#ff7b00', borderRadius: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 16px rgba(255,123,0,.4)', border: '2px solid #fff' }}>
+                      <p style={{ fontFamily: 'var(--font-m),sans-serif', fontWeight: 900, fontSize: '.7rem', color: '#fff', margin: 0, lineHeight: 1 }}>+${b.value}</p>
+                      <p style={{ fontSize: '.5rem', color: 'rgba(255,255,255,.8)', margin: 0 }}>USD</p>
                     </div>
                   </div>
                 </div>
