@@ -399,7 +399,7 @@ export default function AccesoPage() {
                   <div className="bonus-header">
                     <p style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 800, fontSize: '.78rem', color: '#fff', letterSpacing: '.06em', margin: 0 }}>{b.n} — {b.label}</p>
                   </div>
-                  <div style={{ padding: '16px 20px', display: 'flex', gap: 16', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ padding: '16px 20px', display: 'flex', gap: 16, alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ flex: 1 }}>
                       <p style={{ color: 'rgba(0,0,0,.65)', fontSize: '.85rem', lineHeight: 1.65, marginBottom: 10 }}>{b.desc}</p>
                       <p style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 800, fontSize: '.85rem', color: '#7c3aed' }}>
